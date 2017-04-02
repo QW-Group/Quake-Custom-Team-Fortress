@@ -1,5 +1,7 @@
 # Quake Custom Team Fortress
 
+http://downloads.sourceforge.net/customtf/cutf-clientpack-2.0.7z?download
+
 **COMPILES & currently requires cpqw and will load with MVDSV then crashes when a player joins**
 
 The compiled qwprogs.dat is included in the fortress folder along with the server config scripts. The server configs are setup to run with any modification, though you may want to change the server name and rcon. (assuming that this mod is converted to MVDSV)
