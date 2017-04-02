@@ -14,6 +14,8 @@ make all -j4
 
 cd release
 
+strip --strip-unneeded --remove-section=.comment cpqw
+
 **To compile CUSTOM TEAM FORTRESS mod (GMQCC is used)**
 
 git clone git://github.com/graphitemaster/gmqcc.git
