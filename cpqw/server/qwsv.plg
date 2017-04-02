@@ -1,0 +1,147 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: qwsv - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\DOCUME~1\Bill\LOCALS~1\Temp\RSP59B.tmp" with contents
+[
+/nologo /ML /GX /O2 /I "." /I "..\client" /D "NDEBUG" /D "SERVERONLY" /D "WIN32" /D "_CONSOLE" /FR".\Release/" /Fp".\Release/qwsv.pch" /YX /Fo".\Release/" /Fd".\Release/" /FD /c 
+"C:\QUAKE\Dev\server\sys_win.c"
+"C:\QUAKE\Dev\client\zone.c"
+"C:\QUAKE\Dev\client\pmove.c"
+"C:\QUAKE\Dev\client\pmovetst.c"
+"C:\QUAKE\Dev\server\sv_move.c"
+"C:\QUAKE\Dev\server\sv_phys.c"
+"C:\QUAKE\Dev\server\world.c"
+"C:\QUAKE\Dev\server\pr_cmds.c"
+"C:\QUAKE\Dev\server\pr_edict.c"
+"C:\QUAKE\Dev\server\pr_exec.c"
+"C:\QUAKE\Dev\client\cmd.c"
+"C:\QUAKE\Dev\client\common.c"
+"C:\QUAKE\Dev\client\crc.c"
+"C:\QUAKE\Dev\client\cvar.c"
+"C:\QUAKE\Dev\client\mathlib.c"
+"C:\QUAKE\Dev\client\md4.c"
+"C:\QUAKE\Dev\server\model.c"
+"C:\QUAKE\Dev\client\net_chan.c"
+"C:\QUAKE\Dev\client\net_wins.c"
+"C:\QUAKE\Dev\server\sv_ccmds.c"
+"C:\QUAKE\Dev\server\sv_ents.c"
+"C:\QUAKE\Dev\server\sv_init.c"
+"C:\QUAKE\Dev\server\sv_main.c"
+"C:\QUAKE\Dev\server\sv_nchan.c"
+"C:\QUAKE\Dev\server\sv_send.c"
+"C:\QUAKE\Dev\server\sv_user.c"
+]
+Creating command line "cl.exe @C:\DOCUME~1\Bill\LOCALS~1\Temp\RSP59B.tmp" 
+Creating temporary file "C:\DOCUME~1\Bill\LOCALS~1\Temp\RSP59C.tmp" with contents
+[
+ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib winmm.lib /nologo /subsystem:console /incremental:no /pdb:".\Release/qwsv.pdb" /machine:I386 /out:".\Release/qwsv.exe" 
+.\Release\sys_win.obj
+.\Release\zone.obj
+.\Release\pmove.obj
+.\Release\pmovetst.obj
+.\Release\sv_move.obj
+.\Release\sv_phys.obj
+.\Release\world.obj
+.\Release\pr_cmds.obj
+.\Release\pr_edict.obj
+.\Release\pr_exec.obj
+.\Release\cmd.obj
+.\Release\common.obj
+.\Release\crc.obj
+.\Release\cvar.obj
+.\Release\mathlib.obj
+.\Release\md4.obj
+.\Release\model.obj
+.\Release\net_chan.obj
+.\Release\net_wins.obj
+.\Release\sv_ccmds.obj
+.\Release\sv_ents.obj
+.\Release\sv_init.obj
+.\Release\sv_main.obj
+.\Release\sv_nchan.obj
+.\Release\sv_send.obj
+.\Release\sv_user.obj
+]
+Creating command line "link.exe @C:\DOCUME~1\Bill\LOCALS~1\Temp\RSP59C.tmp"
+<h3>Output Window</h3>
+Compiling...
+sys_win.c
+zone.c
+pmove.c
+pmovetst.c
+sv_move.c
+sv_phys.c
+world.c
+pr_cmds.c
+pr_edict.c
+pr_exec.c
+cmd.c
+common.c
+crc.c
+cvar.c
+mathlib.c
+md4.c
+model.c
+net_chan.c
+net_wins.c
+sv_ccmds.c
+sv_ents.c
+sv_init.c
+sv_main.c
+sv_nchan.c
+sv_send.c
+sv_user.c
+Linking...
+Creating temporary file "C:\DOCUME~1\Bill\LOCALS~1\Temp\RSP59E.tmp" with contents
+[
+/nologo /o".\Release/qwsv.bsc" 
+.\Release\sys_win.sbr
+.\Release\zone.sbr
+.\Release\pmove.sbr
+.\Release\pmovetst.sbr
+.\Release\sv_move.sbr
+.\Release\sv_phys.sbr
+.\Release\world.sbr
+.\Release\pr_cmds.sbr
+.\Release\pr_edict.sbr
+.\Release\pr_exec.sbr
+.\Release\cmd.sbr
+.\Release\common.sbr
+.\Release\crc.sbr
+.\Release\cvar.sbr
+.\Release\mathlib.sbr
+.\Release\md4.sbr
+.\Release\model.sbr
+.\Release\net_chan.sbr
+.\Release\net_wins.sbr
+.\Release\sv_ccmds.sbr
+.\Release\sv_ents.sbr
+.\Release\sv_init.sbr
+.\Release\sv_main.sbr
+.\Release\sv_nchan.sbr
+.\Release\sv_send.sbr
+.\Release\sv_user.sbr]
+Creating command line "bscmake.exe @C:\DOCUME~1\Bill\LOCALS~1\Temp\RSP59E.tmp"
+Creating browse info file...
+<h3>Output Window</h3>
+Creating temporary file "C:\DOCUME~1\Bill\LOCALS~1\Temp\RSP59F.bat" with contents
+[
+@echo off
+copy release\qwsv.exe c:\quake\cpqwsv.exe
+]
+Creating command line "C:\DOCUME~1\Bill\LOCALS~1\Temp\RSP59F.bat"
+Copying QWSV to Quake folder
+        1 file(s) copied.
+
+
+
+<h3>Results</h3>
+qwsv.exe - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

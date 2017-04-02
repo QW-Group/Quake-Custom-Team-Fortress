@@ -1,0 +1,52 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: qccx - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "D:\DOCUME~1\Sergi\LOCALS~1\Temp\RSP136.tmp" with contents
+[
+/nologo /ML /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"Release/qccx.pch" /YX /Fo"Release/" /Fd"Release/" /FD /c 
+"C:\MyProjects\Qw\qccx\cmdlib.cpp"
+"C:\MyProjects\Qw\qccx\hash.cpp"
+"C:\MyProjects\Qw\qccx\pr_comp.cpp"
+"C:\MyProjects\Qw\qccx\pr_lex.cpp"
+"C:\MyProjects\Qw\qccx\qcc.cpp"
+]
+Creating command line "cl.exe @D:\DOCUME~1\Sergi\LOCALS~1\Temp\RSP136.tmp" 
+Creating temporary file "D:\DOCUME~1\Sergi\LOCALS~1\Temp\RSP137.tmp" with contents
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /incremental:no /pdb:"Release/qccx.pdb" /machine:I386 /out:"Release/qccx.exe" 
+.\Release\cmdlib.obj
+.\Release\hash.obj
+.\Release\pr_comp.obj
+.\Release\pr_lex.obj
+.\Release\qcc.obj
+]
+Creating command line "link.exe @D:\DOCUME~1\Sergi\LOCALS~1\Temp\RSP137.tmp"
+<h3>Output Window</h3>
+Compiling...
+cmdlib.cpp
+hash.cpp
+pr_comp.cpp
+pr_lex.cpp
+qcc.cpp
+Linking...
+Creating temporary file "D:\DOCUME~1\Sergi\LOCALS~1\Temp\RSP139.bat" with contents
+[
+@echo off
+copy release\qccx.exe c:\quake\fortress\ProzacSRC\cpqccx.exe
+]
+Creating command line "D:\DOCUME~1\Sergi\LOCALS~1\Temp\RSP139.bat"
+Copying QCC to ProzacSRC folder...
+        1 file(s) copied.
+
+
+
+<h3>Results</h3>
+qccx.exe - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>
