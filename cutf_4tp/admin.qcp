@@ -1,0 +1,1476 @@
+
+/* 
+
+	Functions handling TeamFortress Administration for Net Servers
+	!NOTE! parm15 is used to pass admin status across maps
+*/
+
+
+
+void (entity player) RemoveHolo;
+float (float tno) TeamFortress_TeamGetLives;
+void(entity p) SetTeamName;
+void () kill_my_demons;
+void() DetonateAllGunsForced;
+float() TeamFortress_DropItems;
+
+void(float delaytime, float fadetime, float factor) World_FadeIn;
+void(float delaytime, float fadetime, float factor) World_FadeOut;
+void(float delaytime, float fadetime, float factor) World_FadeMid;
+entity(float brightness, float fadetime, float delaytime, float factor) FadeWorld;
+float() ServerUpdating;
+void() NextLevel;
+void(string thesound) BroadcastSound;
+
+void(entity player) ArmyRatingJoin;
+void(entity player) ArmyRatingLeave;
+
+string(entity client) GetClientDescription;
+void(entity player, string st, float action, float predefined) PlayerFinal;
+
+string(float tno) GetTrueTeamName;
+
+float(entity theAdmin) HasValidAdminTarget =
+{
+    if (theAdmin.admin_kick.classname != "player" && theAdmin.admin_kick.classname != "spec") {
+    //if (theAdmin.admin_kick.classname != "player") {
+        sprint(theAdmin, 2, "No user selected!\n");
+        theAdmin.admin_kick = world;
+        return 0;
+    }
+    if (!theAdmin.admin_kick.is_connected) {
+        sprint(theAdmin, 2, "User has disconnected!\n");
+        theAdmin.admin_kick = world;
+        return 0;
+    }
+
+    return 1;
+};
+
+//=====================================================================
+// same thing but doesn't display messages, used in vote.qc
+
+float(entity theAdmin) HasValidAdminTarget2 =
+{
+    if (theAdmin.admin_kick.classname != "player" && theAdmin.admin_kick.classname != "spec") {
+        theAdmin.admin_kick = world;
+        return 0;
+    }
+    if (!theAdmin.admin_kick.is_connected) {
+        theAdmin.admin_kick = world;
+        return 0;
+    }
+
+    return 1;
+};
+
+float(entity player) ValidClientState =
+{
+    if (player.playerclass == 0)
+    {
+        sprint(self,2,"Player ");
+        sprint(self,2,self.admin_kick.netname);
+        sprint(self,2," is observing the game\n");
+       
+        return 0;
+    }
+    if (player.done_custom & 4)
+    {
+        sprint(self,2,"Player ");
+        sprint(self,2,self.admin_kick.netname);
+        sprint(self,2," is still customizing\n");
+       
+        return 0;
+    }
+
+    return 1;
+};
+
+void() Admin_Kick_Cycle =
+{
+	local entity te;
+	local float num;
+    local string st;
+
+	num = 0;
+
+    te = find(self.admin_kick, classname, "player");
+	while (te != world && num == 0)
+    {
+        num = 1;
+
+        if (!te.is_connected)
+            num = 0;
+        
+        if (self.admin_kick==te)
+            num = 0;
+        
+        if (num == 0) te = find(te, classname, "player");
+    }    
+    
+    if (te == world) // if out of players on our search lets scan for spectators
+    {
+        te = find(self.admin_kick, classname, "spec");
+    	while (te != world && num == 0)
+        {
+            num = 1;
+    
+            if (!te.is_connected)
+                num = 0;
+            
+            if (self.admin_kick==te)
+                num = 0;
+            
+            if (num == 0) te = find(te, classname, "spec");
+        }
+    }
+    
+    if (te == world) 
+    {
+		sprint(self, 2, "No Clients Found! ®end of list©\n");
+        self.admin_kick=world;
+	} 
+    else
+    {
+		self.admin_kick = te; //Set current selected person
+		//sprint(self, #PRINT_HIGH, "You can type ÎÈ„Î or ‚·Ó to throw them out. Type ÁÂÙ again to select someone else.");
+
+        if (self.admin_kick.classname == "spec")
+            sprint(self, 2, "√ÏÈÂÓÙ ®Spectator©: ");
+        else
+            sprint(self, 2, "√ÏÈÂÓÙ: ");
+
+		sprint(self, 2, self.admin_kick.netname);
+        sprint(self, 2, " selected ®");
+
+        st = ftos(getuid(self.admin_kick));
+        st = colstr(st,4);
+        
+        sprint(self, 2, "’ÛÂÚ…ƒ∫",st," …–∫"); 
+        st = infokey(self.admin_kick,"ip");
+        st = colstr(st,4);
+        sprint(self,2,st,"©\n");
+	}
+};
+void() Admin_Kick_Person =
+{
+    if (self.admin_kick != world) //Bad
+	{
+        if (!HasValidAdminTarget(self))
+            return;
+
+		RPrint(self.netname);
+        RPrint(" kicks ");
+        RPrint(self.admin_kick.netname);
+        RPrint("\n");
+        
+        bprint(2, self.admin_kick.netname);
+		bprint(2, " has been À…√À≈ƒ by the admin ");
+		bprint(2, self.netname);
+		bprint(2, "\n");
+
+        sprint(self.admin_kick,2,"\nYou have been À…√À≈ƒ from the server!\n");
+
+		stuffcmd(self.admin_kick, "disconnect\n"); //Kick them!
+
+        BroadcastSound("player/teledth1");
+
+		self.admin_kick = world; //Clear it //WK BUG! Used to be ==
+	}
+    else
+        sprint(self, 2, "No target client selected!\n");
+};
+//WK Same code as Bloggy's, but with some happy code for banning
+void() Admin_Ban_Person =
+{
+	local string foo;
+    
+    if (self.admin_kick != world) //Bad
+	{
+		//WK Add checks so that it doesn't crash the server!
+        if (!HasValidAdminTarget(self))
+            return;
+
+        RPrint(self.netname);
+        RPrint(" bans ");
+        RPrint(self.admin_kick.netname);
+        RPrint("\n");
+
+		bprint(2, self.admin_kick.netname);
+		bprint(2, " has been ¬¡ŒŒ≈ƒ by the admin ");
+		bprint(2, self.netname);
+		bprint(2, "\n");
+
+        sprint(self.admin_kick,2,"\nYou have been ¬¡ŒŒ≈ƒ from the server!\n");
+
+        foo = infokey(self.admin_kick,"ip");
+		localcmd("addip ");
+		localcmd(foo);
+		localcmd("\n");
+
+        stuffcmd(self.admin_kick, "disconnect\n"); //Kick them!
+
+        BroadcastSound("player/teledth1");
+
+        self.admin_kick = world; //Clear it //WK BUG! Used to be ==
+	}
+    else
+        sprint(self, 2, "No target client selected!\n");
+};
+
+void() Admin_Curse =
+{
+    if (self.admin_kick != world) //Bad
+	{
+		//WK Add checks so that it doesn't crash the server!
+        if (!HasValidAdminTarget(self))
+            return;
+
+        if (self.admin_kick.classname != "player")
+        {
+            sprint(self,2,"You can only curse players!\n");
+            return;
+        }
+
+        if (!ValidClientState(self.admin_kick))
+            return;
+
+        RPrint(self.netname);
+        RPrint(" curses the player ");
+        RPrint(self.admin_kick.netname);
+        RPrint("\n");
+
+		bprint(2, self.admin_kick.netname);
+		bprint(2, " has been √’“”≈ƒ by the admin ");
+		bprint(2, self.netname);
+		bprint(2, "\n");
+
+        local float tf;
+        local string st2;
+            
+        tf = 0;
+        st2 = infokey(world, "curse");
+            
+        if (st2 == string_null) 
+            tf = stof(st2);            
+
+        createBastard(self.admin_kick,tf);
+	}
+    else
+        sprint(self, 2, "No target client selected!\n");
+};
+
+void(float targetteam) Admin_Assign =
+{
+    if (self.admin_kick != world) //Bad
+	{
+		//WK Add checks so that it doesn't crash the server!
+        if (!HasValidAdminTarget(self))
+            return;
+
+        local string st;
+        local float tc;
+
+        targetteam = floor(targetteam);
+        
+        if (targetteam == 3)
+        {
+            if (number_of_teams < 3)
+            {
+                sprint(self,2,"No team 3 on this map!\n");
+                return;
+            }                
+
+            targetteam = 3;
+        }
+        else if (targetteam == 4)
+        {
+            if (number_of_teams < 4)
+            {
+                sprint(self,2,"No team 4 on this map!\n");
+                return;
+            } 
+
+            targetteam = 4;            
+        }
+        else if (targetteam < 1 || targetteam > 4)
+        {
+            sprint(self,2,"Invalid team number!\n");
+            return;
+        }
+
+        if (self.admin_kick.team_no == targetteam)
+        {
+            st = ftos(targetteam);
+            sprint(self,2,"Player ");
+            sprint(self,2,self.admin_kick.netname);
+            sprint(self,2," is already on team ");
+            sprint(self,2,st);
+            sprint(self,2,"!\n");
+            return;
+        }
+
+        // if our target is observer or he's building a class, return
+        if (!ValidClientState(self.admin_kick))
+            return;
+
+        bprint(2,"The admin ",self.netname," performs team adjustment:\n");
+
+        st = ftos(targetteam);
+        RPrint(self.netname);
+        RPrint(" puts the player ");
+        RPrint(self.admin_kick.netname);
+        RPrint(" on team ");
+        RPrint(st);
+        RPrint("\n");
+            
+        ArmyRatingLeave(self.admin_kick);
+
+        local entity oself;
+        oself = self;
+
+        self = self.admin_kick;
+        
+        // Detonate and kill all our stuff
+        if (self.has_holo > 0 ) RemoveHolo(self);
+        kill_my_demons();
+        DetonateMines(self);
+        DetonateAllGunsForced();    
+        TeamFortress_DropItems();
+        self = oself;
+
+        // Set the player's color
+        stuffcmd(self.admin_kick, "color ");
+        tc = TeamFortress_TeamGetColor(targetteam) - 1;
+        st = ftos(tc);
+
+        tc = self.admin_kick.team_no;
+
+        // Nice colors
+        if (nicecolors==1) st =TeamGetNiceColor(targetteam);
+
+        stuffcmd(self.admin_kick, st);
+        stuffcmd(self.admin_kick, "\n");
+
+        self.admin_kick.team_no = targetteam;
+        makeImmune(self.admin_kick,time+15);
+
+        self.admin_kick.lives = TeamFortress_TeamGetLives(targetteam);
+
+        SetTeamName(self.admin_kick);
+
+        bprint(2,"Player ",self.admin_kick.netname," is assigned to team ");
+
+		// PZ - modified for AGR.. changes playersOnTeam#
+        if (targetteam == 1)
+		{
+			playersOnTeam1 = playersOnTeam1 + 1;
+            bprint(2,"1");
+		}
+        else if (targetteam == 2)
+		{
+			playersOnTeam2 = playersOnTeam2 + 1;
+            bprint(2,"2");
+		}
+        else if (targetteam == 3)
+		{
+			playersOnTeam3 = playersOnTeam3 + 1;
+            bprint(2,"3");
+		}
+        else
+		{
+			playersOnTeam4 = playersOnTeam4 + 1;
+			bprint(2,"4");
+		}
+		if		(tc == 1) playersOnTeam1 = playersOnTeam1 - 1; // tc is old team number
+		else if (tc == 2) playersOnTeam2 = playersOnTeam2 - 1;
+		else if (tc == 3) playersOnTeam3 = playersOnTeam3 - 1;
+		else			  playersOnTeam4 = playersOnTeam4 - 1;
+		// PZ - end AGR mod
+
+        st = GetTrueTeamName(targetteam);
+	    bprint(2, " (", st, " <= ");
+        st = GetTrueTeamName(tc);
+        bprint(2, st,")\n");
+        
+        ArmyRatingJoin(self.admin_kick);
+
+        // Make him/her respawn away
+        oself = self;
+        self = self.admin_kick;
+        PutClientInServer();
+        self = oself;                
+    }
+    else
+        sprint(self, 2, "No target client selected!\n");
+};
+
+//======================================================================
+// The admin wants to type on a client console
+
+void(string cmd) Admin_Cmd =
+{
+	if (self.admin_kick != world) //Bad
+	{
+        if (!HasValidAdminTarget(self))
+            return;
+            
+        
+        stuffcmd(self.admin_kick,cmd); // execute command
+        stuffcmd(self.admin_kick,"\n");
+        sprint(self,2, "Command \"");
+        sprint(self,2, cmd);
+        sprint(self,2, "\" is executed for ");
+        sprint(self, 2, self.admin_kick.netname);
+        sprint(self, 2, "\n");
+        bprint(2, "Admin, "); // PZ: made the following prints broadcasted to all
+        bprint(2, self.netname);
+        bprint(2, ", executes the following command on ");
+        bprint(2, self.admin_kick.netname);
+        bprint(2, "'s client: \"");
+        bprint(2, cmd);
+        bprint(2, "\"\n");
+        BroadcastSound("doors/runeuse");
+        
+
+
+    }
+    else
+        sprint(self, 2, "No target client selected!\n");
+};
+
+void(string arg) Admin_Cuff =
+{
+	if (self.admin_kick != world) //Bad
+	{
+        if (!HasValidAdminTarget(self))
+            return;
+
+        local string tmps;
+        local float tmpf,tmpf2;
+
+        tmpf = getuid(self.admin_kick);
+        
+        if (tmpf) // We got a valid user ID?
+        {
+            tmps = ftos(tmpf);
+            tmpf2 = stof(arg); // Get the argument as float
+
+            if (tmpf2 != 0) // Are we cuffing? or uncuffing?
+            {
+                RPrint(self.netname);
+                RPrint(" cuffs the client ");
+                RPrint(self.admin_kick.netname);
+                RPrint("\n");    
+                
+                bprint(2,self.admin_kick.netname);
+                bprint(2," has been √’∆∆≈ƒ by the admin ");
+                bprint(2,self.netname);
+                bprint(2,"\n");
+            }
+            else
+            {
+                RPrint(self.netname);
+                RPrint(" uncuffs ");
+                RPrint(self.admin_kick.netname);
+                RPrint("\n");   
+                
+                bprint(2,"The admin ");
+                bprint(2,self.netname);
+                bprint(2," uncuffs ");
+                bprint(2,self.admin_kick.netname);
+                bprint(2,"\n");
+            }
+            
+            // Perform the command
+            localcmd("cuff ");
+            localcmd(tmps);
+            localcmd(" ");
+            localcmd(arg);
+            localcmd("\n");
+        }
+        else
+            sprint(self,2,"ERROR: Can't get the user ID!\n");
+
+    }
+    else
+        sprint(self, 2, "No target client selected!\n");
+};
+
+void(string arg) Admin_Mute =
+{
+	if (self.admin_kick != world) //Bad
+	{
+        if (!HasValidAdminTarget(self))
+            return;
+
+        local string tmps;
+        local float tmpf,tmpf2;
+
+        tmpf = getuid(self.admin_kick);
+        
+        if (tmpf) // We got a valid user ID?
+        {
+            tmps = ftos(tmpf);
+            tmpf2 = stof(arg); // Get the argument as float
+
+            if (tmpf2 != 0) // Are we muting? or unmuting?
+            {
+                RPrint(self.netname);
+                RPrint(" mutes the client ");
+                RPrint(self.admin_kick.netname);
+                RPrint("\n");    
+                
+                bprint(2,self.admin_kick.netname);
+                bprint(2," has been Õ’‘≈ƒ by the admin ");
+                bprint(2,self.netname);
+                bprint(2,"\n");
+            }
+            else
+            {
+                RPrint(self.netname);
+                RPrint(" allows ");
+                RPrint(self.admin_kick.netname);
+                RPrint(" to speak\n");   
+                
+                bprint(2,"The admin ");
+                bprint(2,self.netname);
+                bprint(2," allows ");
+                bprint(2,self.admin_kick.netname);
+                bprint(2," to speak\n");
+            }
+            
+            // Perform the command
+            localcmd("mute ");
+            localcmd(tmps);
+            localcmd(" ");
+            localcmd(arg);
+            localcmd("\n");
+        }
+        else
+            sprint(self,2,"ERROR: Can't get the user ID!\n");
+
+    }
+    else
+        sprint(self, 2, "No target client selected!\n");
+};
+
+
+void() Admin_Call_Ceasefire =
+{
+    if (intermission_running) return;
+
+    if (ceasefire)
+	{
+	    ceasefire = 0;
+    	bprint(2, "The game resumes now.\n");
+
+        RPrint(self.netname);
+        RPrint(" ends the ceasefire\n");        
+
+        if (num_players)
+            World_FadeIn(0,0,0);
+        else if (num_specs)
+            World_FadeMid(0,0,0);
+        else World_FadeOut(0,0,0);
+	}
+	else
+	{
+	    ceasefire = 1;
+        bprint(2, self.netname);
+		bprint(2, " forced a ceasefire.\n");
+
+        RPrint(self.netname);
+        RPrint(" forces a ceasefire\n");
+
+        World_FadeMid(0,0,0);
+	}
+};
+
+void() Admin_KillStuff =
+{
+    if (self.admin_kick != world) //Bad
+	{
+        if (!HasValidAdminTarget(self))
+            return;
+
+        local entity oself;
+        oself = self;
+        self = self.admin_kick;
+        
+        // Detonate and kill all his/her stuff
+        if (self.has_holo > 0 ) RemoveHolo(self);
+        kill_my_demons();
+        DetonateMines(self);
+        DetonateAllGunsForced();    
+        TeamFortress_DropItems();
+        self = oself;
+
+        bprint(2,"The admin ");
+        bprint(2,self.netname);
+        bprint(2," detonates all the stuff belonging to ");
+        bprint(2,self.admin_kick.netname);
+        bprint(2,"\n");
+    }
+    else
+        sprint(self, 2, "No target client selected!\n");
+};
+
+//contains the list of impulses that can be used during ceasefire
+//returns TRUE if its good
+float(float inp) GoodCeasefireImpulse =
+{
+	if (inp >= 0 && inp <= 10) // Allow them for menus
+        return 1;
+    
+    if (inp == 181 ||
+	inp == 203 ||
+	inp == 204 ||
+	inp == 205 ||
+	inp == 206 ||
+    inp == 207 ||
+	inp == 119 ||
+	inp == 118   ||
+	inp == 119 ||
+	inp == 131 ||
+	inp == 135 ||
+	inp == 136 ||
+	inp == 23 ||
+	inp == 155 ||
+	inp == 83 ||
+	inp == 212 || 
+    inp == 215 ||
+    inp == 216 ||
+    inp == 217 ||
+    inp == 218 ||
+    inp == 196) //- OfN -
+		return 1;
+
+	return 0;
+
+};
+
+//contains the list of impulses that can be used during ceasefire
+//returns TRUE if its good
+
+/* OfN UNUSED
+float(float inp) Good_Impulse_OnMenu =
+{
+	if (/*inp == #TF_MEDIC_HELPME ||
+	inp == #TF_TAUNT ||
+	inp == #TF_TAUNT2 ||
+	inp == #TF_TAUNT3 ||
+	inp == #TF_TAUNT4 ||
+    inp == #TF_TAUNT5 ||*//*
+	inp == 119 ||
+	inp == 118   ||
+	inp == 119 ||
+	inp == 131 ||
+	inp == 135 ||
+	inp == 136 ||
+	inp == 23 ||
+	inp == 155 ||
+	inp == 83 ||
+	inp == 212 || 
+    inp == 215 || 
+    inp == 216 ||
+    inp == 217 ||
+    inp == 218) //- OfN -
+		return 1;
+
+	return 0;
+
+};*/
+
+//=================================================================================
+// Prints a list of current admins, if param is TRUE print a "none found" message
+
+void(float none, float isadmin) PrintAdmins =
+{
+    local float counter, tmpf;
+    local entity te;
+    local string tmps;
+
+    counter = 0;
+
+    te = find(world, classname, "player");
+    while (te)
+    {            
+        if (te.admin_flag)
+        if (te.is_connected)
+        {
+            if (!counter)
+                sprint(self,2,"Current admins logged on server∫\n");
+            
+            counter = counter + 1;
+
+            tmps = ftos(counter);
+            tmps = colstr(tmps,4);
+            
+            sprint(self,2,tmps);
+            sprint(self,2,"∫ ");
+            sprint(self,2,te.netname);
+
+            if (isadmin || self.admin_flag)
+            {
+                tmps = ftos(getuid(te));
+                tmps = colstr(tmps,4);
+
+                sprint(self, 2, " ®’ÛÂÚ…ƒ∫",tmps," …–∫"); 
+                tmps = infokey(te,"ip");
+                tmps = colstr(tmps,4);
+                sprint(self,2,tmps,"©\n");
+            }
+            else
+            {
+                sprint(self,2," ®UserID∫");
+            
+                tmpf = getuid(te);
+                tmps = ftos(tmpf);
+                sprint(self,2,tmps,"©\n");
+            }
+        }
+
+        te = find(te, classname, "player");
+    }
+    
+    te = find(world, classname, "spec");
+    while (te)
+    {            
+        if (te.admin_flag)
+        if (te.is_connected)
+        {
+            if (!counter)
+                sprint(self,2,"Current admins logged on server∫\n");
+            
+            counter = counter + 1;
+
+            tmps = ftos(counter);
+            tmps = colstr(tmps,4);
+            
+            sprint(self,2,tmps);
+            sprint(self,2,"∫ ");
+            sprint(self,2,te.netname);
+            sprint(self,2," ®spectator©");
+            
+            if (isadmin || self.admin_flag)
+            {
+                tmps = ftos(getuid(te));
+                tmps = colstr(tmps,4);
+
+                sprint(self, 2, " ®’ÛÂÚ…ƒ∫",tmps," …–∫"); 
+                tmps = infokey(te,"ip");
+                tmps = colstr(tmps,4);
+                sprint(self,2,tmps,"©\n");
+            }
+            else
+            {
+                sprint(self,2," ®UserID∫");
+                tmpf = getuid(te);
+                tmps = ftos(tmpf);
+                sprint(self,2,tmps,"©\n");
+            }
+        }
+
+        te = find(te, classname, "spec");
+    }    
+
+    if (!counter && none)
+        sprint(self,2,"No admins currently logged on server.\n");
+};
+
+//========================================================================
+// Prints given text to all admins
+
+void(string text) NotifyAdmins =
+{
+    local entity te;
+
+    te = find(world, classname, "player");
+    while (te)
+    {            
+        if (te.admin_flag)
+        if (te.is_connected)
+            sprint(te,2,text);
+
+        te = find(te, classname, "player");
+    }
+    
+    te = find(world, classname, "spec");
+    while (te)
+    {            
+        if (te.admin_flag)
+        if (te.is_connected)
+            sprint(te,2,text);
+
+        te = find(te, classname, "spec");
+    }
+};
+
+void(string s1, string s2, string s3, string s4, string s5, string s6, string s7, string s8) PrintToAdmins =
+{
+    local entity te;
+
+    te = find(world, classname, "player");
+    while (te)
+    {            
+        if (te.admin_flag)
+        if (te.is_connected)
+        {
+            sprint(te,2,s1);            
+            sprint(te,2,s2);
+            sprint(te,2,s3);
+            sprint(te,2,s4);
+            sprint(te,2,s5);
+            sprint(te,2,s6);
+            sprint(te,2,s7);
+            sprint(te,2,s8);
+        }
+
+        te = find(te, classname, "player");
+    }
+    
+    te = find(world, classname, "spec");
+    while (te)
+    {            
+        if (te.admin_flag)
+        if (te.is_connected)
+        {
+            sprint(te,2,s1);            
+            sprint(te,2,s2);
+            sprint(te,2,s3);
+            sprint(te,2,s4);
+            sprint(te,2,s5);
+            sprint(te,2,s6);
+            sprint(te,2,s7);
+            sprint(te,2,s8);
+        }
+
+        te = find(te, classname, "spec");
+    }
+};
+
+//===============================================================
+// Admin logged in event
+
+void(entity admin) AdminLoggedIn =
+{
+    local string text;
+
+    text = strcat("User ",admin.netname);
+    text = strcat(text," logged in as admin.\n");
+    
+    RPrint(text);
+    NotifyAdmins(text);
+};
+
+//===============================================================
+// Admin logged out event
+
+void(entity admin) AdminLoggedOut =
+{
+    local string text;
+
+    text = strcat("User ",admin.netname);
+    text = strcat(text," logged out as admin.\n");
+
+    RPrint(text);
+    NotifyAdmins(text);
+};
+
+//================================================================
+// Tells a message from an user to all admins logged in
+
+float(entity user, string str) Admin_Tell =
+{
+    local float numadmins;
+    local entity admin;
+    local string st;
+
+    if (mutedtime(user))
+    {
+        sprint(user,2,"You are muted!\n");
+        return 99;
+    }
+
+    st = colstr(str,2);
+
+    numadmins = 0;
+
+    admin = find(world,classname,"player");
+
+    while (admin)
+    {
+        if (admin.admin_flag)
+        if (admin.is_connected)
+        {
+            numadmins = numadmins + 1;
+            sprint(admin,2,"To Adminsç (",user.netname,"): ",st,"\n");
+            stuffcmd(admin,"play misc/talk\n");
+        }
+        
+        admin = find(admin,classname,"player");
+    }
+
+    admin = find(world,classname,"spec");
+
+    while (admin)
+    {
+        if (admin.admin_flag)
+        if (admin.is_connected)
+        {
+            numadmins = numadmins + 1;
+            sprint(admin,2,"To Adminsç (",user.netname,"): ",st,"\n");
+            stuffcmd(admin,"play misc/talk\n");
+        }
+        
+        admin = find(admin,classname,"spec");
+    }
+
+    putsaytime(user);
+
+    if (!user.admin_flag && numadmins > 0)
+    {
+        sprint(user,2,"To Adminsç (",user.netname,"): ",st,"\n");
+        stuffcmd(user,"play misc/talk\n");
+    }
+
+    dprint("To Adminsç (");
+    dprint(user.netname);
+    dprint("): ");
+    dprint(str);
+    dprint("\n");
+
+    if (!numadmins)
+        sprint(user,2,"No admins logged in server currently!\n");
+    else
+    {
+        if (numadmins == 1)
+            sprint(user,2,"€ admin reading this›\n");
+        else
+        {
+            st = ftos(numadmins);
+            st = colstr(st,4);
+
+            sprint(user,2,"€",st," admins reading this›\n");            
+        }
+    }
+
+    return numadmins;
+};
+
+//=======================================================================
+// Ends current map if possible
+
+void() Admin_EndGame =
+{
+    if (intermission_running)
+    {
+        sprint(self,2,"The map already ended!\n");
+        return;
+    }
+
+    if (ServerUpdating())
+    {
+        sprint(self,2,"Unable to end the map during a server update!\n");
+        return;
+    }
+
+    if (time < 20)
+    {
+        sprint(self,2,"There must pass 20 seconds at least to be able to end a map!\n");
+        return;
+    }
+
+    ceasefire = 0;
+
+    bprint(2,"The admin ",self.netname," ends the current game.\n");
+                                
+    NextLevel ();
+};
+
+//==========================================================
+// Prints a sermon on a player client
+
+void(string st, float action) Admin_Sermon =
+{
+    local float predef;
+
+    predef = 0;
+
+    if (st == "1") // TK
+        predef = 1;
+    else if (st == "2") // Cheating
+        predef = 2;
+        
+    if (self.admin_kick == world || self.admin_kick.classname != "player" || !self.admin_kick.is_connected)
+    {
+        sprint(self,2,"Bad player selected as target for sermon!\n");
+        return;
+    }
+
+    if (self.flags & 8192)
+    {
+        sprint(self,2,"Already showing a sermon for that player!\n");
+        return;
+    }
+
+    if (st == "")
+    {
+        sprint(self,2,"You should specify a string for the sermon or a number (1=tk or 2=cheats)!\n");
+        return;
+    }
+
+    PlayerFinal(self.admin_kick,st,action,predef);
+
+    if (action == 2)
+        bprint(2,"The admin ",self.netname, " decides to ban ",self.admin_kick.netname," after a sermon");
+    else if (action == 1)
+        bprint(2,"The admin ",self.netname, " decides to kick ",self.admin_kick.netname," after a sermon");
+    else
+        bprint(2,"The admin ",self.netname, " sermonizes ",self.admin_kick.netname);
+
+    if (predef == 1)
+        bprint(2," about teamkilling\n");
+    else if (predef == 2)
+        bprint(2," about cheating\n");
+    else
+        bprint(2,"\n");
+};
+
+//==============================================================================
+// Isn't the bitching of kids annoying sometimes while playing?
+
+float(float mode, float mutetime) Admin_Silence =
+{
+    local entity te;
+    local string st, st2;
+    local float fl, counter;
+
+	te = world;
+	counter = 0;
+
+    if (mode == 0 || mode == 1) // Players
+    {
+        te = find(te,classname,"player");
+
+        while (te)
+        {
+            if (te.is_connected)
+            if (!te.admin_flag)
+            {
+                fl = getuid(te);
+                st = ftos(fl);
+                st2 = ftos(mutetime);
+
+                localcmd("mute 00");
+                localcmd(st);
+                localcmd(" ");
+                localcmd(st2);
+                localcmd("\n");
+
+                counter = counter + 1;
+            }
+            
+            te = find(te,classname,"player");
+        }
+    }
+    
+    if (mode == 2 || mode == 0) // Spectators
+    {
+        te = find(te,classname,"spec");
+
+        while (te)
+        {
+            if (te.is_connected)
+            if (!te.admin_flag)
+            {
+                fl = getuid(te);
+                st = ftos(fl);
+                st2 = ftos(mutetime);
+
+                localcmd("mute 00");
+                localcmd(st);
+                localcmd(" ");
+                localcmd(st2);
+                localcmd("\n");
+
+                counter = counter + 1;
+            }
+
+            te = find(te,classname,"spec");
+        }
+    }
+
+    if (mutetime > 0)
+    {
+        bprint(2,"The admin ",self.netname," imposes silence ");
+        if (mode == 0)
+            bprint(2,"among all clients\n");
+        else if (mode == 1)
+            bprint(2,"among players\n");
+        else if (mode == 2)
+            bprint(2,"among spectators\n");
+    }
+    else
+    {
+        bprint(2,"The admin ",self.netname," allows all ");
+        if (mode == 0)
+            bprint(2,"clients");
+        else if (mode == 1)
+            bprint(2,"players");
+        else if (mode == 2)
+            bprint(2,"spectators");
+        bprint(2," to speak\n");
+    }
+
+    return counter;
+};
+
+//=======================================================================
+// Admin requests info about a client
+
+void() Admin_Check =
+{
+    local string st;
+    local float tmpf;
+
+    if (self.admin_kick != world) //Bad
+	{
+        if (!HasValidAdminTarget(self))
+            return;
+
+        sprint(self,2,"ùûûü √ÏÈÂÓÙ …ÓÊÔÚÌ·ÙÈÔÓ √ËÂ„ÎÛ: ùûûü\n");
+        tmpf = getuid(self.admin_kick);
+        st = ftos(tmpf);
+        st = colstr(st,4);
+        sprint(self, 2,"Œ·ÌÂ: ",self.admin_kick.netname,"\n’ÛÂÚ…ƒ: ",st," ú …–: ");
+        st = infokey(self.admin_kick,"ip");
+        st = colstr(st,4);
+        sprint(self, 2,st,"\n√Ï·ÈÌÂ‰: ");
+        st = GetClientDescription(self.admin_kick);
+        sprint(self, 2,st,"\nùûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûü\n");
+    }
+    else
+        sprint(self, 2, "No target client selected!\n");
+};
+
+
+//==================================================
+
+
+// Gizmo
+float( entity object ) IsValidUseObject;
+string( entity object ) GetUseObjectAction;
+string( entity object ) GetUseObjectName;
+void( entity object ) UseObject;
+void() Admin_Use =
+{
+	local string objectName, objectAction;
+
+	makevectors( self.v_angle );
+	traceline( self.origin + '0 0 16', ( self.origin + '0 0 16' ) + v_forward * 4096, 0, self );
+
+	if ( !IsValidUseObject( trace_ent ) ) {
+		sprint( self, 2, trace_ent.classname );
+		sprint( self, 2, " is not a valid object to use\n" );
+		return;
+	}
+
+	objectName = GetUseObjectName( trace_ent );
+	objectAction = GetUseObjectAction( trace_ent );
+
+	bprint( 2, "The admin ", self.netname, " forces a ", objectName, " to ", objectAction, "\n" );
+	UseObject( trace_ent );
+};
+
+
+//==================================================
+
+
+
+void() monster_zombie;
+void() monster_shambler;
+void() monster_knight;
+void() monster_enforcer;
+void() monster_demon1;
+void() monster_army;
+void() monster_ogre;
+void() monster_shalrath;
+void() monster_wizard;
+void() monster_dog;
+void() monster_fish;
+void() monster_hell_knight;
+void() monster_tarbaby;
+
+/*
+===============
+Admin_SpawnEntityAtLocation
+
+This is a local function used to spawn an admin spawnable
+entity at the specified location.
+NOTE: does not check if the location is valid.
+===============
+*/
+entity( string entity_classname, vector pos ) Admin_SpawnEntityAtLocation = {
+	local entity	e, oldself;
+
+	e = spawn();
+	setorigin( e, pos );
+
+	oldself = self;
+	self = e;
+	if ( entity_classname == "monster_zombie" )
+		monster_zombie ();
+	else if ( entity_classname == "monster_shambler" )
+		monster_shambler ();
+	else if ( entity_classname == "monster_knight" )
+		monster_knight ();
+	else if ( entity_classname == "monster_enforcer" )
+		monster_enforcer ();
+	else if ( entity_classname == "monster_demon1" )
+		monster_demon1 ();
+	else if ( entity_classname == "monster_army" )
+		monster_army ();
+	else if ( entity_classname == "monster_ogre" )
+		monster_ogre ();
+	else if ( entity_classname == "monster_shalrath" )
+		monster_shalrath ();
+	else if ( entity_classname == "monster_wizard" )
+		monster_wizard ();
+	else if ( entity_classname == "monster_dog" )
+		monster_dog ();
+	else if ( entity_classname == "monster_fish" )
+		monster_fish ();
+	else if ( entity_classname == "monster_hell_knight" )
+		monster_hell_knight ();
+	else if ( entity_classname == "monster_tarbaby" )
+		monster_tarbaby ();
+	else {
+		self = oldself;
+		remove( e );
+		return world;
+	}
+	self = oldself;
+
+	e.lives = 0;
+	e.endtime = 5;		// remove corpses and gibs after around 5 seconds
+
+	return e;
+};
+
+/*
+===============
+Admin_Spawn
+
+Tries to spawn the the specified type of entity near self's origin.
+===============
+*/
+void( string entity_classname, float entity_team ) Admin_Spawn = {
+	local entity	e;
+	local vector	vec;
+	local string	tmps;
+
+	vec = self.v_angle;
+	vec_z = 0;
+	makevectors( vec );
+	traceline( self.origin + '0 0 16', ( self.origin + '0 0 16' ) + v_forward * 128, 0, self );
+
+	// spawn the entity at the location
+	e = Admin_SpawnEntityAtLocation( entity_classname, trace_endpos );
+	if ( !e ) {
+		sprint( self, 2, "Unknown entity classname\n" );
+		return;
+	}
+
+	if ( InSolid( e ) ) {
+		remove( e );
+		sprint( self, 2, "Entity spawn position not valid!\n" );
+		return;
+	}
+
+	if ( entity_team )
+		e.team_no = entity_team;
+
+	if ( entity_team ) {
+		tmps = ftos( entity_team );
+		bprint( 2, "The admin ", self.netname, " spawns a ", entity_classname, " on team ", tmps, "\n" );
+	} else
+		bprint( 2, "The admin ", self.netname, " spawns a ", entity_classname, "\n" );
+};
+
+/*
+===============
+Admin_MassSpawn
+
+Tries to spawn the specified amount of the specified type of
+entity near self's origin.
+===============
+*/
+void( string entity_classname, float entity_team, float ecount ) Admin_MassSpawn = {
+	local entity	e;
+	local vector	vec;
+	local vector	tempOrigin;
+	local string	tmps;
+	local float		biggestSide, ftmp;
+	local float		numSpawned;
+	local float		maxCount;
+
+	// don't allow too many to prevent invisible monsters
+	if ( ecount > 50 ) {
+		sprint( self, 2, "You cannot spawn more than 50 entities at a time!\n" );
+		return;
+	}
+
+	// default to 4 if 0 is specified
+	if ( !ecount )
+		ecount = 4;
+
+	// only allow up to 200 tries to find a good spot
+	maxCount = 200;
+
+	e = world;
+	biggestSide = numSpawned = 0;
+
+	// set the initial vectors
+	vec = self.v_angle;
+	vec_z = 0;
+	makevectors( vec );
+
+	// set the initial origin
+	tempOrigin = self.origin + v_forward * 128;
+
+	// make the vectors flat from here on in
+	vec_z = vec_x = 0;
+	vec_y = self.v_angle_y;
+	makevectors( vec );
+	vec = v_forward;
+
+	// spawn as many as possible
+	while ( numSpawned < ecount && maxCount ) {
+		// spawn the entity at the location
+		if ( !e ) {
+			e = Admin_SpawnEntityAtLocation( entity_classname, tempOrigin );
+			if ( !e ) {
+				sprint( self, 2, "Unknown entity classname\n" );
+				return;
+			}
+		} else
+			setorigin( e, tempOrigin );
+
+		// get the biggest side
+		if ( !biggestSide ) {
+			biggestSide = ( e.mins_x * -1 ) + e.maxs_x;
+			ftmp = ( e.mins_y * -1 ) + e.maxs_y;
+			if ( ftmp > biggestSide )
+				biggestSide = ftmp;
+
+			biggestSide = biggestSide + biggestSide / 2;
+		}
+
+		// check for invalid positions
+		traceline( e.origin, e.origin + v_up * -8192, 1, e );
+
+		// if the entity's current position isn't valid, then keep it and try it somewhere else
+		if ( trace_fraction == 1 || InSolid( e ) ) {
+			// stop trying if the first monster isn't valid
+			if ( !numSpawned ) {
+				remove( e );
+				sprint( self, 2, "Entity spawn position not valid!\n" );
+				return;
+			}
+
+			// backup and try a new direction
+			tempOrigin = tempOrigin - vec * biggestSide;
+
+			// randomize the direction a little
+			ftmp = random();
+			if ( ftmp <= 0.25 )
+				vec = v_forward;
+			else if ( ftmp <= 0.5 )
+				vec = v_forward * -1;
+			else if ( ftmp <= 0.75 )
+				vec = v_right;
+			else
+				vec = v_right * -1;
+		} else {
+			if ( entity_team )
+				e.team_no = entity_team;
+
+			e = world;					// spawn a new one now
+			numSpawned = numSpawned + 1;
+		}
+
+		// update origin and ecount
+		tempOrigin = tempOrigin + vec * biggestSide;
+		maxCount = maxCount - 1;
+	}
+
+	// remove the last monster if it didn't spawn
+	if ( e )
+		remove( e );
+
+	tmps = ftos( numSpawned );
+	sprint( self, 2, tmps, " entities spawned\n" );
+
+	if ( entity_team ) {
+		bprint( 2, "The admin ", self.netname, " spawns ", tmps, " " );
+		tmps = ftos( entity_team );
+		bprint( 2, entity_classname, " entities on team ", tmps, "\n" );
+	} else
+		bprint( 2, "The admin ", self.netname, " spawns ", tmps, " ", entity_classname, " entities\n" );
+};
+
+
+//==================================================
+
+/*
+===============
+Admin_ValidEntityToKill
+===============
+*/
+float( entity te ) Admin_ValidEntityToKill = {
+	if ( !te )
+		return 0;
+	if ( !te.takedamage )
+		return 0;
+
+	if ( te.classname == "misc_explobox" )
+		return 1;
+	if ( te.classname == "misc_explobox2" )
+		return 1;
+	if ( te.classname == "player" )
+		return 1;
+
+	if ( COOP_IsCoopMonster( te ) )
+		return 1;
+
+
+	return 0;
+};
+
+/*
+===============
+Admin_Kill
+
+Kills the entity directly infront of self.
+===============
+*/
+void() Admin_Kill = {
+	makevectors( self.v_angle );
+	traceline( self.origin + '0 0 16', ( self.origin + '0 0 16' ) + v_forward * 4096, 0, self );
+
+	if ( !Admin_ValidEntityToKill( trace_ent ) ) {
+		sprint( self, 2, "Invalid entity to kill\n" );
+		return;
+	}
+
+	if ( trace_ent.netname )
+		bprint( 2, "The admin ", self.netname, " deems ", trace_ent.netname, " dead\n" );
+	else
+		bprint( 2, "The admin ", self.netname, " deems the entity ", trace_ent.classname, " dead\n" );
+
+	deathmsg = 74;
+	TF_T_Damage( trace_ent, self, self, trace_ent.health + 10000, 1 | 32, 0 );
+};
+

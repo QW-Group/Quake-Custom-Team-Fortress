@@ -1,0 +1,4041 @@
+/*======================================================
+	CLIENT.QC			Custom TeamFortress v3.2
+
+	(c) TeamFortress Software Pty Ltd	29/2/97
+	(c) William Kerney			16/9/00
+	(c) Craig Hauser				19/3/00
+========================================================
+Handles obituaries, what happens when a client dies, respawns,
+connects & disconnects, and when a map changes levels
+======================================================*/
+
+// prototypes
+void () W_WeaponFrame;
+void() W_SetCurrentAmmo;
+void(entity attacker, float damage) player_pain;
+void() player_stand1;
+void (vector org) spawn_tfog;
+void (vector org, entity death_owner) spawn_tdeath;
+float modelindex_eyes, modelindex_player, modelindex_null;
+float(float v) anglemod;
+
+//void () SetUpChrisRound;//-
+void () PrematchBegin;
+void () TeamAllPlayers;
+//void (float winner) RoundStop;//-
+//void () UpdateScores;
+//void () roundtimer_think;//-
+//void () EndRound;//-
+
+// TeamFortress prototypes
+void() TeamFortress_MOTD;
+void() TeamFortress_CheckTeamCheats;
+//float(float tno) TeamFortress_TeamGetColor; //- OfN - not used here
+void(entity Viewer, float pc, float rpc) TeamFortress_PrintClassName;
+void(entity Viewer, float pc) TeamFortress_PrintJobName;
+void() TeamFortress_RemoveTimers;
+void(float Suicided) TeamFortress_SetupRespawn;
+void() TeamFortress_ShowTF;
+float(float pc) IsLegalClass;
+void() SetupTeamEqualiser;
+
+void(entity p) SetTeamName;
+
+void (float number) decrement_team_ammoboxes;
+void() TeamFortress_DetonatePipebombs;
+void(float f) decrement_team_pipebombs; 	
+void () PlayerObserverMode;
+
+// Hook prototypes
+void () Service_Grapple;
+
+// TeamFortressMap prototypes
+void(entity AD) ParseTFDetect;
+entity(float ino) Finditem;
+void(entity Item, entity AP, entity Goal) tfgoalitem_GiveToPlayer;
+void(entity Goal, entity AP, entity ActivatingGoal) AttemptToActivate;
+void() CTF_FlagCheck;
+
+//WK
+void() DropToCustomClassGen;
+void(entity p) TeamFortress_SetSpeed;
+void () kill_my_demons;
+void () DetonateAllGuns; // SB
+void () Boot_Flamer_stream_touch;
+void (entity foo,float bar) makeImmune;
+
+// SB Extern
+void (entity targ) GetRank;
+//void() SwitchFromCamera;
+
+//==============// ofn
+void(entity mine_owner) DetonateMines;
+void(entity player) RemoveHolo;
+string(entity thebuilding) GetBuildingName;
+string(entity themonster) GetMonsterName;
+void(entity attacker) MonsterKill;
+void() DetonateAllGunsForced;
+
+float() ValidVoteEnt;
+void() ResetVoteEnt;
+void(string thesound) BroadcastSound;
+
+void (entity attacker) WarlockKnifeKill;
+void(entity player, float usage) SetMeatUsage;
+void(entity player, float usage) SetHeadsUsage;
+
+void() PlayerJoined;
+void() PlayerQuit;
+
+string(entity client) GetClientDescription;
+string(entity client) GetBracedClDesc;
+
+float() ServerUpdating;
+void(float broadcastmsg) PrintGameSettings;
+void(entity player) PlayerDropRunes;
+void() FinalizedPerformAction;
+
+entity() GetSleepVote;
+void() VoteToSleep;
+void(entity sleepent, entity targetclient) SleepVoteResume;
+void(string nfmap) LaunchMap;
+
+/*
+=============================================================================
+
+				LEVEL CHANGING / INTERMISSION
+
+=============================================================================
+*/
+
+string nextmap;
+
+//float intermission_running; // OfN - Moved to defs.qc for use on environ.qc
+float	intermission_exittime;
+
+/*QUAKED info_intermission (1 0.5 0.5) (-16 -16 -16) (16 16 16)
+This is the camera point for the intermission.
+Use mangle instead of angle, so you can set pitch or roll as well as yaw.  'pitch roll yaw'
+*/
+void() info_intermission =
+{
+	if (CheckExistence() == 0)
+	{
+		dremove(self);
+		return;
+	}
+};
+
+
+void() SetChangeParms =
+{
+	if (self.health <= 0)
+	{
+		SetNewParms ();
+		return;
+	}
+
+	// remove items
+	self.items = self.items - (self.items & (131072 | 262144 | 524288 | 1048576 | 2097152 | 4194304) );
+	
+	// cap super health
+	if (self.health > 100)
+		self.health = 100;
+	if (self.health < 50)
+		self.health = 50;
+	parm1 = self.items;
+	parm2 = self.health;
+	parm3 = self.armorvalue;
+	if (self.ammo_shells < 25)
+		parm4 = 25;
+	else
+		parm4 = self.ammo_shells;
+	parm5 = self.ammo_nails;
+	parm6 = self.ammo_rockets;
+	parm7 = self.ammo_cells;
+	parm8 = self.current_weapon;
+	parm9 = self.armortype * 100;
+
+	// TeamFortress Parameters
+	parm10 = toggleflags;  // Store the global ToggleFlag settings
+	parm11 = 0; 		   // Random Playerclass
+	parm12 = 0;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	parm13 = self.StatusBarRes;
+	parm14 = self.StatusBarSize;
+
+
+	parm15 = self.admin_flag; //CH Pass along admin status :)
+
+};
+
+void() SetNewParms =
+{
+	parm1 = 0;
+	parm2 = 100;
+	parm3 = 0;
+	parm4 = 25;
+	parm5 = 0;
+	parm6 = 0;
+	parm6 = 0;
+	parm8 = 1;
+	parm9 = 0;
+
+	// TeamFortress Parameters
+	parm10 = 0;
+	parm11 = 0;
+	parm12 = 0;
+	parm13 = 0;
+	parm14 = 0;
+	parm15 = 0;
+};
+
+// This think kicks in 30 seconds into the map to
+// turn autoteam on.
+void() autoteam_think =
+{
+	//local float loopc;
+	//? local entity other;//,oself;
+	
+//	if (chris)
+//		SetUpChrisRound();
+//	if (!chris)
+		//PrematchBegin(); // PZ: no
+	
+	toggleflags = toggleflags | 64;
+	dremove(self);
+};
+
+// PZ: This function actually ends the prematch. Go figure.
+void () PrematchBegin =
+{
+	if (prematch)
+	{
+		bprint(2,"ú The game has now started! ú\n");
+		other = find(world, classname, "player");
+		while (other != world)
+		{
+			other.is_abouttodie = 1;
+			other.items = other.items - (other.items & 1048576);
+			other.invincible_time = 0;
+			other.invincible_finished = 0;
+			other.effects = other.effects - (other.effects & 8);
+			TF_T_Damage(other, world, world, other.health + 20, 1, 0);
+			other = find(other, classname, "player");
+		}
+		
+		// - OfN - wtf
+		/*other = find(world, classname, "grunty");
+		while (other != world)
+		{
+			other.is_abouttodie = #TRUE;
+			other.items = other.items - (other.items & #IT_INVULNERABILITY);
+			other.invincible_time = 0;
+			other.invincible_finished = 0;
+			other.effects = other.effects - (other.effects & #EF_DIMLIGHT);
+			TF_T_Damage(other, world, world, other.health + 20, #TF_TD_IGNOREARMOUR, #TF_TD_OTHER);
+			other = find(other, classname, "grunty");
+		}*/
+	}
+	dremove(self); // PZ: removes timer entity that called this function
+	
+/*	if (chris)
+	{
+		if (self.classname == "prematch_timer")
+			dremove(self);
+		else
+			SetUpChrisRound();
+	}*/
+};
+
+/*void () SetUpChrisRound =
+{
+	local entity other, oself;
+	
+	// Make sure everyone is on a team
+	TeamAllPlayers();
+	
+	// Clean up team player counts
+	team1total = 0;
+	team2total = 0;
+	team3total = 0;
+	team4total = 0;
+
+	oself = self;
+	
+	other = find(world, classname, "player");
+	while (other != world)
+	{
+		if (livesperguy > 0)
+		{
+			if (other.team_no == 1) team1total = team1total + livesperguy;
+			if (other.team_no == 2) team2total = team2total + livesperguy;
+			if (other.team_no == 3) team3total = team3total + livesperguy;
+			if (other.team_no == 4) team4total = team4total + livesperguy;
+			other.lives = livesperguy;
+		}
+		
+		self = other;
+		kill_my_demons();
+		DetonateAllGuns();
+		
+		TF_T_Damage(other, world, world, other.health + 20, #TF_TD_IGNOREARMOUR, #TF_TD_OTHER);
+		
+		other = find(other, classname, "player");
+	}
+	
+	newmis = spawn();
+	newmis.classname = "chris_round_timer";
+	newmis.nextthink = time + roundtime;
+	newmis.think = roundtimer_think;
+};*/
+
+/*void() roundtimer_think =
+{
+
+	RoundStop(0);
+	dremove(self);
+
+};*/
+
+void () TeamAllPlayers =
+{
+	local entity other, oself;
+	
+	other = find(world, classname, "player");
+	while (other != world)
+	{
+		if (other.team_no <= 0 && other.is_connected)
+		{
+			oself = self;
+			self = other;
+			Menu_Team_Input(5);
+			self = oself;
+		}
+		other = find(other, classname, "player");
+	}
+};		
+
+/*void (float winner) RoundStop =
+{
+	if (winner == 0)
+		bprint(#PRINT_MEDIUM, "The round has ended due to time.\n");
+	else
+	{
+		if (winner == 1)
+		{
+			team1rounds = team1rounds + 1;
+			bprint(#PRINT_MEDIUM, "The blue team wins the round.\n");
+		}
+		if (winner == 2)
+		{
+			team2rounds = team2rounds + 1;
+			bprint(#PRINT_MEDIUM, "This round goes to the red team.\n");
+		}
+		if (winner == 3)
+		{
+			team3rounds = team3rounds + 1;
+			bprint(#PRINT_MEDIUM, "The yellow team are sponsored by SB-1 Tech and have won this round.\n");
+		}
+		if (winner == 4)
+		{
+			team4rounds = team4rounds + 1;
+			bprint(#PRINT_MEDIUM, "The green team are the winners of this round.\n");
+		}
+	}
+	
+	UpdateScores();
+	
+	newmis = spawn();
+	newmis.nextthink = time + 1;
+	newmis.think = EndRound;
+};*/
+
+/*void() UpdateScores =
+{
+	local entity guy;
+	
+	guy = find(other, classname, "player");
+	while (guy != world)
+	{
+		if (guy.team_no == 1)
+		{
+			guy.frags = team1rounds * 10;
+			guy.real_frags = team1rounds * 10;
+		}
+		else if (guy.team_no == 2)
+		{
+			guy.frags = team2rounds * 10;
+			guy.real_frags = team2rounds * 10;
+		}
+		else if (guy.team_no == 3)
+		{
+			guy.frags = team3rounds * 10;
+			guy.real_frags = team3rounds * 10;
+		}
+		else if (guy.team_no == 4)
+		{
+			guy.frags = team4rounds * 10;
+			guy.real_frags = team4rounds * 10;
+		}
+		guy = find(guy, classname, "other");
+	}
+};*/ /////////////??/////////////7
+
+/*void() EndRound =
+{
+	local entity roundtimer, prematchtimer;
+	local float winner, prematchtime;
+	local string st;
+	
+	// Kill the round timer
+	other = find(world, classname, "chris_round_timer");
+	// I deliberately don't do a contingency check here - if it screws up I wanna know about it
+	dremove(other);
+	
+	st = infokey(world, "pm");
+	if (st == string_null) // if 'pm' isn't set, try 'prematch'
+		st = infokey(world, "prematch");
+	if (st == "on") // if it reads 'on', do a 30 second prematch
+		prematchtime = time + 30;
+	else // if it doesn't read 'on'...
+		prematchtime = stof(st); // turn the string into a float
+	if (prematchtime) // if we have prematch
+	{
+		prematch = time + prematchtime; // set it
+	}
+	else
+		prematch = #FALSE; // otherwise, no prematch
+	
+	// Kill everyone
+/*	other = find(world, classname, "player");
+	while (other != world)
+	{
+		TF_T_Damage(other, world, world, other.health + 20, #TF_TD_IGNOREARMOUR, #TF_TD_OTHER);
+		other = find(other, classname, "player");
+	} Don't kill everyone here or it drops the flag
+	*/
+	// Set up the timer
+/*- if (team1rounds < roundstowin && team2rounds < roundstowin && team3rounds < roundstowin && team4rounds < roundstowin)
+	{
+		roundtimer = spawn();
+		roundtimer.think = SetUpChrisRound;
+		roundtimer.nextthink = time + 5;
+		
+		prematchtimer = spawn();
+		prematchtimer.classname == "prematch_timer";
+		prematchtimer.nextthink = time + prematch;
+		prematchtimer.think = PrematchBegin;
+	}
+	else
+	{
+		newmis = spawn();
+		newmis.nextthink = time + 5;
+		newmis.think = execute_changelevel;
+	}
+};*/
+
+void() DecodeLevelParms =
+{
+	local string st;
+	local entity ent;
+	local float prematchtime;
+
+	if (serverflags)
+	{
+		if (world.model == "maps/start.bsp")
+			SetNewParms (); 	// take away all stuff on starting new episode
+	}
+	
+	self.items = parm1;
+	self.health = parm2;
+	self.armorvalue = parm3;
+	self.ammo_shells = parm4;
+	self.ammo_nails = parm5;
+	self.ammo_rockets = parm6;
+	self.ammo_cells = parm7;
+	self.current_weapon = parm8;
+	self.armortype = parm9 * 0.01;
+
+	// TeamFortress Parameters
+	// Detect whether this is the first entrance into a map
+	if (toggleflags == 0)
+	{
+		toggleflags = parm10;
+		allow_hook = 0;
+		invis_only = 0;
+
+		if (coop || !deathmatch)
+			toggleflags = toggleflags | 1;
+
+		nextmap = mapname;
+
+	
+		allow_hook = 1;
+	
+
+		// Is this a FortressMap?
+		ent = find(world, classname, "info_tfdetect");
+		if (ent != world)
+		{
+			// Turn on Teamplay
+			if (teamplay == 0)
+				cvar_set("teamplay","21?TeamFortress");
+
+			// Parse the rest of the Detection details
+			ParseTFDetect(ent);
+
+			// If the number_of_teams wasn't set, then there's not TF
+			// spawnpoints on this lvl... so guess at 4 teams.
+
+			if ( deathmatch ) {
+				if ( number_of_teams <= 0 || number_of_teams >= 5 )
+					number_of_teams = 4;
+			} else
+				number_of_teams = 1;	// Gizmo - only one team on singleplayer/coop
+
+
+
+
+		}
+		else
+		{
+			// Is this a CTF map?
+			ent = find(world, classname, "info_player_team1");
+			if ((ent != world) || (CTF_Map == 1))
+			{
+				// Turn on CTF MAP
+				CTF_Map = 1;
+
+				// Turn on Teamplay
+				if (teamplay == 0)
+					cvar_set("teamplay","21?TeamFortress");
+
+				// Setup the CTF FlagCheck Timer
+				ent = spawn();
+				ent.nextthink = time + 30;
+				ent.think = CTF_FlagCheck;
+
+
+				if ( !deathmatch )
+					number_of_teams = 1;
+				else
+					number_of_teams = 2;
+
+
+
+			}
+			else // Normal map
+			{
+
+				if ( !deathmatch )
+					number_of_teams = 1;
+				else
+					number_of_teams = 4;
+
+
+
+			}
+
+			// Set speed limits
+
+
+
+			// set aiming level
+
+
+
+			// Set life limits
+			team1lives = -1;
+			team2lives = -1;
+			team3lives = -1;
+			team4lives = -1;
+
+			// WK Clear our nextspam counters
+			team1nextspam = -1;
+			team2nextspam = -1;
+			team3nextspam = -1;
+			team4nextspam = -1;
+
+			// Set illegal playerclasses
+			illegalclasses1 = 0;
+			illegalclasses2 = 0;
+			illegalclasses3 = 0;
+			illegalclasses4 = 0;
+
+			// Set Team Limits
+			team1maxplayers = 100;
+			team2maxplayers = 100;
+			team3maxplayers = 100;
+			team4maxplayers = 100;
+			civilianteams = 0;
+		}		 
+
+		// Ofn
+		PrintGameSettings(1);		 
+
+		SetupTeamEqualiser();
+
+		if (1)
+		{
+			toggleflags = toggleflags - (toggleflags & 128);
+		}
+		
+		if (0)
+		{
+			toggleflags = toggleflags | 128;
+		}
+		
+		if (0)
+		{
+			toggleflags = toggleflags | 2;
+		}
+
+	
+		st = infokey(world, "temp1");
+		toggleflags = (toggleflags | 256 | stof(st));
+	
+
+
+
+		local float autoteam_time;
+		autoteam_time = 30;
+
+	
+		// check all serverinfo settings, to set the appropriate toggleflags
+		//local string st;
+
+		// AUTOTEAM
+		st = infokey(world, "a");
+		if (st == string_null)
+			st = infokey(world, "autoteam");
+		if (st == "on")
+			toggleflags = toggleflags | 64;
+		else if (st == "off")
+			toggleflags = toggleflags - (toggleflags & 64);
+		else if (stof(st) != 0)
+		{
+			toggleflags = toggleflags | 64;
+			autoteam_time = stof(st);
+		}
+
+		// TEAMFRAGS
+		st = infokey(world, "t");
+		if (st == string_null)
+			st = infokey(world, "teamfrags");
+		if (st == "on")
+			toggleflags = toggleflags | 128;
+		else if (st == "off")
+			toggleflags = toggleflags - (toggleflags & 128);
+		// PZ - for AGR mode
+		if (agr)
+		{
+			if (agr_teamfrags)
+				toggleflags = toggleflags | 128;
+			else
+				toggleflags = toggleflags - (toggleflags & 128);
+		}
+		// end AGR mod
+
+		//WK JELLO WATER
+		st = infokey(world, "j");
+		if (st == string_null)
+			st = infokey(world, "jello");
+		if (st == "on")
+			jello = 1;
+		else {
+			local float numba;
+			numba = stof(st);
+			if (numba)
+				jello = numba;
+			else
+				jello = 0;
+		}
+
+		//WK JELLO WATER
+		light_damage = 0;
+		st = infokey(world, "ld");
+		if (st == string_null)
+			st = infokey(world, "lightdamage");
+		if (st == "on")
+			light_damage = 1;
+
+		// SB New, improved TF 2.9 fake prematch mode!
+		// We can make a class, come in, run around, play tag the flag, but can't do anything
+		// useful until the prematch is over!
+		
+		st = infokey(world, "pm");
+		if (st == string_null) // if 'pm' isn't set, try 'prematch'
+			st = infokey(world, "prematch");
+		if (st == "on") // if it reads 'on', do a 30 second prematch
+			prematchtime = time + 30;
+		else // if it doesn't read 'on'...
+			prematchtime = stof(st); // turn the string into a float
+		if (prematchtime) // if we have prematch
+		{
+			prematch = time + prematchtime; // set it
+			// PZ: why require autoteam after prematch?? (no more)
+			//autoteam_time = prematchtime;
+			//toggleflags = toggleflags | #TFLAG_AUTOTEAM;
+			// PZ: for some reason, prematch was riding on autoteam code (no more)
+			ent = spawn();
+			ent.nextthink = time + prematchtime;
+			ent.think = PrematchBegin;
+		}
+		else
+			prematch = 0; // otherwise, no prematch
+		
+		//WK Bounty System
+		st = infokey(world, "bounty");
+		if (st == string_null)
+			st = infokey(world, "moola");
+		if (st == "on")
+			bounty = 1;
+		else
+			bounty = 0;
+
+		//CH Sets the starting amount of money :)
+		/*st = infokey(world, "m");
+		if (st == string_null)
+			st = infokey(world, "money");
+		local float numba;
+		numba = stof(st);
+		if (numba)
+			custom_money = numba;
+		else
+			custom_money = #SPENDING_LIMIT; // --> DEFAULT_MONEY 
+		MOVED TO UDPATEINFOS()*/
+
+		// GRAPPLING HOOK
+		st = infokey(world, "g");
+		if (st == string_null)
+			st = infokey(world, "grapple");
+		if (st == "off")
+			allow_hook = 0;
+		if (!(toggleflags & 1024) && st != "on")
+			allow_hook = 0;
+
+		// SPY OFF
+		st = infokey(world, "spy");
+		if (st == "off")
+			spy_off = 1;
+
+		// SPY INVIS ONLY
+		st = infokey(world, "s");
+		if (st == string_null)
+			st = infokey(world, "spyinvis");
+		if (st == "on" || toggleflags & 512)
+			invis_only = 1;
+		else if (st == "off")
+			invis_only = 0;
+
+		// RespawnDelay
+		st = infokey(world, "rd");
+		if (st == string_null)
+			st = infokey(world, "respawn_delay");
+		respawn_delay_time = stof(st);
+		if (respawn_delay_time)
+			toggleflags = toggleflags | 4;
+	
+
+
+
+
+
+		// If no Respawndelay has been specified, set the default
+		if (toggleflags & 4 && respawn_delay_time == 0)
+			respawn_delay_time = 5;
+
+		// Prevent autoteam from kicking in for 30 seconds.
+		// Allows restructuring of the teams from the last map nicely.
+		if (toggleflags & 64)
+		{
+			toggleflags = toggleflags - (toggleflags & 64);
+			ent = spawn();
+			ent.nextthink = time + autoteam_time;
+			ent.think = autoteam_think;
+		}
+	}
+
+	if (parm11)
+		self.tfstate = parm11;
+	if (self.playerclass == 0)
+		self.playerclass = parm12;
+
+
+	if (parm13)
+		self.StatusBarRes = parm13;
+	if (parm14)
+		self.StatusBarSize = parm14;
+
+
+	if (parm15)
+		self.admin_flag = parm15; //CH Admin status :)
+
+};
+
+/*
+============
+FindIntermission
+
+Returns the entity to view from
+============
+*/
+entity() FindIntermission =
+{
+	local	entity spot;
+	local	float cyc;
+
+	// look for info_intermission first
+	spot = find (world, classname, "info_intermission");
+	if (spot)
+	{	// pick a random one
+		cyc = random() * 1;
+
+		// Following removed for the observer code
+		/*while (cyc > 1)
+		{
+			spot = find (spot, classname, "info_intermission");
+			if (!spot)
+				spot = find (spot, classname, "info_intermission");
+			cyc = cyc - 1;
+		}*/
+
+		return spot;
+	}
+
+// then look for the start position
+	spot = find (world, classname, "info_player_start");
+	if (spot)
+		return spot;
+
+// then look through the deathmatch starts
+	spot = find (world, classname, "info_player_deathmatch");
+	if (spot)
+	{	
+		// pick a random one
+		cyc = random() * 6;
+		while (cyc > 1)
+		{
+			spot = find (spot, classname, "info_player_deathmatch");
+			if (!spot)
+				spot = find (spot, classname, "info_player_deathmatch");
+			cyc = cyc - 1;
+		}
+		return spot;
+	}
+	
+	
+	objerror ("FindIntermission: no spot");
+};
+
+/*===========================
+FindNextIntermission
+
+returns the next intermission point
+===========================*/
+entity (entity start_point) FindNextIntermission =
+{
+	local	entity spot;
+	//local float cyc;
+
+	if (deathmatch)
+	{
+	// look through info_intermission first
+		if (start_point.classname == "info_intermission" || start_point == world)
+		{
+			spot = find (start_point, classname, "info_intermission");
+			if (spot)
+				return spot;
+			else
+				start_point = world;
+		}
+
+
+	// then look through the deathmatch starts
+		if (start_point.classname == "info_player_deathmatch" || start_point == world)
+		{
+			spot = find (start_point, classname, "info_player_deathmatch");
+			if (spot)
+				return spot;
+		}
+
+		// at the end of the list
+		spot = find (world, classname, "info_intermission");
+		if (spot)
+			return spot;
+
+		spot = find (world, classname, "info_player_deathmatch");
+		if (spot)
+			return spot;
+	}
+	else // do not cycle though in co-op or single
+	{
+		spot = find (world, classname, "info_player_start");
+		if (spot)
+			return spot;
+	}
+
+	// it should never reach this point
+	return FindIntermission();	
+};
+
+
+/*==================================================
+
+TF_MovePlayer
+Moves the player to another intermission viewpoint
+
+====================================================*/
+
+void() TF_MovePlayer =
+{
+	local entity place;
+
+	place = FindNextIntermission(self.observer_list);
+
+	self.observer_list = place;
+
+	setorigin(self, place.origin + '0 0 1');
+	self.angles = place.angles;
+	self.fixangle = 1;		// turn this way immediately
+
+};
+
+//- OfN - Map cycling code modified to match TF2.8 standard
+float(float checkIP, float noIdlers) GetNoPlayers;
+void() SetCycleTimeoutTimer;
+void() SetCycleErrorCheck;
+void() SetCycleTimer;
+
+float() DoExtraCycle =
+{
+	local string nfmap, temp;
+	local float minplayers, maxplayers, itsok, currentpl;
+
+	nfmap = infokey(world, "nmap");
+
+	// if null then return
+	if (nfmap == string_null)
+		return 0;
+
+	if (infokey(world,"minp")!="")
+		minplayers = stof(infokey(world,"minp"));
+	else
+		minplayers = 0;
+
+	if (infokey(world,"maxp")!="")
+		maxplayers = stof(infokey(world,"maxp"));
+	else
+		maxplayers = 32;
+
+	itsok = 1;
+
+	currentpl = GetNoPlayers(0, 0);
+
+	// check conditions
+	if (minplayers > currentpl) {
+		bprint(2,"Map ");
+		nfmap = infokey(world, "nmap");
+		bprint(2, nfmap);
+		bprint(2," skipped ≠ minimum players ");
+		temp = ftos(minplayers);
+		bprint(2, temp);
+		bprint(2," ®currently ");
+		temp = ftos(currentpl);
+		bprint(2, temp);
+		bprint(2,"©\n");
+		itsok = 0;
+	} else if (maxplayers < currentpl) {
+		bprint(2,"Map ");
+		nfmap = infokey(world, "nmap");
+		bprint(2, nfmap);
+		bprint(2," skipped ≠ maximum players ");
+		temp = ftos(maxplayers);
+		bprint(2,temp);
+		bprint(2," ®currently ");
+		temp = ftos(currentpl);
+		bprint(2,temp);
+		bprint(2,"©\n");
+		itsok = 0;
+	}
+
+	// cleanup
+	localcmd("localinfo minp \"\"\n");
+	localcmd("localinfo maxp \"\"\n");
+	//locals clean
+
+	// execute map conditions ok
+	if (itsok) {
+		nfmap = infokey(world, "nmap");
+		LaunchMap(nfmap);
+
+		return 1;
+	} else {
+		localcmd("localinfo nmap \"\"\n");
+		return 0;
+	}
+
+	return 0;
+};
+
+void() GotoNextMap;
+
+void() cycle_timer_think =
+{
+	GotoNextMap();
+	dremove(self);
+};
+
+void() cycle_timeout_think =
+{
+	// Silently report to server console and remote debugger
+	//RPrint("Warning: Error executing map cfg file, it doesn't exist or it doesn't make an explicit map change\n\n Attempting direct map launch...\n\n");
+	
+	// Direct map launch
+	local string tmap;
+
+	tmap = infokey(world,"tmap");
+	localcmd("map ");
+	localcmd(tmap);
+	localcmd("\n");
+
+	// If map is really launched the following timer never runs
+	SetCycleErrorCheck();		 
+	dremove(self);
+};
+
+void() cycle_error_think =
+{
+	// Get name of problematic map	  
+	local string tmap;
+	tmap = infokey(world,"tmap");
+
+	// And display it to every1 on server
+	bprint(2,"Server failed loading map \"");
+	bprint(2,tmap);
+	bprint(2,"\" (Skipping...)\n");
+	
+	// Also log it to server console
+	RPrint("ERROR TRYING TO LAUNCH \"");
+	RPrint(tmap);
+	RPrint("\" MAP!\n");
+
+	// Clean up, not need anyway as it is done on worlspawn
+	localcmd("localinfo tmap \"\"\n");
+
+	already_chosen_map = 0;
+	SetCycleTimer();
+
+	dremove(self);
+};
+
+void() SetCycleTimeoutTimer =
+{
+	newmis = spawn();
+	newmis.classname = "cycletimeout_timer";
+	newmis.nextthink = time + 1;
+	newmis.think = cycle_timeout_think;
+};
+
+void() SetCycleTimer =
+{
+	newmis = spawn();
+	newmis.classname = "cyclemap_timer";
+	newmis.nextthink = time + 0.3;
+	newmis.think = cycle_timer_think;
+};
+
+void() SetCycleErrorCheck =
+{
+	newmis = spawn();
+	newmis.classname = "cycleerror_timer";
+	newmis.nextthink = time + 1;
+	newmis.think = cycle_error_think;
+};
+
+
+/*
+	CheckFailedMapChange - used to check if a changelevel() call failed
+
+	By Gizmo
+*/
+
+void () fail_think =
+{
+	bprint (2, "Map change failed! Defaulting to start...\n");
+	//changelevel ("start");
+	// fix changelevel bug?
+	localcmd ("map start\n");
+	remove (self);
+};
+
+void () CheckFailedMapChange =
+{
+	newmis = spawn();
+	newmis.nextthink = time + 5;
+	newmis.think = fail_think;
+};
+
+
+void() GotoNextMap =
+{
+	local float nextlevel;
+	local string sl;
+	//local entity te;
+	local string cyc;
+	local string nmap;
+
+	// Gizmo - this enables nextmap voting on coop
+	nmap = infokey (world, "nmap");
+	localcmd ("localinfo nmap \"\"\n");
+
+	// Gizmo - check if the samelevel cvar is set to 1
+	if ( cvar( "samelevel" ) == 1 ) {
+		changelevel( mapname );
+		already_chosen_map = 1;
+	} else if (nextmap != mapname || nmap != string_null) {
+		if (nmap != string_null)
+			nextmap = nmap;
+
+		changelevel (nextmap);
+		CheckFailedMapChange ();
+		already_chosen_map = 1;
+	}
+
+	if ( !already_chosen_map )
+		already_chosen_map = DoExtraCycle();
+
+	if (!already_chosen_map) {
+		if (1) // PZ - AGR off on map triggered by rotation
+			localcmd ("localinfo agr \"\"\n");
+
+		sl = infokey (world, "n");
+		nextlevel = stof (sl);
+
+		nextlevel = nextlevel + 1;	// next level
+		sl = ftos (nextlevel);
+		localcmd ("serverinfo n ");
+		localcmd (sl);
+		localcmd ("\n");
+		
+		
+		// change map
+		cyc = infokey (world, "cycledir");
+
+		if (cyc == string_null)
+			localcmd ("exec cpcycle/map");
+		else {
+			localcmd ("exec ");
+			localcmd (cyc);
+			localcmd ("/map");
+		}
+
+		localcmd (sl);
+		localcmd (".cfg\n");
+	}
+
+/*
+	// Gizmo - if the above didn't produce a serverinfo/localinfo nmap then default to start
+	if (!already_chosen_map && infokey(world, "nmap") != string_null)
+		already_chosen_map = DoExtraCycle ();
+	else if (!already_chosen_map && infokey(world, "nmap") == string_null)
+		changelevel ("start");
+*/
+
+	if (infokey(world, "n") == "0")
+		already_chosen_map = 0;
+
+	// Gizmo - this is only called if the map wasn't changed to for min/max player reasons
+	// Gizmo - all this does is set a timer to call GotoNextMap again and try the next map from the infokey(world, "n") number
+	if (already_chosen_map == 0) // nothing was done yet, so set the damn timer..
+		SetCycleTimer ();
+};
+
+
+void() ExitIntermission =
+{
+	RPrint("Exiting intermission...\n");
+// skip any text in deathmatch
+	if (deathmatch)
+	{
+		RPrint("Exit Intermission in Deathmatch.\n");
+		GotoNextMap ();
+		return;
+	}
+	
+	intermission_exittime = time + 1;
+	intermission_running = intermission_running + 1;
+
+//
+// run some text if at the end of an episode
+//
+	if (intermission_running == 2)
+	{
+		if (world.model == "maps/e1m7.bsp")
+		{
+			WriteByte (2, 32);
+			WriteByte (2, 2);
+			WriteByte (2, 3);
+			if (!cvar("registered"))
+			{
+				WriteByte (2, 31);
+				WriteString (2, "As the corpse of the monstrous entity\nChthon sinks back into the lava whence\nit rose, you grip the Rune of Earth\nMagic tightly. Now that you have\nconquered the Dimension of the Doomed,\nrealm of Earth Magic, you are ready to\ncomplete your task in the other three\nhaunted lands of Quake. Or are you? If\nyou don't register Quake, you'll never\nknow what awaits you in the Realm of\nBlack Magic, the Netherworld, and the\nElder World!");
+			}
+			else
+			{
+				WriteByte (2, 31);
+				WriteString (2, "As the corpse of the monstrous entity\nChthon sinks back into the lava whence\nit rose, you grip the Rune of Earth\nMagic tightly. Now that you have\nconquered the Dimension of the Doomed,\nrealm of Earth Magic, you are ready to\ncomplete your task. A Rune of magic\npower lies at the end of each haunted\nland of Quake. Go forth, seek the\ntotality of the four Runes!");
+			}
+			return;
+		}
+		else if (world.model == "maps/e2m6.bsp")
+		{
+			WriteByte (2, 32);
+			WriteByte (2, 2);
+			WriteByte (2, 3);
+
+			WriteByte (2, 31);
+			WriteString (2, "The Rune of Black Magic throbs evilly in\nyour hand and whispers dark thoughts\ninto your brain. You learn the inmost\nlore of the Hell-Mother; Shub-Niggurath!\nYou now know that she is behind all the\nterrible plotting which has led to so\nmuch death and horror. But she is not\ninviolate! Armed with this Rune, you\nrealize that once all four Runes are\ncombined, the gate to Shub-Niggurath's\nPit will open, and you can face the\nWitch-Goddess herself in her frightful\notherworld cathedral.");
+			return;
+		}
+		else if (world.model == "maps/e3m6.bsp")
+		{
+			WriteByte (2, 32);
+			WriteByte (2, 2);
+			WriteByte (2, 3);
+
+			WriteByte (2, 31);
+			WriteString (2, "The charred viscera of diabolic horrors\nbubble viscously as you seize the Rune\nof Hell Magic. Its heat scorches your\nhand, and its terrible secrets blight\nyour mind. Gathering the shreds of your\ncourage, you shake the devil's shackles\nfrom your soul, and become ever more\nhard and determined to destroy the\nhideous creatures whose mere existence\nthreatens the souls and psyches of all\nthe population of Earth.");
+			return;
+		}
+		else if (world.model == "maps/e4m7.bsp")
+		{
+			WriteByte (2, 32);
+			WriteByte (2, 2);
+			WriteByte (2, 3);
+
+			WriteByte (2, 31);
+			WriteString (2, "Despite the awful might of the Elder\nWorld, you have achieved the Rune of\nElder Magic, capstone of all types of\narcane wisdom. Beyond good and evil,\nbeyond life and death, the Rune\npulsates, heavy with import. Patient and\npotent, the Elder Being Shub-Niggurath\nweaves her dire plans to clear off all\nlife from the Earth, and bring her own\nfoul offspring to our world! For all the\ndwellers in these nightmare dimensions\nare her descendants! Once all Runes of\nmagic power are united, the energy\nbehind them will blast open the Gateway\nto Shub-Niggurath, and you can travel\nthere to foil the Hell-Mother's plots\nin person.");
+			return;
+		}
+
+		GotoNextMap();
+	}
+	
+	if (intermission_running == 3)
+	{
+		if (!cvar("registered"))
+		{	// shareware episode has been completed, go to sell screen
+			WriteByte (2, 33);
+			return;
+		}
+		
+		if ( (serverflags&15) == 15)
+		{
+			WriteByte (2, 31);
+			WriteString (2, "Now, you have all four Runes. You sense\ntremendous invisible forces moving to\nunseal ancient barriers. Shub-Niggurath\nhad hoped to use the Runes Herself to\nclear off the Earth, but now instead,\nyou will use them to enter her home and\nconfront her as an avatar of avenging\nEarth-life. If you defeat her, you will\nbe remembered forever as the savior of\nthe planet. If she conquers, it will be\nas if you had never been born.");
+			return;
+		}
+		
+	}
+
+	RPrint("Exit Intermission.\n");
+	
+	GotoNextMap();
+};
+
+/*
+============
+IntermissionThink
+
+When the player presses attack or jump, change to the next level
+============
+*/
+void() IntermissionThink =
+{
+	if (time < intermission_exittime)
+		return;
+
+	if (!self.button0 && !self.button1 && !self.button2)
+		return;
+
+	if (ServerUpdating())
+		return;
+	
+	if (!triggered_cycle)
+	{
+		RPrint("Intermission think.\n");
+		triggered_cycle = 1;
+		GotoNextMap();
+	}
+};
+
+/*
+============
+execute_changelevel
+
+The global "nextmap" has been set previously.
+Take the players to the intermission spot
+============
+*/
+void() PrintResults;
+void() execute_changelevel =
+{
+	local entity	pos;
+	RPrint("execute_changelevel()\n");
+
+	PrintResults();
+
+	World_FadeEnd(2.9,2.9,0);
+
+	intermission_running = 1;
+	
+	// enforce a wait time before allowing changelevel
+	intermission_exittime = time + 10;
+
+	pos = FindIntermission ();
+
+	// play intermission music
+	// OfN TODO: remove this?
+	//WriteByte (#MSG_ALL, #SVC_CDTRACK);
+	//WriteByte (#MSG_ALL, 3);
+
+	WriteByte (2, 30);
+	WriteCoord (2, pos.origin_x);
+	WriteCoord (2, pos.origin_y);
+	WriteCoord (2, pos.origin_z);
+	WriteAngle (2, pos.mangle_x);
+	WriteAngle (2, pos.mangle_y);
+	WriteAngle (2, pos.mangle_z);
+	
+	other = find (world, classname, "player");
+	while (other != world)
+	{
+		other.takedamage = 0;
+		other.solid = 0;
+		other.movetype = 0;
+		other.modelindex = 0;
+		other = find (other, classname, "player");
+	}	
+
+};
+
+
+// Gizmo
+void() changelevel_use =
+{
+	other = activator;
+
+	if (cvar("samelevel") == 2 || (cvar("samelevel") == 3 && mapname != "start")) {
+		T_Damage (other, self, self, 50000);
+		return;
+	}
+
+	if ( self.message ) {
+		if ( !( self.spawnflags & 4 ) )
+			bprint( 2, other.netname );
+		bprint( 2, self.message );
+		bprint( 2, "\n" );
+	} else {
+		bprint (2, other.netname);
+		bprint (2, " exited the level\n");
+	}
+
+	nextmap = self.map;
+
+	SUB_UseTargets ();
+
+	if ( (self.spawnflags & 1) && (deathmatch == 0) )
+	{	// NO_INTERMISSION
+		GotoNextMap();
+		return;
+	}
+
+	self.use = SUB_Null;
+	self.touch = SUB_Null;
+
+	// we can't move people right now, because touch functions are called
+	// in the middle of C movement code, so set a think time to do it
+	self.think = execute_changelevel;
+	self.nextthink = time + 0.1;
+};
+
+void() changelevel_touch =
+{
+	//local entity pos;
+	//local float ne;
+	//local string st;
+
+	if (other.classname != "player")
+		return;
+
+	if (cvar("samelevel") == 2 || (cvar("samelevel") == 3 && mapname != "start")) {
+		T_Damage (other, self, self, 50000);
+		return;
+	}
+
+	bprint (2, other.netname);
+	bprint (2, " exited the level\n");
+
+	nextmap = self.map;
+
+	SUB_UseTargets ();
+
+	if ( (self.spawnflags & 1) && (deathmatch == 0) )
+	{	// NO_INTERMISSION
+		GotoNextMap();
+		return;
+	}
+
+	self.use = SUB_Null;
+	self.touch = SUB_Null;
+
+	// we can't move people right now, because touch functions are called
+	// in the middle of C movement code, so set a think time to do it
+	self.think = execute_changelevel;
+	self.nextthink = time + 0.1;
+};
+
+/*QUAKED trigger_changelevel (0.5 0.5 0.5) ? NO_INTERMISSION NOTOUCH NOPLAYERNAME
+When the player touches this, he gets sent to the map listed in the "map" variable.  Unless the NO_INTERMISSION flag is set, the view will go to the info_intermission spot and display stats.
+*/
+void() trigger_changelevel =
+{
+	if (CheckExistence() == 0)
+	{
+		dremove(self);
+		return;
+	}
+
+	if (!self.map)
+		objerror ("changelevel trigger doesn't have map");
+	
+	InitTrigger ();
+
+	if ( !( self.spawnflags & 2 ) )
+		self.touch = changelevel_touch;
+
+	// Gizmo - can now be triggered
+	if ( self.targetname )
+		self.use = changelevel_use;
+};
+
+
+/*
+=============================================================================
+
+				PLAYER GAME EDGE FUNCTIONS
+
+=============================================================================
+*/
+
+void() set_suicide_frame;
+
+// called by ClientKill and DeadThink
+void() respawn =
+{
+/*	if (!(self.done_custom == 0 || (self.done_custom & #CUSTOM_ON_SPAWN))) // do not spawn in prematch
+		if (prematch < time)
+		{
+			sprint(self, #PRINT_HIGH, "Sorry, there are still ");
+			sprint(self, #PRINT_HIGH, prematch - time);
+			sprint(self, #PRINT_HIGH, " seconds of prematch remaining. Type custom to recreate your class.\n");
+			return;
+		}
+*/		
+
+	if (coop)
+	{
+		// Gizmo - if in coop 3, then do not allow respawning
+		if ( coop == 3 ) {
+
+			if ( self.modelindex == modelindex_player ) {
+				if ( self.attack_finished < time ) {
+					if ( self.last_saveme_sound < time )
+						sprint( self, 2, "You must wait for a medic!\n" );
+					self.impulse = 181;
+					DeadImpulses();
+					self.attack_finished = time + 0.25;
+				}
+			} else {
+				sprint( self, 2, "You're dead for good!\n" );
+				PlayerObserverMode();
+				self.monsterweight = 1;
+			}
+
+
+
+
+
+			self.tfstate = self.tfstate - ( self.tfstate & 8192 );
+		} else {
+			// make a copy of the dead body for appearances sake
+			CopyToBodyQue (self);
+
+			self.velocity = '0 0 0'; // Thanks catscratch
+			self.button0 = 0;
+			self.button1 = 0;
+			self.button2 = 0;
+
+			// get the spawn parms as they were at level start
+			setspawnparms (self);
+			// respawn		
+			PutClientInServer ();
+		}
+	}
+	else
+
+    if (deathmatch)
+	{
+		// make a copy of the dead body for appearances sake
+		CopyToBodyQue (self);
+
+		self.velocity = '0 0 0'; // Thanks catscratch
+		self.button0 = 0;
+		self.button1 = 0;
+		self.button2 = 0;
+
+		// set default spawn parms
+		SetNewParms ();
+		// respawn		
+		PutClientInServer ();
+	}
+	else
+	{
+
+		// restart the level
+		changelevel( mapname );
+
+
+
+	}
+};
+
+/*
+============
+ClientKill
+
+Player entered the suicide command
+============
+*/
+void() ClientKill =
+{
+	if (intermission_running)
+		return;
+
+	if (ceasefire) 
+	{
+		sprint(self,2,"You can't suicide during a ceasefire!\n");
+		return;
+	}
+
+	if (self.flags & 8192)
+		return;
+	
+	local float finished;
+	local entity te;
+	//WK Stop music
+	sound (self, 5, "misc/null.wav", 0.1, 1);
+
+	if (self.suicide_time > time)
+		return;
+
+	if (self.deadflag)
+		return;
+
+	// players can't suicide again for 10 seconds
+	self.suicide_time = time + 5 + (random() * 5);
+
+	//WK If building class, remove flag and start over
+	if (self.playerclass == 11 && (self.done_custom & 4))
+	{
+		sprint(self, 2,"You can type ¢custom¢ again to start over!\n");
+		return;
+		//WK self.done_custom = #CUSTOM_ON_SPAWN | #CUSTOM_FINISHED;
+	}
+	if (self.playerclass == 0)
+	{
+		sprint(self, 2,"You aren't alive!\n");
+		return;
+	}
+
+	if (prematch < time)
+	{
+		bprint (1, self.netname);
+		bprint (1, " suicides\n");
+	}
+
+	set_suicide_frame();
+	self.modelindex = modelindex_player;
+
+	// If infected, give the medic a frag
+	if (self.tfstate & 16)
+	{
+		finished = 0;
+		te = find(world, classname, "timer");
+		while (te)
+		{
+			if (te.owner == self && te.think == BioInfection_Decay)
+			{
+			
+				logfrag(te, self);
+			
+				te.enemy.real_frags = te.enemy.real_frags + 1;
+				if (!(toggleflags & 128))
+					te.enemy.frags = te.enemy.real_frags;
+				finished = 1; //Thanks lostman
+			}
+
+			te = find(te, classname, "timer");
+			if (finished) te = world;
+		}
+	}
+
+	else 
+		logfrag (self, self);
+
+
+	self.real_frags = self.real_frags - 1;
+	if (teamplay & 32768) //WK
+		self.real_frags = self.real_frags - 1;
+
+	if (!(toggleflags & 128))
+		self.frags = self.real_frags;
+
+	self.weaponmodel= "";
+	self.view_ofs = '0 0 -8';
+	self.movetype = 0;
+
+	//WK If building class, remove flag and start over
+	if (self.playerclass == 11 && (self.done_custom & 4))
+	{
+		sprint(self, 2,"You can type ¢custom¢ again to start over!\n");
+		self.done_custom = 1 | 2;
+		return; //ch
+	}
+
+	// Remove all timers for this player
+	TeamFortress_RemoveTimers();
+	TeamFortress_SetupRespawn(1);
+
+	// Drop any runes he would carry
+	PlayerDropRunes(self);
+
+	self.health = -1;
+	self.th_die();
+//	self.deadflag = #DEAD_RESPAWNABLE;		// Gizmo - commented this out, th_die() takes care of it
+	self.tfstate = self.tfstate | 8192;
+//	self.respawn_time = time;
+};
+
+////////////////////////////////////
+// FindTeamSpawnPoint
+//////////
+entity lastspawn_team1;
+entity lastspawn_team2;
+entity lastspawn_team3;
+entity lastspawn_team4;
+
+entity(float team_num) FindTeamSpawnPoint =
+{
+	local entity spot;
+	local entity at_spot;
+	local float spot_found;
+	local float attempts;
+
+	if (team_num == 1)
+	{
+		spot = lastspawn_team1;
+
+		attempts = 0;
+		// search through until found or end-of-list
+		while (1)
+		{
+			attempts = attempts + 1;
+
+			spot = find(spot, team_str_home, "ts1");
+
+			if (spot == world)
+				spot = find(world, team_str_home, "ts1");
+
+			if (spot == world)
+				return world;
+		
+			at_spot = findradius(spot.origin, 40);
+			spot_found = 1;
+
+			while (at_spot != world)
+			{
+				if (at_spot.classname == "player" && at_spot.deadflag == 0)
+				{
+					spot_found = 0;					
+				}	
+				
+				at_spot = at_spot.chain;			
+			}
+
+			// Check the Criteria of the spawnpoint
+			if (!Activated(spot, self))
+				spot_found = 0;
+
+			if ((spot_found) || (attempts >= 30))
+			{
+				lastspawn_team1 = spot;
+				return spot;
+			}
+		}
+
+	}
+	else if (team_num == 2)
+	{
+		spot = lastspawn_team2;
+
+		attempts = 0;
+		// search through until found or end-of-list
+		while (1)
+		{
+			attempts = attempts + 1;
+
+			spot = find(spot, team_str_home, "ts2");
+
+			if (spot == world)
+				spot = find(world, team_str_home, "ts2");
+
+			if (spot == world)
+				return world;
+		
+			at_spot = findradius(spot.origin, 40);
+			spot_found = 1;
+
+			while (at_spot != world)
+			{
+				if (at_spot.classname == "player" && at_spot.deadflag == 0)
+				{
+					spot_found = 0;					
+				}	
+				
+				at_spot = at_spot.chain;			
+			}
+
+			// Check the Criteria of the spawnpoint
+			if (!Activated(spot, self))
+				spot_found = 0;
+
+			if ((spot_found) || (attempts >= 30))
+			{
+				lastspawn_team2 = spot;
+				return spot;
+			}
+		}
+	}
+	else if (team_num == 3)
+	{
+		spot = lastspawn_team3;
+
+		attempts = 0;
+		// search through until found or end-of-list
+		while (1)
+		{
+			attempts = attempts + 1;
+
+			spot = find(spot, team_str_home, "ts3");
+
+			if (spot == world)
+				spot = find(world, team_str_home, "ts3");
+
+			if (spot == world)
+				return world;
+		
+			at_spot = findradius(spot.origin, 40);
+			spot_found = 1;
+
+			while (at_spot != world)
+			{
+				if (at_spot.classname == "player" && at_spot.deadflag == 0)
+				{
+					spot_found = 0;					
+				}	
+				
+				at_spot = at_spot.chain;			
+			}
+
+			// Check the Criteria of the spawnpoint
+			if (!Activated(spot, self))
+				spot_found = 0;
+
+			if ((spot_found) || (attempts >= 30))
+			{
+				lastspawn_team3 = spot;
+				return spot;
+			}
+		}
+	}
+	else if (team_num == 4)
+	{
+		spot = lastspawn_team4;
+
+		attempts = 0;
+		// search through until found or end-of-list
+		while (1)
+		{
+			attempts = attempts + 1;
+
+			spot = find(spot, team_str_home, "ts4");
+
+			if (spot == world)
+				spot = find(world, team_str_home, "ts4");
+
+			if (spot == world)
+				return world;
+		
+			at_spot = findradius(spot.origin, 40);
+			spot_found = 1;
+
+			while (at_spot != world)
+			{
+				if (at_spot.classname == "player" && at_spot.deadflag == 0)
+				{
+					spot_found = 0;					
+				}	
+				
+				at_spot = at_spot.chain;			
+			}
+
+			// Check the Criteria of the spawnpoint
+			if (!Activated(spot, self))
+				spot_found = 0;
+
+			if ((spot_found) || (attempts >= 30))
+			{
+				lastspawn_team4 = spot;
+				return spot;
+			}
+		}
+	}
+
+	// failure
+	return world;
+};
+
+/*
+============
+SelectSpawnPoint
+
+Returns the entity to spawn at
+============
+*/
+entity() SelectSpawnPoint =
+{
+	local	entity spot;
+	local	entity at_spot;
+	local	float  spot_found;
+	local	float  attempts;
+	
+	// testinfo_player_start is only found in regioned levels
+
+	if ( !deathmatch ) {
+		spot = find (world, classname, "testplayerstart");
+		if (spot)
+			return spot;
+	}
+
+
+	// If FortressMap option is on, we want to make the player spawn on a 
+	// spawnpoint marked as being one for his/her team.
+	// The team that owns a spawnpoint is kept in the spawnpoints's teamno
+	if (self.team_no != 0)
+	{
+		spot = FindTeamSpawnPoint(self.team_no);
+		if (spot != world)
+			return spot;
+
+		// failure to find a team spawn point for that player
+		// just move on
+	}
+
+	// choose a info_player_deathmatch point
+
+	if (coop)
+	{
+		lastspawn = find(lastspawn, classname, "info_player_coop");
+		if (lastspawn == world)
+			lastspawn = find (world, classname, "info_player_coop");
+				
+		if (lastspawn != world)
+			return lastspawn;
+	}
+	else
+
+
+	if (deathmatch)
+	{
+		// search through
+		spot = find(lastspawn, classname, "info_player_deathmatch");
+		if (spot == world)
+			spot = find(world, classname, "info_player_deathmatch");
+
+		attempts = 0;
+		while (spot != world && attempts < 100)
+		{
+			attempts = attempts + 1;
+
+			// reject spot if other players are found at point
+			at_spot = findradius(spot.origin, 40);
+			spot_found = 1;
+			while (at_spot)
+			{
+				if (at_spot.classname == "player" && at_spot.deadflag == 0)
+				{
+					spot_found = 0;					
+				}	
+				
+				at_spot = at_spot.chain;			
+			}
+
+			// Make sure we don't get locked by people standing on all
+			// the spawnpoints.
+			if ((spot_found) || (attempts >= 10))
+			{
+				lastspawn = spot;
+				return spot;
+			}
+			
+			spot = find(spot, classname, "info_player_deathmatch"); 
+			
+			if (spot == world)
+				spot = find(world, classname, "info_player_deathmatch");
+		}
+	}
+
+	if (serverflags)
+	{	// return with a rune to start
+		spot = find (world, classname, "info_player_start2");
+		if (spot)
+			return spot;
+	}
+	
+	spot = find (world, classname, "info_player_start");
+	if (!spot)
+		error ("PutClientInServer: no info_player_start on level\n");
+	
+	return spot;
+};
+
+//================================================
+// Cleans up everything ^_^
+
+void() CleanUpEverything =
+{
+	SetMeatUsage(self,4);
+	SetHeadsUsage(self,4);
+	SetCurrentSoul(self,0);
+
+	if (self.has_holo > 0 ) RemoveHolo(self);
+
+	kill_my_demons();
+	RemoveArmyTimer();
+	
+	DetonateMines(self);
+	DetonateAllGunsForced();
+
+	if (self.job & 128)
+		self.delay_time = 0;
+	else
+		self.delay_time = 1; // Avoids setting an armytimer when not needed by switching/rebuilding class*/
+
+	if (!(self.flags & 8192)) // Only if not a "finalized" player
+		self.dont_do_triggerwork = 0; // warlock points/guerilla mine kills or army rating
+	
+	self.increase_team4 = 0; // used by army/warlock status bar and guerilla stuff
+	
+	// Clean up pointers
+	// fixes like when having hacked something and getting army/warlock, phantom monsters
+	self.demon_one = world;
+	self.demon_two = world;
+	self.demon_three = world;
+
+	TeamFortress_RemoveTimers();
+
+	RemoveArmyTimer();
+
+	// Reset our "job initialization done" flag to false
+	self.goal_activation = 0;
+};
+
+void() DecodeLevelParms;
+void() PlayerDie;
+void() TeamFortress_SetHealth;
+void() TeamFortress_SetEquipment;
+void() player_touch;
+void(entity p) TeamFortress_SetSpeed;
+void(entity p) TeamFortress_SetSkin;
+
+/*
+===========
+SetClientAlive
+
+Sets a player so that he is alive.
+Their health and armor are set to the standard respawning amounts.
+Note that this sets the player's frame also.
+===========
+*/
+void() SetClientAlive = {
+	local entity	te;
+
+	self.th_pain = player_pain;
+	self.th_die = PlayerDie;
+	self.touch = player_touch;
+	self.classname = "player";
+	self.takedamage = 2;
+	self.solid = 3;
+	self.movetype = 3;
+	self.show_hostile = 0;
+	self.is_malfunctioning = 0;
+	self.is_abouttodie = 0;
+
+	// OfN
+	self.has_holo = 0;
+	self.is_killed = 0;
+
+	self.message = ""; // reset for gremlin and cool gibs (heads)
+	self.FlashTime = 0;
+	self.flags = 8;
+	self.aura = 0; //- OfN
+	self.crusader_inspirator=world; // OfN - needed?
+	self.gravity = 1; //WK
+	self.air_finished = time + 12;
+	self.dmg = 2;			// initial water damage
+	self.super_damage_finished = 0;
+	self.radsuit_finished = 0;
+	self.invisible_finished = 0;
+	self.invincible_finished = 0;
+	self.effects = 0;
+	self.invincible_time = 0;
+	self.reload_shotgun = 0;
+	self.reload_super_shotgun = 0;
+	self.reload_grenade_launcher = 0;
+	self.reload_rocket_launcher = 0;
+	self.reload_light_assault = 0;
+	self.reload_laser_cannon = 0;
+	self.last_attacked_time = 0; //WK For chaplan healing purposes
+
+	self.deadflag = 0;
+	// pausetime is set by teleporters to keep the player from moving a while
+	self.pausetime = 0;
+	self.view_ofs = '0 0 22';
+
+	// grapple stuff
+	self.on_hook = 0;
+	self.hook_out = 0;
+	self.fire_held_down = 0;
+
+	// Reset all tfstate flags, except for RANDOMPC and ZOOMOFF
+	self.tfstate = self.tfstate & ( 8 | 4096 );
+
+	makeImmune( self, time + 5 );
+
+	if (self.playerclass != 11)
+	{
+		self.max_health = 100;
+		self.health = 100;
+	}
+	
+	// OfN - FIx grenade on spawn
+	te = find(world,classname,"grenade_timer");
+	while (te)
+	{
+		if (te.owner == self)
+		{
+			te.nextthink = time + 0.1;
+			te.think = SUB_Remove;
+		}
+
+		te = find(te,classname,"grenade_timer");
+	}
+
+	// Set the weapons and ammo for the player based on class
+	TeamFortress_SetEquipment();
+	// Set the health for the player based on class
+	TeamFortress_SetHealth();
+	// Set the speed for the player based on class
+	TeamFortress_SetSpeed(self);
+	// Set the skin for the player based on class
+	TeamFortress_SetSkin(self);
+	stuffcmd(self, "v_idlescale 0\n");
+	stuffcmd(self, "v_cshift 0 0 0 0\n");
+	//WK Clear Bastard Rotation
+	stuffcmd(self, "-left;-right;cl_yawspeed 140\n");
+
+
+	setmodel (self, string_null);
+	modelindex_null = self.modelindex;
+
+
+	setmodel (self, "progs/eyes.mdl");
+	modelindex_eyes = self.modelindex;
+
+	setmodel (self, "progs/player.mdl");
+	modelindex_player = self.modelindex;
+
+	setsize (self, '-16 -16 -24', '16 16 32');
+};
+
+/*
+===========
+PutClientInServer
+
+called each time a player is spawned
+============
+*/
+void() PutClientInServer =
+{
+
+
+
+	local float iszoom, oldclass;
+	local entity spot, te;
+	local string rjtmp;
+
+	DecodeLevelParms ();
+
+/*	if (self.is_cameraviewing)
+		SwitchFromCamera();*/
+
+
+	// Force all players to be on the same team in Coop mode
+	if ( coop ) {
+		// teamplay must be at least set to something
+		if ( !teamplay ) {
+			teamplay = 21;
+			cvar_set( "teamplay", "21?TeamFortress" );
+		}
+
+		// only set team if we're not already on a team
+		if ( !self.team_no )
+			TeamFortress_TeamSet( 1 );
+	}
+
+
+	// Set the Civilian Class of anyone in a Civilian Team
+	if (self.playerclass == 0)
+	{
+		if (TeamFortress_TeamIsCivilian(self.team_no))
+		{
+			self.impulse = 1;
+			TeamFortress_ChangeClass();
+		}
+	}
+
+	// For players who've changed their classes in deathmatch 3, 
+	// their class may be PC_RANDOM, in which case we set the toggleflag
+
+	if ( ( coop && self.nextpc != 0 ) || ( deathmatch == 3 && self.nextpc != 0 ) ) {
+
+
+
+		// Did we switch our player class?
+		if (self.playerclass != self.nextpc)
+		if (!(self.done_custom & 1)) // and not going to customize, which will call it on DropToCustom
+		{
+			CleanUpEverything(); // if so, kill all our stuff
+			ResetStripedAndGiven(self);
+		}
+
+		self.playerclass = self.nextpc;
+
+		if (self.nextpc == 10)
+			self.tfstate = self.tfstate | 8;
+		else
+			self.tfstate = self.tfstate - (self.tfstate & 8);
+	}
+
+	// some states are kept
+	iszoom = 0;
+
+	if (self.tfstate & 4096)
+		iszoom = 1;
+
+	// Reset all tfstate flags, except for RANDOMPC
+	if (self.tfstate & 8)
+	{
+		oldclass = self.playerclass;
+		self.playerclass = 1 + floor(random() * (10 - 1));
+		while(!IsLegalClass(self.playerclass) || (self.playerclass == oldclass))
+			self.playerclass = 1 + floor(random() * (10 - 1));
+		self.tfstate = 8;
+	}
+	else
+		self.tfstate = 0;
+
+	if (iszoom == 1)
+		self.tfstate = self.tfstate | 4096;
+
+	// Gizmo - created SetClientAlive() so it can be used in other places as well
+	SetClientAlive();
+
+	// Display the Player's Class
+	if (!(self.done_custom == 0 || (self.done_custom & 1)))
+	{
+		if (self.playerclass != 11)
+			TeamFortress_PrintClassName(self,self.playerclass, (self.tfstate & 8));
+		else 
+			TeamFortress_PrintJobName(self,self.job);
+	}
+
+	//WK Again, since they could lose their sentrygun in SetEquip...
+	DetonateAllGuns();
+
+
+	SetTeamName(self);
+
+
+	self.attack_finished = time + 0.3;
+
+	// make sure that autozoom is reset
+	if (self.height != 0)
+	{
+		self.height = 0;
+		TF_zoom(90);
+	}
+
+	spot = SelectSpawnPoint ();
+
+	self.observer_list = spot;
+	self.origin = spot.origin + '0 0 1';
+	self.angles = spot.angles;
+	self.fixangle = 1;		// turn this way immediately
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	// If this is a TeamSpawnpoint, check to see if it
+	// gives out a GoalItem, or displays a message
+	if (spot.classname == "info_player_teamspawn")
+	{
+		if (spot.items != 0)
+		{
+			te = Finditem(spot.items);
+			if (te)
+				tfgoalitem_GiveToPlayer(te, self, self);
+
+			if (!(spot.goal_activation & 1))
+				spot.items = 0;
+		}
+
+		// Display teamspawn message
+		if (spot.message)
+		{
+			CenterPrint(self, spot.message);
+
+			if (!(spot.goal_activation & 2))
+				spot.message = string_null;
+		}
+
+		// Activate a Goal if needed
+		if (spot.activate_goal_no != 0)
+		{
+			te = Findgoal(spot.activate_goal_no);
+			if (te)
+				AttemptToActivate(te, self, spot);
+		}
+
+		// TeamSpawn points can remove themselves after being spawned on
+		if (spot.goal_effects == 1)
+		{
+			spot.classname = "deadpoint";
+			spot.team_str_home = string_null;
+			spot.nextthink = time + 1;
+			spot.think = SUB_Remove;
+		}
+	}
+
+	if (self.playerclass == 0)
+	{
+
+		self.modelindex = modelindex_null;
+
+
+
+		self.current_menu = 1;
+		self.gravity = 0;
+	}
+
+	//WK DropIntoCustomClassGeneration
+	if (self.playerclass == 11)
+	{
+//WK Done_custom is initialized to 0, hackish yes.
+//There are two entries, unintialized 0, or a person having issued a 'custom' command
+//which sets the #CUSTOM_ON_SPAWN flag
+		if (self.done_custom == 0 || (self.done_custom & 1))
+		{
+			DropToCustomClassGen();
+		}
+		else
+		{
+			self.maxspeed = self.custom_speed; //Reset our speed
+		}
+	}
+	else {
+		self.done_custom = 0; //Unitialize this. Maybe set to ON_SPAWN...
+	}
+
+	player_stand1 ();
+
+	if (deathmatch || coop)
+	{
+		makevectors(self.angles);
+		if (self.playerclass != 0) {
+			spawn_tfog (self.origin + v_forward*10);
+			spawn_tdeath (self.origin, self);
+		}
+	}
+
+
+	// Set Rocket Jump Modifiers
+	
+	rjtmp = infokey(world, "rj");
+	if (stof(rjtmp) != 0)
+		rj = stof(rjtmp);
+	else
+		rj = 1;
+
+
+	//This code is in three places. client,custom & tfort.qc
+	//WK Give them invincibility if they are a normal class or bought it
+	if ((self.playerclass >= 1 && self.playerclass <= 10) ||
+	self.tf_items & 4096) {
+		self.items = self.items + 1048576;
+		self.invincible_time = 1;
+
+		if ( !deathmatch )
+			self.invincible_finished = time + 2;
+		else
+
+		self.invincible_finished = time + 5;
+		if (self.custom_speed > 300)
+			self.invincible_finished = self.invincible_finished - 1;			
+		if (self.custom_speed > 400)
+			self.invincible_finished = self.invincible_finished - 1;			
+	}
+};
+
+
+/*
+=============================================================================
+
+				QUAKED FUNCTIONS
+
+=============================================================================
+*/
+
+
+
+/*
+==============
+ValidSpawnPoint
+
+Checks if the given spawn point is stuck inside the world.
+For maps with bad coops spawns like terra6.
+==============
+*/
+float( entity point ) ValidSpawnPoint = {
+	local entity	tent, oself;
+	local float 	ret;
+
+	tent = spawn();
+	tent.solid = 3;
+	tent.movetype = 4;
+	setsize( tent, '-16 -16 -24', '16 16 32' );
+	setorigin( tent, point.origin );
+
+	oself = self;
+	self = tent;
+
+	self.origin_z = self.origin_z + 1;
+	droptofloor();
+
+	ret = walkmove( 0, 0 );
+
+	self = oself;
+
+	remove( tent );
+	return ret;
+};
+
+
+
+/*QUAKED info_player_start (1 0 0) (-16 -16 -24) (16 16 24)
+The normal starting point for a level.
+*/
+void() info_player_start =
+{
+	if (CheckExistence() == 0)
+	{
+		dremove(self);
+		return;
+	}
+};
+
+
+/*QUAKED info_player_start2 (1 0 0) (-16 -16 -24) (16 16 24)
+Only used on start map for the return point from an episode.
+*/
+void() info_player_start2 =
+{
+	if (CheckExistence() == 0)
+	{
+		dremove(self);
+		return;
+	}
+};
+
+
+/*
+saved out by quaked in region mode
+*/
+void() testplayerstart =
+{
+	if (CheckExistence() == 0)
+	{
+		dremove(self);
+		return;
+	}
+
+};
+
+/*QUAKED info_player_deathmatch (1 0 1) (-16 -16 -24) (16 16 24)
+potential spawning position for deathmatch games
+*/
+void() info_player_deathmatch =
+{
+	if (CheckExistence() == 0)
+	{
+		dremove(self);
+		return;
+	}
+
+
+	// if we're in singleplayer or coop, then remove the spawn to save entities
+	if ( !deathmatch ) {
+		remove( self );
+		return;
+	}
+
+};
+
+/*QUAKED info_player_coop (1 0 1) (-16 -16 -24) (16 16 24)
+potential spawning position for coop games
+*/
+void() info_player_coop =
+{
+	if (CheckExistence() == 0)
+	{
+		dremove(self);
+		return;
+	}
+
+
+	// if we're not in coop mode, then remove the spawn to save entities
+	if ( !coop ) {
+		remove( self );
+		return;
+	}
+	if ( !ValidSpawnPoint( self ) ) {
+		dprint( "Bad placement of coop spawn at: " );
+		dprint( vtos( self.origin ) );
+		dprint( "\n" );
+
+		remove( self );
+		return;
+	}
+
+};
+
+/*
+===============================================================================
+
+RULES
+
+===============================================================================
+*/
+
+void(entity c) PrintClientScore =
+{
+	if (c.frags > -10 && c.frags < 0)
+		bprint (1, " ");
+	else if (c.frags >= 0)
+	{
+		if (c.frags < 100)
+			bprint (1, " ");
+		if (c.frags < 10)
+			bprint (1, " ");
+	}
+	bprint (1, ftos(c.frags));
+	bprint (1, " ");
+	bprint (1, c.netname);
+	bprint (1, "\n");
+};
+
+void() DumpScore =
+{
+	local entity	e, sort, walk;
+
+	if (world.chain)
+		error ("DumpScore: world.chain is set");
+
+// build a sorted lis
+	e = find(world, classname, "player");
+	sort = world;
+	while (e)
+	{
+		if (!sort)
+		{
+			sort = e;
+			e.chain = world;
+		}
+		else
+		{
+			if (e.frags > sort.frags)
+			{
+				e.chain = sort;
+				sort = e;
+			}
+			else
+			{
+				walk = sort;
+				do
+				{
+					if (!walk.chain)
+					{
+						e.chain = world;
+						walk.chain = e;
+					}
+					else if (walk.chain.frags < e.frags)
+					{
+						e.chain = walk.chain;
+						walk.chain = e;
+					}
+					else
+						walk = walk.chain;
+				} while (walk.chain != e);
+			}
+		}
+		
+		e = find(e, classname, "player");
+	}
+
+// print the list
+	
+	bprint (1, "\n");	
+	while (sort)
+	{
+		PrintClientScore (sort);
+		sort = sort.chain;
+	}
+	bprint (1, "\n");
+};
+
+/*
+go to the next level for deathmatch
+*/
+float already_cycled;
+
+void() NextLevel =
+{
+	if (ServerUpdating())
+		return;
+
+	local entity o;
+	//local string st;
+	
+	if (already_cycled)
+		return;
+
+	agr = 0; // PZ - makes timer sounds and such stop
+
+	already_cycled = 1;
+
+	o = spawn();
+	o.map = nextmap;
+	o.think = execute_changelevel;
+	o.nextthink = time + 0.1;
+};
+
+/*
+============
+CheckRules
+
+Exit deathmatch games upon conditions
+============
+*/
+void() CheckRules =
+{
+	/*if (ServerUpdating())
+		return;*/ //OPTIMIZED: checked on NextLevel, because this crap is called every frame by all clients..
+	
+	if (timelimit && time >= timelimit)
+		NextLevel ();
+	else if (fraglimit && self.frags >= fraglimit)
+		NextLevel ();
+};
+
+//============================================================================
+
+void() PlayerDeathThink =
+{
+	if (self.flags & 8192)
+		return;
+
+	//local entity	old_self;
+	local float 	forward;
+
+	if ((self.flags & 512) && self.message != "cool")
+	{
+		forward = vlen (self.velocity);
+		forward = forward - 20;
+		if (forward <= 0)
+			self.velocity = '0 0 0';
+		else	
+			self.velocity = forward * normalize(self.velocity);
+	}
+
+	// wait for all buttons released
+	if (self.deadflag == 2)
+	{
+		if (self.button2 || self.button1 || self.button0)
+			return;
+		self.deadflag = 3;
+		// make sure that respawn flag has not been set
+		self.tfstate = self.tfstate - (self.tfstate & 8192);
+		return;
+	}
+
+	// wait for any button down
+	if (!self.button2 && !self.button1 && !self.button0)
+	{
+		// if no buttons, but respawn_ready flag is set, respawn
+		if (self.tfstate & 8192)
+		{
+			if (self.respawn_time <= time)
+			{
+				self.button0 = 0;
+				self.button1 = 0;
+				self.button2 = 0;
+				respawn();
+			}
+		}
+		return;
+	}
+	else
+	{
+		// button has been pressed, player is ready to respawn
+		self.tfstate = self.tfstate | 8192;
+
+		if (self.respawn_time <= time)
+		{
+			self.button0 = 0;
+			self.button1 = 0;
+			self.button2 = 0;
+			respawn();
+		}
+		return;
+	}
+};
+
+void() PlayerJump =
+{
+	if (self.done_custom & 4) // OfN
+	{
+		self.velocity = '0 0 0';
+		return; // Dont jump if customizing
+	}
+
+	if (self.flags & 8192)
+		return;
+
+	// OfN - Psionized guys can't jump
+	if (self.tfstate & 1048576)
+	{
+		if (self.velocity_z > 0)
+			self.velocity_z = 0;
+
+		return;
+	}
+	
+	//local vector start, end;
+
+	if (self.flags & 2048)
+		return;
+
+	if (self.waterlevel >= 2)
+	{
+		if (self.watertype == -3)
+			self.velocity_z = 100;
+		else if (self.watertype == -4)
+			self.velocity_z = 80;
+		else
+			self.velocity_z = 50;
+		//WK
+		if (self.tf_items & 512)
+			self.velocity_z = 250;
+
+// play swiming sound
+		if (self.cutf_items & 2048) // SB no noise if we have stealth
+			return;
+		
+		if (self.swim_flag < time)
+		{
+			self.swim_flag = time + 1;
+			if (random() < 0.5)
+				sound (self, 4, "misc/water1.wav", 1, 1);
+			else
+				sound (self, 4, "misc/water2.wav", 1, 1);
+		}
+
+		return;
+	}
+
+	if (!(self.flags & 512))
+		return;
+
+	if (!(self.flags & 4096) )
+		return; 	// don't pogo stick
+
+	// Gizmo - jump bug fix
+	if (self.velocity_z < 0)
+		self.velocity_z = 0;
+
+	self.flags = self.flags - (self.flags & 4096);
+	self.button2 = 0;
+// player jumping sound
+	if (!(self.cutf_items & 2048)) // Only play it if we don't have stealth
+		sound (self, 4, "player/plyrjmp8.wav", 1, 1);
+
+	//WK Sprinters jump higher
+	//SB No, people with high jump do
+	if (self.cutf_items & 4096)
+		self.velocity_z = self.velocity_z + 400;
+
+
+
+
+};
+
+
+/*
+===========
+WaterMove
+
+============
+*/
+.float	dmgtime;
+
+void() WaterMove =
+{
+//	RPrint (ftos(self.waterlevel));
+	if (self.movetype == 8)
+		return;
+	if (self.health < 0)
+		return;
+
+	if (self.flags & 8192)
+		return;
+
+	//WK Poison attacks
+	if (self.tfstate & (16384 | 32768))
+	{
+		if (self.air_finished < time)
+		{	// drown!
+			if (self.pain_finished < time)
+			{
+				self.dmg = self.dmg + 0.5;
+				if (self.dmg == 2.5) //Initial damage is 2
+					sprint(self,2,"Your lungs are still paralyzed. Try to minimize your exposure to poison\n");
+				if (self.dmg > 6)
+					self.dmg = 2.2;
+				if (self.dmg < self.health - 1)
+					TF_T_Damage (self, world, world, self.dmg, 1, 0);
+				self.pain_finished = time + 1;
+			}
+		}
+	}
+	else if (self.waterlevel != 3)
+	{
+		if (self.air_finished < time)
+			sound (self, 2, "player/gasp2.wav", 1, 1);
+		else if (self.air_finished < time + 9)
+			sound (self, 2, "player/gasp1.wav", 1, 1);
+		self.air_finished = time + 12;
+		self.dmg = 2;
+	}
+	else if (self.air_finished < time)
+	{	// drown!
+		if (self.pain_finished < time)
+		{
+			self.dmg = self.dmg + 2;
+			if (self.dmg > 15)
+				self.dmg = 10;
+			TF_T_Damage (self, world, world, self.dmg, 1, 0);
+			self.pain_finished = time + 1;
+		}
+	}
+	
+	if (!self.waterlevel)
+	{
+		if (self.flags & 16)
+		{	
+			// play leave water sound
+			if (!(self.cutf_items & 2048)) // SB only if no stealth
+				sound (self, 4, "misc/outwater.wav", 1, 1);
+			self.flags = self.flags - 16;
+			//WK Setspeed for Scuba commando
+			if (self.tf_items & 512)
+				TeamFortress_SetSpeed(self);
+		}
+		return;
+	}
+
+	if (self.watertype == -5)
+	{	// do damage
+		if (self.dmgtime < time)
+		{
+			if (self.radsuit_finished > time)
+				self.dmgtime = time + 1;
+			else
+				self.dmgtime = time + 0.2;
+
+			// Asbestos armor helps against lava, but I doubt it'll save you :)
+			TF_T_Damage (self, world, world, 10*self.waterlevel, 0, 16);
+		}
+	}
+	else if (self.watertype == -4)
+	{	// do damage
+		if (self.dmgtime < time && self.radsuit_finished < time)
+		{
+			self.dmgtime = time + 1;
+			//T_Damage (self, world, world, 4*self.waterlevel);
+			TF_T_Damage (self, world, world, 4*self.waterlevel, 0, 8);
+		}
+	}
+	
+	if ( !(self.flags & 16) )
+	{	
+		// player enter water sound
+		if (!(self.cutf_items & 2048))
+			if (self.watertype == -5)
+				sound (self, 4, "player/inlava.wav", 1, 1);
+			else if (self.watertype == -3)
+				sound (self, 4, "player/inh2o.wav", 1, 1);
+			else if (self.watertype == -4)
+				sound (self, 4, "player/slimbrn2.wav", 1, 1);
+
+		self.flags = self.flags + 16;
+		self.dmgtime = 0;
+		//WK Setspeed for scuba commando
+		if (self.tf_items & 512)
+			TeamFortress_SetSpeed(self);
+	}
+
+
+
+
+
+};
+
+void() CheckWaterJump =
+{
+	local vector start, end;
+
+	// check for a jump-out-of-water
+	makevectors (self.angles);
+	start = self.origin;
+	start_z = start_z + 8; 
+	v_forward_z = 0;
+	normalize(v_forward);
+	end = start + v_forward*24;
+	traceline (start, end, 1, self);
+	if (trace_fraction < 1)
+	{	// solid at waist
+		start_z = start_z + self.maxs_z - 8;
+		end = start + v_forward*24;
+		self.movedir = trace_plane_normal * -50;
+		traceline (start, end, 1, self);
+		if (trace_fraction == 1)
+		{	// open at eye level
+			self.flags = self.flags | 2048;
+			self.velocity_z = 225;
+			self.flags = self.flags - (self.flags & 4096);
+			self.teleport_time = time + 2;	// safety net
+			return;
+		}
+	}
+};
+
+
+/*
+================
+PlayerPreThink
+
+Called every frame before physics are run
+================
+*/
+void() PlayerPreThink =
+{
+	if (self.flags & 8192)
+		return;
+
+	//local float	mspeed, aspeed, r;
+	local vector src;
+	//WK -- For LPB calculation
+	local string foo;
+	local float ping;
+
+	if (self.is_feigning && self.waterlevel == 1)
+	{
+		self.watertype = -3;
+		self.waterlevel = 3;
+	}
+
+	if (self.cheat_level > 0)
+		self.cheat_level = self.cheat_level - 1;
+	if (self.speed_level > 0) //Cyto
+		self.speed_level = self.speed_level - 1;
+	if (intermission_running)
+	{
+		IntermissionThink ();	// otherwise a button could be missed between
+		return; 				// the think tics
+	}
+
+	makevectors (self.v_angle); 	// is this still used?
+
+ // culled by KK. was QUAKE_WORLD
+	//if (infokey(world,"ceasefire")=="on") //Cyto
+	if (ceasefire)
+	{
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		if (self.current_menu == 1 || self.current_menu == 0)
+		if (self.duration < time)
+		{
+			if (self.endtime & 1)
+				CenterPrint(self,"ùûûûûûûûûûûûûûûûûûü\n√Â·ÛÂÊÈÚÂ ¡ÏÈÂÛ\nùûûûûûûûûûûûûûûûûûü");
+			else
+				CenterPrint(self,"ùûûûûûûûûûûûûûûûûûü\nCeasefire Applies\nùûûûûûûûûûûûûûûûûûü");
+			
+			self.duration = time + 0.5;
+
+			self.endtime = self.endtime + 1;
+		}
+																				  
+		if (!GoodCeasefireImpulse(self.impulse)) //See admin.qc
+			self.impulse = 0;
+
+		self.button0 = 0;
+		self.button1 = 0;
+		self.button2 = 0;
+	}
+	else if (self.lip)
+	{
+		self.lip = 0;
+		centerprint(self,"");
+	}
+
+// End Cyt0
+
+	CheckRules ();
+
+	//xxxx
+	//WK Supercharged observer mode!
+	if (self.playerclass == 0)
+	{
+		if (self.button0)
+		{
+			//WK Nifty code to push through walls only if we really want to
+			if (vlen(self.velocity) < 200)
+			{
+				src = self.origin + normalize(v_forward) * 5;
+				setorigin(self,src);
+			}
+			self.velocity = normalize(v_forward) * 400;
+		}
+		else
+		{
+			foo = infokey(self,"ping");
+			ping = 200;
+			if (foo != string_null)
+				ping = stof(foo);
+			if (ping < 300) {
+				self.velocity_x = floor((3 * self.velocity_x) / 4);
+				self.velocity_y = floor((3 * self.velocity_y) / 4);
+				self.velocity_z = 0; //WK 1-7-7 Change so that observers don't fall at all
+			}
+		}
+		if (self.button2)
+			self.velocity = '0 0 0';
+		return;
+	//WK Removed jump == autoteam
+	//WK Removed all the demo stuff stuff.
+	}
+
+	if (self.view_ofs == '0 0 0')
+		return; 	// intermission or finale
+
+	if (self.playerclass != 0)
+		WaterMove();
+
+
+
+
+
+
+	if (self.deadflag >= 2)
+	{
+		PlayerDeathThink ();
+		return;
+	}
+
+	if (self.undercover_team || self.undercover_skin || self.is_undercover)
+	{
+		if (self.effects & (8 | 4))
+		{
+			sprint(self, 1, "The glowing removes your disguise.\n");
+			Spy_RemoveDisguise(self);
+		}
+	}
+	/*if (self.job & #JOB_THIEF && self.job & #JOB_FULL_HIDE) 
+	{
+		if (self.effects & (#EF_DIMLIGHT | #EF_BRIGHTLIGHT))
+		{
+			sprint(self, #PRINT_MEDIUM, "The glowing removes your full invisibility.\n");
+			self.job = self.job - (self.job & #JOB_FULL_HIDE);
+			self.job = self.job | #JOB_ACTIVE;
+		}
+	} */
+	
+	if (self.deadflag == 1)
+		return; // dying, so do nothing
+
+	if (!self.is_feigning)
+	{
+		if (self.button2)
+		{
+			PlayerJump (); //WK This just does noises for jumps
+		}
+		else
+			self.flags = self.flags | 4096;
+	}
+
+	//WK Scuba commando treads water :)
+	if ((self.tf_items & 512) && self.waterlevel > 1) {
+		if (self.velocity_z >= -25 && self.velocity_z < 0)
+			self.velocity_z = 10; //Tread water if near a stop
+	}
+	
+	//Jello Water :)
+	else if (jello && self.waterlevel > 1) {
+		if (jello == 1) //Binary on/off
+			self.velocity_z = 1000; //900 is a better number for 2forts
+		else
+			self.velocity_z = jello;
+	}
+
+	// PZ: added part of WK's BH restriction code (only affects glowers (flag carriers))
+	//WK 5-15-08 The bunny hop caps only apply while the player is on the ground or water or firing our hover boots
+	// Can't use custom_speed since it's only set on Custom PCs
+	local vector tempvel;
+	local float tempspeed;
+	if (self.flags & 512 || self.waterlevel > 1 || (self.tf_items & 16384 && self.button2)) {
+		/*local string foobar;
+		tempspeed = vlen(self.velocity);
+		foobar = ftos(tempspeed);
+		if (tempspeed > 100) {
+			sprint(self,#PRINT_HIGH,"Speed: ");
+			sprint(self,#PRINT_HIGH,foobar);
+			sprint(self,#PRINT_HIGH,"Maxspeed: ");
+			tempspeed = self.maxspeed;
+			foobar = ftos(tempspeed);
+			sprint(self,#PRINT_HIGH,foobar);
+			sprint(self,#PRINT_HIGH,"\n");
+		}*/
+			
+		// PZ: no Bunny Hopping for people with the flag (glowers)
+		if (self.effects & (8 | 4)) {
+			if (self.maxspeed < 0) self.maxspeed = 0;
+			tempvel_x = self.velocity_x; //We only care about horizontal movement
+			tempvel_y = self.velocity_y;
+			tempvel_z = 0;
+			tempspeed = vlen(tempvel);
+			if (tempspeed > self.maxspeed) {
+				tempspeed = self.maxspeed / tempspeed;
+				self.velocity_x = self.velocity_x * tempspeed; //Only slow down horizontal movement
+				self.velocity_y = self.velocity_y * tempspeed;
+			}
+		}
+	}
+
+	// teleporters can force a non-moving pause time	
+	if (time < self.pausetime)
+		self.velocity = '0 0 0';
+
+	// Gizmo - fixed this happening while building
+	if (time > self.attack_finished && self.currentammo == 0 && self.weapon > 16 && !self.is_building)
+	{
+		self.weapon = W_BestWeapon ();
+		W_SetCurrentAmmo ();
+	}
+
+	// Do grapple stuff if I'm on a hook
+	if (self.on_hook)
+	{
+		Service_Grapple ();
+		if (self.button2 && self.velocity_z > 10)
+			self.velocity_z = 10;	//WK Allow more creative physics with hook
+	}
+	
+
+	//WK Add Hover Boot Support
+	//WK 1/7/7 Allow people to jump when wearing boots
+	if (self.tf_items & 16384) { 
+		if (self.button2 && self.velocity_z < 0 && self.hover_time > 0 && self.waterlevel == 0 && !(self.flags & 512))
+		{	//Try to hover
+			self.velocity_z = 100; //+10 == hover
+			self.hover_time = self.hover_time - 0.25; //0.1 == tick time
+			if (self.hover_time <= 0) {
+				self.hover_time = -5; //3 second penalty for draining it
+				sprint(self,2,"Your boots are out of fuel, let them recharge\n");
+			}
+			//Spit out fire from them!
+			if (self.search_time < time) {
+			sound (self, 0, "weapons/flmfire2.wav", 1, 1);
+			local entity flame;
+			flame = spawn();
+			flame.owner = self;flame.movetype = 9;
+			flame.solid = 2;flame.classname = "flamerflame";
+			makevectors (self.v_angle);
+			flame.velocity = -1 * v_up; flame.velocity = flame.velocity * 600;
+			flame.touch = Boot_Flamer_stream_touch;flame.think = s_explode1;
+			flame.nextthink = time + 0.1;setmodel (flame, "progs/s_explod.spr");
+			setsize (flame, '0 0 0', '0 0 0');
+			setorigin (flame, self.origin + v_up * -16);
+			self.search_time = time + 0.15;
+			}
+		}
+		else { //Recharger <- That's French for "recharge"
+			self.hover_time = self.hover_time + 0.01; //0.05 is a half-tick
+			if (self.hover_time > 5 && (!(self.tf_items & 524288)))
+				self.hover_time = 5;
+			if (self.hover_time > (5 * 2) && self.tf_items & 524288)
+				self.hover_time = (5 * 2);
+		}
+	}
+};
+	
+/*
+================
+CheckPowerups
+
+Check for turning off powerups
+================
+*/
+void() CheckPowerups =
+{
+	local float lighton;
+	local entity te;
+
+	if (self.health <= 0)
+		return;
+
+	// Invisibility
+	//WK Made people invis during building, and during thief's full hide
+	//WK And while being inspired by chaplan
+	if (self.done_custom & 4 || //We are building a custom class
+		  self.playerclass == 0 || //Or we're in observer mode
+		 (self.job & 1 && self.job & 4096) || //Or we are fully hiding thieves
+	   //(self.tfstate & #TFSTATE_INSPIRED && !(self.job & #JOB_CHAPLAN)) || //ofN comented by
+	   self.aura == 4) //- OfN
+	{
+		self.modelindex = modelindex_null;	// don't use eyes
+	}
+	else if ((self.is_undercover == 1 && invis_only == 1) || (self.job & 1 && self.job & 2048))
+	{
+		self.frame = 0;
+		self.modelindex = modelindex_eyes;
+	}
+	else if (self.invisible_finished)
+	{
+		// If this is being given by a goalitem, extend the time
+		if (self.tfstate & 64)
+		{
+			if (self.invisible_finished < time + 10)
+				self.invisible_finished = time + 666;
+		}
+
+		// sound and screen flash when items starts to run out
+		if (self.invisible_sound < time)
+		{
+			sound (self, 0, "items/inv3.wav", 0.5, 2);
+			self.invisible_sound = time + ((random() * 3) + 1);
+		}
+
+
+		if (self.invisible_finished < time + 3)
+		{
+			if (self.invisible_time == 1)
+			{
+				sprint(self, 2, "Ring of Shadows magic is fading\n");
+				stuffcmd (self, "bf\n");
+				sound (self, 0, "items/inv2.wav", 1, 1);
+				self.invisible_time = time + 1;
+			}
+			
+			if (self.invisible_time < time)
+			{
+				self.invisible_time = time + 1;
+				stuffcmd (self, "bf\n");
+			}
+		}
+
+		if (self.invisible_finished < time)
+		{	// just stopped
+			self.items = self.items - 524288;
+			self.invisible_finished = 0;
+			self.invisible_time = 0;
+		}
+		
+		// use the eyes
+		self.frame = 0;
+		self.modelindex = modelindex_eyes;
+	}
+	else
+		self.modelindex = modelindex_player;	// don't use eyes
+
+	// invincibility
+	if (self.invincible_finished)
+	{
+		// If this is being given by a goalitem, extend the time
+		if (self.tfstate & 32)
+		{
+			if (self.invincible_finished < time + 10)
+				self.invincible_finished = time + 666;
+		}
+
+		// sound and screen flash when items starts to run out
+		if (self.invincible_finished < time + 3)
+		{
+			if (self.invincible_time == 1)
+			{
+				sprint (self, 2, "Protection is almost burned out\n");
+
+				stuffcmd (self, "bf\n");
+				sound (self, 0, "items/protect2.wav", 1, 1);
+				self.invincible_time = time + 1;
+			}
+			
+			if (self.invincible_time < time)
+			{
+				self.invincible_time = time + 1;
+				stuffcmd (self, "bf\n");
+			}
+		}
+		
+		if (self.invincible_finished < time)
+		{	// just stopped
+			self.items = self.items - 1048576;
+			self.invincible_time = 0;
+			self.invincible_finished = 0;
+		}
+		if (self.invincible_finished > time)
+			self.effects = self.effects | 8;
+		else
+		{
+			// Only remove dimlight if it's not being supplied by a GoalItem
+			lighton = 0;
+			te = find (world, classname, "item_tfgoal");
+			while (te)
+			{
+				if (te.owner == self)
+				{
+					if (te.goal_activation & 1)
+						lighton = 1;
+				}
+				te = find(te, classname, "item_tfgoal");
+			}
+
+			if (!lighton)
+				self.effects = self.effects - (self.effects & 8);
+		}
+	}
+
+	// super damage
+	if (self.super_damage_finished)
+	{
+		// If this is being given by a goalitem, extend the time
+		if (self.tfstate & 128)
+		{
+			if (self.super_damage_finished == time + 10)
+				self.super_damage_finished = time + 666;
+		}
+
+		// sound and screen flash when items starts to run out
+		if (self.super_damage_finished < time + 3 && !(self.tfstate & 131072))
+		{
+			if (self.super_time == 1)
+			{
+				sprint (self, 2, "Quad Damage is wearing off\n");
+				stuffcmd (self, "bf\n");
+				sound (self, 0, "items/damage2.wav", 1, 1);
+				self.super_time = time + 1;
+			}	  
+			
+			if (self.super_time < time)
+			{
+				self.super_time = time + 1;
+				stuffcmd (self, "bf\n");
+			}
+		}
+
+		if (self.super_damage_finished < time)
+		{	// just stopped
+			self.items = self.items - 4194304;
+			self.super_damage_finished = 0;
+			self.super_time = 0;
+			//WK If inspired, remove inspiration
+			self.tfstate = self.tfstate - (self.tfstate & 131072);
+		}
+		if (self.super_damage_finished > time)
+			self.effects = self.effects | 8;
+		else
+		{
+			// Only remove dimlight if it's not being supplied by a GoalItem
+			lighton = 0;
+			te = find (world, classname, "item_tfgoal");
+			while (te)
+			{
+				if (te.owner == self)
+				{
+					if (te.goal_activation & 1)
+						lighton = 1;
+				}
+				te = find(te, classname, "item_tfgoal");
+			}
+
+			if (!lighton)
+				self.effects = self.effects - (self.effects & 8);
+		}
+	}	
+
+	// suit 
+	if (self.radsuit_finished)
+	{
+		self.air_finished = time + 12;		// don't drown
+
+		// If this is being given by a goalitem, extend the time
+		if (self.tfstate & 256 || self.tf_items & 512)
+		{
+//WK Do we need this?	if (self.radsuit_finished == time + 10)
+				self.radsuit_finished = time + 666;
+		}
+
+		// sound and screen flash when items starts to run out
+		if (self.radsuit_finished < time + 3)
+		{
+			if (self.rad_time == 1)
+			{
+				sprint (self, 2, "Air supply in Biosuit expiring\n");
+				stuffcmd (self, "bf\n");
+				sound (self, 0, "items/suit2.wav", 1, 1);
+				self.rad_time = time + 1;
+			}
+			
+			if (self.rad_time < time)
+			{
+				self.rad_time = time + 1;
+				stuffcmd (self, "bf\n");
+			}
+		}
+
+		if (self.radsuit_finished < time)
+		{	// just stopped
+			self.items = self.items - 2097152;
+			self.rad_time = 0;
+			self.radsuit_finished = 0;
+		}
+	}	
+
+	if (self.aura == 4)
+		if (self.aura_time < time)
+		{
+			if (self.invisible_finished < time)
+				self.items = self.items - (self.items & 524288);
+			self.aura = 0;
+		}
+
+};
+
+void() DeadImpulses;
+
+/*
+================
+
+
+Called every frame after physics are run
+================
+*/
+void() PlayerPostThink =
+{
+	/*local float	mspeed, aspeed;
+	local	float	r;*/
+
+	if (self.flags & 8192)
+	{
+		if (self.dont_do_triggerwork == 4)
+			return;
+		
+		if ((self.ex_skill_max + 40) < time)
+		{
+			FinalizedPerformAction();
+			return;
+		}
+
+		if (self.ex_skill_min < time)
+		{
+			if (self.option2 == 1)
+			{
+				if (self.dont_do_triggerwork == 1)
+					stuffcmd(self,"team kick\n");
+				else if (self.dont_do_triggerwork == 2)
+					stuffcmd(self,"team ban\n");
+				else
+					stuffcmd(self,"team serm\n");
+				
+				self.option2 = 0;
+			}		   
+			else
+			{
+				if (self.dont_do_triggerwork == 1)
+					stuffcmd(self,"team \"ÎÈ„Î\"\n");
+				else if (self.dont_do_triggerwork == 2)
+					stuffcmd(self,"team \"‚·Ó\"\n");
+				else
+					stuffcmd(self,"team \"ÛÂÚÌ\"\n");
+				
+				self.option2 = 1;
+			}		   
+
+			self.ex_skill_min = time + 1;			 
+		}
+
+		return;
+	}
+
+	if (self.view_ofs == '0 0 0')
+		return; 	// intermission or finale
+ // culled by KK. was QUAKE_WORLD
+	//if (infokey(world,"ceasefire")=="on") //Cyto
+	if (ceasefire)
+		if (!GoodCeasefireImpulse(self.impulse)) //See admin.qc
+			self.impulse = 0;
+
+	if (self.deadflag)
+	{
+		DeadImpulses();  // check for dead-only commands
+		self.impulse = 0;
+		return;
+	}
+
+	// check to see if player landed and play landing sound 
+	if (self.takedamage && (self.jump_flag < -300) && (self.flags & 512) && (self.health > 0))
+	{
+		if (self.watertype == -3)
+		{
+			if (!(self.cutf_items & 2048))
+				sound (self, 4, "player/h2ojump.wav", 1, 1);
+		}
+		else if (self.jump_flag < -650)
+		{
+			if (!(self.cutf_items & 2048)) { //WK Judo teaches falling... SB ceaf judo
+				self.deathtype = "falling";
+				T_Damage (self, world, world, 5); 
+				sound (self, 2, "player/land2.wav", 1, 1);
+			}
+		}
+		else
+			if (!(self.cutf_items & 2048)) //WK Judo teaches falling... SB ceaf judo
+				sound (self, 2, "player/land.wav", 1, 1);
+	}
+
+
+	// Gizmo - check if we were going to be teamkilled by a friendly engy and we made it out of the lava
+	if ( self.trigger_field )
+	if ( self.watertype != -5 )
+	if ( pointcontents( self.origin ) != -5 )
+	if ( self.flags & 512 || self.flags & 1024 )	// we're out of lava and we're on solid ground so we're safe
+		self.trigger_field = world;
+
+
+
+	self.jump_flag = self.velocity_z;
+
+	CheckPowerups ();
+	W_WeaponFrame ();
+
+	//	Display MOTD
+	// Sync this with tforthlp.qc and menu.qc
+	if (self.motd < 1600)
+		TeamFortress_MOTD();
+	else if (self.cheat_check == 0)
+		self.cheat_check = time + 10;
+
+	else if (self.current_menu == 0 && time > self.StatusRefreshTime && self.StatusBarSize != 0)
+	{
+		if (!ceasefire)
+		{
+			if (self.StatusBarScreen == 1)
+				RefreshStatusBar1(self); //Sentry screen
+			else if (self.StatusBarScreen == 2)
+				RefreshStatusBar2(self); //Spy screen
+			else if (self.StatusBarScreen == 3)
+				RefreshStatusBar3(self); //Misc screen
+			else if (self.StatusBarScreen == 4)
+				RefreshStatusBar4(self); //Tesla screen
+			else if (self.StatusBarScreen == 5)
+				RefreshStatusBar5(self); //Scanner screen
+			else
+				RefreshStatusBar(self); //Normal scores and clip
+		}
+	}
+
+
+	// Check for Team Cheats
+	if (self.cheat_check <= time)
+	{
+		TeamFortress_CheckTeamCheats();
+
+	
+		self.cheat_check = time + 5;
+	
+
+
+	}
+};
+
+
+/*
+===========
+ClientConnect
+
+called when a player connects to a server
+============
+*/
+
+void() ClientConnect =
+{
+	local string st;
+
+	st = GetBracedClDesc(self);    
+	bprint (2, self.netname," ",st," has joined the server\n");
+
+	// PZ: make their team name and color blank when they join the server
+	stuffcmd(self, "team \"\"\n");
+	stuffcmd(self, "color \"0 0\"\n");
+	
+	//- OfN
+	self.admin_kick = world;
+
+	self.ex_skill_min = 0; // OfN - Used as password attempt count
+	self.ex_skill_max = time; // OfN - Used on cmnd.qc
+	self.option2 = time; // OfN - Used on cmnd.qc
+
+	self.goal_activation = 0; // Job initialized flag
+	self.runes_owned = 0; // Runes, 0 = none
+
+	self.endtime = 0; // Centerprint effect counter
+	
+	// Set Default autozoom
+	if (0 == 0)
+		self.tfstate = self.tfstate | 4096;
+
+	// Set the MOTD on
+	self.motd = 0;
+	// Clear the Alias Flag
+	self.got_aliases = 0;
+	self.ff_count = 0; //WK Clear the friendly-fire counter
+
+
+
+//RJM
+	st = infokey(self, "sbr");
+	if (st == string_null)
+//RJM
+		st = infokey(self, "sbar_res");
+	if (st == "768")
+		self.StatusBarRes = 8;
+	else if (st == "600")
+		self.StatusBarRes = 7;
+	else if (st == "480")
+		self.StatusBarRes = 6;
+	else if (st == "400")
+		self.StatusBarRes = 5;
+	else if (st == "384")
+		self.StatusBarRes = 4;
+	else if (st == "350")
+		self.StatusBarRes = 3;
+	else if (st == "300")
+		self.StatusBarRes = 2;
+	else if (st == "240")
+		self.StatusBarRes = 1;
+	else 
+		self.StatusBarRes = 0;
+//RJM
+	st = infokey(self, "sbs");
+	if (st == string_null)
+//RJM
+		st = infokey(self, "sbar_size");
+	self.StatusBarSize = stof(st);
+	if (self.StatusBarSize > 2 || self.StatusBarSize < 0)
+		self.StatusBarSize = 0;
+
+
+	//self.has_disconnected = #FALSE;
+	self.is_connected = 1;
+
+	//PlayerObserverMode(); //ofn already commented out
+	
+	self.gravity = 0;
+	self.movetype = 5;
+
+	// a client connecting during an intermission can cause problems
+	if (intermission_running)
+		GotoNextMap();
+
+	//- OfN Player joined event
+	PlayerJoined();
+};
+
+/*
+===========
+ClientDisconnect
+
+called when a player disconnects from a server
+============
+*/
+
+void() GibPlayerOut;
+void() set_suicide_frame_disc;
+
+void() ClientDisconnect =
+{
+	//local float teamsup;
+	local entity te;
+
+
+
+
+
+
+	local string st;
+
+	st = ftos (floor(self.real_frags));
+	bprint (2, self.netname);
+	bprint (2, " has left the game with ");
+	bprint (2, st);
+	bprint (2, " frags\n");// and ");
+
+	/*st = ftos (floor(self.ff_count));
+	bprint (#PRINT_HIGH, st);
+	bprint (#PRINT_HIGH, " teamkills\n");*/
+
+	if (self.admin_flag)
+	{
+		AdminLoggedOut(self);
+		self.admin_flag = 0;
+	}
+
+	self.message = "";
+
+	// Throw gib/head stuff if appropiate only
+	if (!(self.done_custom & 4)) // customizing, so nope
+	if (!(self.playerclass == 0))	// observing, so nope
+	if (self.modelindex == modelindex_player)	// are we visible and on a player model? (not a head)
+		GibPlayerOut(); // ok, gib him
+
+	// OfN - Adjust army rating of our teammates as needed
+	ArmyRatingLeave(self);
+
+	//- he got significant score?
+	/*local float temp_scr;
+	local float avr_team_scr;
+	avr_team_scr = (team1score + team2score + team3score + team4score) / number_of_teams;
+	temp_scr = fabs (self.real_frags) + self.ff_count;
+	
+	if ( (temp_scr > time || time > 20) && time < 60*60 && deathmatch == 3) 
+	{
+		local float final_score;
+		final_score = self.real_frags - self.ff_count*3 - avr_team_scr/2 ;
+		
+		if ( final_score < -50 )
+			bprint (#PRINT_HIGH, "bad enough to ban him! hehe\n");
+		else if (final_score < 0)
+			bprint (#PRINT_HIGH, "damn newbie!\n");
+		else if (final_score < 10)
+			bprint (#PRINT_HIGH, "he was not doing much\n");
+		else if (final_score < 30)
+			bprint (#PRINT_HIGH, "a regular player\n");
+		else if (final_score < 50)
+			bprint (#PRINT_HIGH, "not bad!\n");
+		else if (final_score < 75)
+			bprint (#PRINT_HIGH, "good score\n");
+		else if (final_score < 100)
+			bprint (#PRINT_HIGH, "cool score!\n");
+		else if (final_score < 125)
+			bprint (#PRINT_HIGH, "he is a real master of customTF!\n");
+		else bprint (#PRINT_HIGH, "omg! did he cheat? awesome score!\n");
+		Fortunatelly for his team
+	}*/
+
+	//- OfN
+	
+
+	sound (self, 4, "player/tornoff2.wav", 1, 0);
+	//self.has_disconnected = #TRUE;
+	self.is_connected = 0;
+
+	if (debug_target == self)
+		debug_target = world;
+
+	// Remove Timers
+	//TeamFortress_RemoveTimers(); Moved inside CleanUpEverything
+
+	CleanUpEverything();
+
+	// Drop any runes he would carry
+	PlayerDropRunes(self);
+
+	// Remove Buildings
+	////DetonateAllGunsForced();
+	/*Find_And_Dmg("building_dispenser", self, 1);
+	Find_And_Dmg("building_sentrygun", self, 1);
+	Find_And_Dmg("building_tesla", self, 1);
+	Find_And_Dmg("building_camera", self, 1);
+	Find_And_Dmg("building_teleporter", self, 1);
+	Find_And_Dmg("building_sensor", self, 1); //sb*/
+
+	//WK Added demon cleanup
+	////kill_my_demons();
+	//WK Added ammobox/pipebomb fix
+	te = find(world, classname, "ammobox");
+	while (te)
+	{
+		if (te.enemy == self) {
+			num_world_ammoboxes = num_world_ammoboxes - 1;
+			if (te.enemy.team_no != 0)
+				decrement_team_ammoboxes(self.team_no);
+			
+		}
+		te.think = SUB_Remove;
+		te.nextthink = time + 0.1;
+
+		te = find(te, classname, "ammobox");
+	}
+	te = find(world, classname, "pipebomb");
+	while (te)
+	{
+		if (te.owner == self) {
+			num_world_pipebombs = num_world_pipebombs - 1;
+			decrement_team_pipebombs(self.team_no); 	
+			te.think = SUB_Remove;
+			te.nextthink = time + 0.1;
+		}
+
+		te = find(te, classname, "pipebomb");
+	}
+
+	// OfN - Remove holograph if player disconnects!
+	////if (self.has_holo > 0 ) RemoveHolo(self);
+	////DetonateMines(self);  
+	////RemoveArmyTimer();
+
+	// Remove Detpacks
+	te = find(world, classname, "detpack");
+	while (te)
+	{
+		if (te.owner == self)
+		{
+			if (te.weaponmode == 1) 		  // Detpack was being disarmed
+			{	
+				te.enemy.tfstate = te.enemy.tfstate - (te.enemy.tfstate & 65536);
+		
+				TeamFortress_SetSpeed(te.enemy);
+		
+
+
+
+				dremove(te.oldenemy);	 // CountDown
+				dremove(te.observer_list); //	Disarm timer
+			}
+
+			dremove(te);
+			te = world;
+		}
+
+		te = find(te, classname, "detpack");
+	}
+
+	//- OfN - Player quit event
+	PlayerQuit();
+
+	set_suicide_frame_disc ();
+	self.netname = string_null;
+	self.team_no = 0;
+	self.solid = 0;
+	self.movetype = 0; //WK Stop crashing MOVETYPE_WALK bug?
+	setsize(self, '0 0 0', '0 0 0');
+
+	self.classname = "emptyclient";
+
+	// Gizmo - this used to be above ArmyRatingLeave() and under GibPlayerOut(), for whoever put it up there
+	// Remove our permanent strings (if any in use by us)
+	if (self.t_s_h != "")
+		delstr(self.t_s_h);
+	if (self.t_s_m != "")
+		delstr(self.t_s_m);
+	if (self.t_s_c != "")
+		delstr(self.t_s_c);	
+};
+
+//==============================================================
+// "Event" functions when a player joins or leaves
+
+void() UpdateMapSettings;
+void(entity player) ResetStripedAndGiven;
+
+void() PlayerJoined =
+{
+	num_players = num_players + 1;
+
+	UpdateMapSettings();
+
+	if (num_players == 1)
+		World_FadeIn(5.2,0,2); // 4.5, 2
+
+	ResetStripedAndGiven(self);
+	
+	self.owned_by = 0; // VOTED_JUSTJOINED
+
+	// Check if this player is hiding from a mute voting
+	if (votesleeping)
+	{
+		local entity sleepvote;
+
+		sleepvote = GetSleepVote();
+
+		if (sleepvote)
+		{
+			local string foo;
+			foo = infokey(self,"ip");
+
+			if (foo == sleepvote.message)
+			{
+				if (ValidVoteEnt()) // But.. shit we have another vote running!
+					sleepvote.admin_kick = self; // Will check in its thinks
+				else
+					SleepVoteResume(sleepvote,self); // Resume it!
+			}
+		}
+		else
+		{
+			RPrint("BUG: Unable check for resume of vote, GetSleepVote() failed!\n");
+		}		 
+	}
+	// Bastard Memory
+	// Is this player still serving curse time? -Pulseczar
+	local entity te;
+	local string IP;
+	IP = infokey(self, "ip");
+	te = find(world, netname, "bastardtimer");
+	while (te)
+	{
+		if (IP == te.t_s_h)
+		{
+			self.penance_time = te.penance_time;
+			te.owner = self;
+			makeImmune(self, time + 65);
+			bprint(2, self.netname);
+			bprint(2, " discovered that he/she can no longer escape Curse by reconnecting\n");
+			break;
+		}
+		te = find(te, netname, "bastardtimer");
+	}
+};
+
+void() PlayerQuit =
+{
+	local string foo;
+	local entity te;
+	
+	num_players = num_players - 1;
+
+	// PZ - created playersOnTeam# for AGR mode
+	if		(self.team_no == 1) playersOnTeam1 = playersOnTeam1 - 1;
+	else if (self.team_no == 2) playersOnTeam2 = playersOnTeam2 - 1;
+	else if (self.team_no == 3) playersOnTeam3 = playersOnTeam3 - 1;
+	else if (self.team_no == 4) playersOnTeam4 = playersOnTeam4 - 1;
+
+	UpdateMapSettings();
+
+	// Trying to escape from banning? not today..
+	if (self.flags & 8192)
+	if (self.dont_do_triggerwork == 2)
+	{
+		bprint(2, self.netname);
+		bprint(2, " escapes the sermon but not his banning\n");
+
+		sprint(self,2,"\nYou have been ¬¡ŒŒ≈ƒ from the server!\n");
+		
+		foo = infokey(self,"ip");
+		localcmd("addip ");
+		localcmd(foo);
+		localcmd("\n");
+
+		self.dont_do_triggerwork = 4;
+	}
+
+	if (votesleeping)
+	{
+		te = GetSleepVote();
+
+		if (te)
+		{
+			if (te.admin_kick == self)
+				te.admin_kick = world;
+		}
+	}
+
+	if (ValidVoteEnt())
+	{
+		if (current_voteent.has_sentry == 0) //PUNISH
+		if (current_voteent.admin_kick == self)
+		{
+			if (current_voteent.g_a == 2) // PUNISH_BAN
+			{
+				bprint(2,"Votingç ");
+				bprint(2,self.netname);
+				bprint(2," leaves the server but votes to ban him may continue..\n"); // only IP in fact, but better to not inform every1 about it, dont ya think?
+								
+				// You will be remembered here, pal
+				current_voteent.dont_do_triggerwork = 1;
+				
+				current_voteent.t_s_h = infokey(self,"ip");
+				current_voteent.t_s_h = makestr(current_voteent.t_s_h);
+				current_voteent.t_s_m = makestr(self.netname);
+
+				BroadcastSound("zombie/z_hit");
+			}
+			else if (current_voteent.g_a == 3 || current_voteent.g_a == 4) // PUNISH_MUTE or PUNISH_CUFF
+			{
+				bprint(2,"Votingç ");
+				bprint(2,self.netname);
+				bprint(2," leaves the server, but keeping client data\n"); // only IP in fact, but better to not inform every1 about it, dont ya think?
+								
+				// You will be remembered here, pal
+				VoteToSleep();
+				
+				BroadcastSound("zombie/z_hit");
+			}
+			else // anything else should fail (kick and curse)
+			{
+				bprint(2,"Votingç Punishment failed. User ");
+				bprint(2,self.netname);
+				bprint(2," has left the server\n");
+
+				BroadcastSound("zombie/z_hit");
+				ResetVoteEnt();
+			}
+		}		 
+	}
+
+	// Reset version and clienttype
+	self.cltype = 0;
+	self.clversion = 0;
+
+	if (num_players < 0)
+		num_players = 0;
+
+	if (!num_players)
+	{
+		if (!num_specs)
+		{
+			if (ceasefire)
+			{
+				ceasefire = 0;
+				bprint(2,"No clients on server, ceasefire ends automatically..\n");
+			}
+
+			World_FadeOut(0,0,0);	  // TOCHECK: If this is 2, and u reconnect weird fade occurs
+		}
+		else
+			World_FadeMid(2,0,2);
+	}
+};
+
+void() UpdateMapSettings =
+{
+	local float result;
+
+	if (mapname == "huntedr")
+	{
+		result = floor(TeamFortress_TeamGetNoPlayers(2) * 0.5);
+		team3maxplayers = result;
+		if (team3maxplayers < 1) team3maxplayers = 1;
+	}
+	else if (mapname == "border1" || mapname == "border1r")
+	{
+		result = floor(TeamFortress_TeamGetNoPlayers(2) * 0.5);
+		team3maxplayers = result;
+		team1maxplayers = result;
+		if (team3maxplayers < 1) team3maxplayers = 1;
+		if (team1maxplayers < 1) team1maxplayers = 1;
+	}
+};
+

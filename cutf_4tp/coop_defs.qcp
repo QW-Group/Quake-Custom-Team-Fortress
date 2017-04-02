@@ -1,0 +1,83 @@
+/*
+	coop_defs.qc
+*/
+
+
+
+
+
+
+// misc monster stuff
+
+
+// .spawnflags values
+
+
+
+
+// alternate teams
+
+
+// monster weights, a monster can be inbetween these
+
+
+
+
+
+
+// monster flags
+
+
+
+
+
+
+
+
+
+// more attack states
+
+
+
+// macros for certain variables so we can reuse unused variables and still give it a unique name
+
+
+
+//#define npc_spawndelay				walkframe			// was gravity
+
+
+
+
+
+
+
+
+
+
+// damage multipliers
+
+
+
+
+
+
+
+
+// used for smooth movement of monsters, FIXME: change vars I just made up some crap to see if it compiles
+.void() npc_oldthink;
+
+
+
+
+
+
+
+// coop monster fields
+.float monsterweight;
+.float monsterflags;								// MFLAG_*** flags
+
+// coop only player fields
+
+
+
+

@@ -1,0 +1,1331 @@
+/*=======================================================//
+// field.QC - CustomTF 3.2.OfN             - 30/1/2001 - //
+// by Sergio Fumaña Grunwaldt - OfteN [cp]               //
+=========================================================//
+ Field generator stuff - Written all by myself! :)
+ I took the model and some sounds from deadlode mod
+ One sound is from megaTF
+=========================================================*/
+
+// field generator status flags, DO NOT MODIFY
+
+
+
+
+
+
+
+// field generator settings
+
+
+
+
+
+
+
+// force field settings
+
+
+
+
+
+
+/*===============================================================================================
+
+EXPLANATION OF HOW THE ENTITY FIELDS ARE USED (thnx? np.. :P)
+---------------------------------------------
+
+For field generator entity:
+---------------------------
+
+.has_holo        - Holds current status of every field generator, FIELDGEN_ISXXXX determines
+.has_sensor      - Boolean value, determines if field generator is currently supporting a force field
+.martyr_enemy    - This points to the force field, if none its always 'world'
+.no_grenades_1   - Controls delay between tries to link (only affects sound/flash, it tries to link every frame)
+.no_grenades_2   - Controls delay for field to go up again after beeing disabled
+.tp_grenades_1   - Controls delay of the WORKING status
+.has_teleporter  - Used to flash generators when field is activated
+.has_camera      - Controls delay between cells take
+.has_tesla       - Boolean, forced status.
+
+For force field entity:
+-----------------------
+
+.demon_one      - Points to the first field generator
+.demon_two      - Points to the 2nd generator
+.has_holo       - Hum sound running, boolean
+.has_sensor     - Shield sound running, boolean
+.has_tesla      - Controls delay between hums
+.has_sentry     - Controls delay between shield sounds
+.cnt            - Orientation of field (x or y)
+.dmg            - Next damage the field will do
+.has_camera     - Used to control the rate at which the field touch sound/visual effects are done (4hz)
+
+================================================================================================*/
+
+void() CheckDistance;
+entity(entity fieldgen) Find_OtherGen;
+float(entity fieldgen1, entity fieldgen2) FieldGens_CanLink;
+float(entity fieldgen) FieldGen_CanIdle;
+float(entity fieldgen) IsValidFieldGen;
+float (vector targ, vector check) vis2orig;
+float(entity field) IsValidField;
+void(entity tfield, entity gen1) Field_UpdateSounds;
+void(entity tfield) Field_StopSounds;
+void(entity tfield) Field_MakeVisual;
+float(entity tfield) FieldIsImproved;
+float(entity tfield) FieldIsMalfunctioning;
+void() Field_touch;
+void() Field_touch_SUB;
+float(entity e1, entity e2) EntsTouching2;
+void(entity tfield, vector where, entity thing) FieldExplosion;
+void(entity field) PutFieldWork;
+float(entity tfield, entity who) Field_ItCanPass;
+float(entity tfield, entity who) Field_ShouldDamage;
+
+
+
+
+
+
+
+
+//=========================================================================================
+// field generator model and sounds
+
+void() Field_Precache =
+{
+  	precache_sound ("misc/null.wav");
+    precache_sound2("misc/ffhum.wav");
+    precache_sound2("misc/ffbeep.wav");
+    precache_sound2("misc/ffield.wav");
+    precache_sound2("misc/ffact.wav");
+    precache_sound2("misc/fffail.wav");
+    precache_model2("progs/ffgen2.mdl");
+};
+
+//==================================================================================================
+// checks for field generators and removes itself if needed, checks for stuck entities inside field 
+
+void() Field_think =
+{
+    /* NOT NEEDED - if (self.classname != "force_field")
+    {
+        RPrint("BUG: Not a force field entity was in 'FieldThink()'!\n");
+        return;
+    }*/ 
+
+    self.has_camera = 0; // resets flag for visuals
+
+    // check field generators, removal of this field if needed... (for safety only)
+    if (!IsValidFieldGen(self.demon_one) || !IsValidFieldGen(self.demon_two))
+    {
+        if (IsValidFieldGen(self.demon_one))
+        {
+            self.demon_one.has_sensor = 0;
+            self.demon_one.martyr_enemy = world;
+        }
+
+        if (IsValidFieldGen(self.demon_two))
+        {
+            self.demon_two.has_sensor = 0;
+            self.demon_two.martyr_enemy = world;
+        }
+
+        self.demon_one = world;
+        self.demon_two = world;
+        
+        dremove(self);
+
+        // report this, as it shouldnt happen
+        RPrint("Debug: Field entity removed in Field_think()\n"); 
+        return;
+    }
+    else
+        self.nextthink = time + 0.25; // 4hz rate
+
+    // Make visuals if needed
+    if (self.demon_one.has_holo == 4)
+        Field_MakeVisual(self);        
+   
+    // checks for anything stuck in field :)
+    local entity te;
+    local float frange;
+
+    frange = 285;
+
+    if (FieldIsImproved(self) & 8)
+    {
+        frange = 475; // at least 1 hacked for range
+
+        if (self.demon_one.all_active & 8 && self.demon_two.all_active & 8)
+            frange = 600; // both field generators hacked
+    }
+
+    te = findradius(self.origin,frange);
+    while (te)
+	{
+		if (te != self)
+        if (te != self.demon_one)
+        if (te != self.demon_two)
+        if (te.velocity == '0 0 0')
+        if (te.classname != "force_field")
+        if (EntsTouching2(te,self))
+        {
+            other = te;
+            deathmsg = 65; 
+            self.dmg = 500; // this gonna hurt
+            Field_touch_SUB();
+		}
+
+		te = te.chain;
+	}
+};
+
+//=============================================================================================
+// is one entity actually intersecting the other one? (this avoids using a stupid trigger)
+
+float(entity e1, entity e2) EntsTouching2 =
+{
+    if (e1.absmin_x > e2.absmax_x)
+        return 0;
+    if (e1.absmin_y > e2.absmax_y)
+        return 0;
+    if (e1.absmin_z > e2.absmax_z)
+        return 0;
+
+    if (e1.absmax_x < e2.absmin_x)
+        return 0;
+    if (e1.absmax_y < e2.absmin_y)
+        return 0;
+    if (e1.absmax_z < e2.absmin_z)
+        return 0;
+
+    return 1;
+};
+
+//=================================================================================
+// these 2 functions return the current hacks that should apply to the field
+
+float(entity tfield) FieldIsImproved =
+{
+    if (IsValidFieldGen(tfield.demon_one) && IsValidFieldGen(tfield.demon_two))
+        return tfield.demon_one.all_active | tfield.demon_two.all_active;
+
+    if (IsValidFieldGen(tfield.demon_one))
+        return tfield.demon_one.all_active;
+
+    if (IsValidFieldGen(tfield.demon_two))
+        return tfield.demon_two.all_active;
+
+    return 0;
+};
+
+float(entity tfield) FieldIsMalfunctioning =
+{
+    if (IsValidFieldGen(tfield.demon_one) && IsValidFieldGen(tfield.demon_two))
+        return tfield.demon_one.is_malfunctioning | tfield.demon_two.is_malfunctioning;
+
+    if (IsValidFieldGen(tfield.demon_one))
+        return tfield.demon_one.is_malfunctioning;
+
+    if (IsValidFieldGen(tfield.demon_two))
+        return tfield.demon_two.is_malfunctioning;
+
+    return 0;
+};
+
+//=================================================================
+// disables force field
+
+void(entity tfield, float timedisable) DisableField =
+{
+    if (IsValidFieldGen(tfield.demon_one))
+    {
+        tfield.demon_one.has_holo = 2;
+        
+        if (tfield.demon_one.no_grenades_2 < time + timedisable)
+            tfield.demon_one.no_grenades_2 = time + timedisable;
+    }
+            
+    if (IsValidFieldGen(tfield.demon_two))
+    {
+        tfield.demon_two.has_holo = 2;
+
+        if (tfield.demon_two.no_grenades_2 < time + timedisable)
+            tfield.demon_two.no_grenades_2 = time + timedisable;
+    }    
+
+    sound (tfield, 2, "misc/ffbeep.wav", 0.4, 2);
+};
+
+//=========================================================================================
+// applies damage and makes the sound and visual effect for the forcefield shock
+
+void() Field_touch_SUB =
+{
+    if (FieldIsMalfunctioning(self) & 4) // reduce output
+        self.dmg = 1;
+
+    
+    if (other.message == "corpse") // Corpses
+    {
+        if (Field_ItCanPass(self, other))  
+        {
+            DisableField(self,1.5);                        
+            return;
+        }
+        else
+        {
+            if (Field_ShouldDamage(self,other))
+                TF_T_Damage (other, self, self.real_owner, self.dmg, 0, 8);
+        }
+    }
+    else 
+    
+    if (other.classname == "player" && other.health > 0) // PLAYERS (alive)
+    {
+    	if (other.playerclass == 0) // Observers (they have 1 hp)
+	    	return;         
+        
+        if (Field_ItCanPass(self, other))  
+        {
+            DisableField(self,1.5);                        
+            return;
+        }
+        else
+        {
+            if (Field_ShouldDamage(self,other))
+                TF_T_Damage (other, self, self.real_owner, self.dmg, 2, 8);
+        }
+    }
+    else // non player entities (or player heads)
+    {
+		// Gizmo - allow non demons and non army soldiers to be affected (coop monsters)
+        if (IsMonster(other))
+        {
+            if (Field_ItCanPass(self, other))
+            {
+                DisableField(self,1.5);
+                return;
+            }
+            else if (Field_ShouldDamage(self,other))
+                TF_T_Damage (other, self, self.real_owner, self.dmg, 2, 8);
+        }
+        else // non-monsters non-alive-players entities (EVERYTHING ELSE)
+        {
+            // excludes entities that shouldnt be moved, doors plats etc..
+            if(other.movetype == 0 
+                || other.movetype == 7
+                || other == world)
+                return;
+
+            if (other.flags & 512)
+                other.velocity_z = other.velocity_z + 100 + 160*random();
+
+            other.flags = other.flags - (other.flags & 512);
+                        
+            if (self.cnt) // Y Alignment
+            {
+                if (other.origin_x < self.origin_x)
+                    other.velocity_x = (0 - other.velocity_x) - (80 + 100 * random());
+                else
+                    other.velocity_x = (0 - other.velocity_x) + (80 + 100 * random());
+            }
+            else // X Alignment
+            {
+                if (other.origin_y < self.origin_y)
+                    other.velocity_y = (0 - other.velocity_y) - (80 + 100 * random());
+                else
+                    other.velocity_y = (0 - other.velocity_y) + (80 + 100 * random());
+            }
+        }
+    }
+
+    // Do the effects for shock
+    FieldExplosion(self,other.origin,other);
+    PutFieldWork(self);
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//=========================================================================
+// returns TRUE if 'who' entity should be able to pass thru the field
+
+float(entity tfield, entity who) Field_ItCanPass =
+{
+
+
+
+    
+    
+    if (FieldIsMalfunctioning(tfield) & 1) // Malfunctioning, always block
+        return 0;
+
+    if (who == tfield.real_owner) // field owner - always pass
+        return 1;
+
+
+
+
+
+
+
+
+    if (who.classname == "player") // PLAYERS
+    {
+        if (Teammate(who.team_no, tfield.real_owner.team_no)) // teammate
+            return 1;
+
+        if (Teammate(who.undercover_team, tfield.real_owner.team_no)) // spies disguised as our team
+            return 1;
+    }
+    else if (IsMonster(who))  // MONSTERS/ARMY		// Gizmo - allow non demons and non army soldiers to be affected (coop monsters)
+    {
+		local float temp;
+
+		temp = GetTeam( who );
+        if (Teammate(temp, tfield.real_owner.team_no)) // team monster
+            return 1;
+    }
+
+    else if (who.message == "corpse") // CORPSES
+    {
+        if (Teammate(who.team_no, tfield.real_owner.team_no)) // team corpse
+            return 1;
+    }
+
+
+    return 0;
+};
+
+//=========================================================================
+// returns TRUE if 'who' entity should be damaged by the field
+
+float(entity tfield, entity who) Field_ShouldDamage =
+{
+
+
+   
+    
+    if (FieldIsMalfunctioning(tfield) & 1) // Malfunctioning, hurts always
+        return 1;
+
+    if (who.classname == "player") // PLAYERS
+    {
+        if (who == tfield.real_owner) // field owner
+            return 0;
+
+        if (Teammate(who.team_no, tfield.real_owner.team_no)) // teammate
+            return 0;
+
+        if (Teammate(who.undercover_team, tfield.real_owner.team_no)) // spies disguised as our team
+            return 0;
+    }
+    else if (IsMonster(who))  // MONSTERS/ARMY		// Gizmo - allow non demons and non army soldiers to be affected (coop monsters)
+    {
+		local float temp;
+
+		temp = GetTeam( who );
+        if (Teammate(temp, tfield.real_owner.team_no)) // team monster
+            return 0;
+    }
+
+    else if (who.message == "corpse") // CORPSES
+    {
+        if (Teammate(who.team_no, tfield.real_owner.team_no)) // team corpse
+            return 0;
+    }
+
+
+    return 1;
+};
+
+//=============================================================================
+// applies the particle effect and electric sound (at max 4hz rate)
+
+void(entity tfield, vector where, entity thing) FieldExplosion =
+{
+    if (!tfield.has_camera)
+    {
+        if (thing == world || thing.is_removed) return;
+
+        local vector whereFX;
+        whereFX = where;
+        whereFX_z = tfield.origin_z;
+
+        spawnFOG(whereFX);
+        sound(tfield,4,"effects/crunch.wav",0.5,1);
+
+        tfield.has_camera = 1; // cya soon (this gets reset on every field think)
+    }
+};
+
+//================================================================
+// Refresh working time for the force field
+
+void(entity field) PutFieldWork =
+{
+    if (IsValidFieldGen(field.demon_one))
+        field.demon_one.tp_grenades_1 = time + 3;        
+    if (IsValidFieldGen(field.demon_two))
+        field.demon_two.tp_grenades_1 = time + 3;
+};
+
+//==============================================================
+// Force field touch function
+
+void() Field_touch =
+{
+    if (other.classname == "force_field") return; //avoid weird loops with other fields
+
+    self.dmg = 250;
+
+    deathmsg = 64;
+    Field_touch_SUB();
+};
+
+//===================================================================================
+// creates the force field between the 2 generators (only if none currently on)
+
+void(entity gen1, entity gen2) Create_Field =
+{
+    // Check for existing force field, and abort if any
+    if (gen1.has_sensor || gen2.has_sensor)
+        return;
+
+    if (gen1.martyr_enemy != world || gen2.martyr_enemy != world) // 2nd CHECK
+        return;
+
+    // already checked b4 on CanLink -> CanIdle
+    /*if (!IsValidFieldGen(gen1) || !IsValidFieldGen(gen2))
+        return;*/
+        
+    gen1.has_holo = 3;
+    gen2.has_holo = 3;
+
+    gen1.has_sensor = 1;
+    gen2.has_sensor = 1;
+
+    local entity tfield;
+
+    // generate field
+    tfield = spawn();
+    tfield.classname = "force_field";
+    tfield.owner = world;
+    tfield.real_owner = gen1.real_owner; // --> player
+
+    tfield.think = Field_think;
+    tfield.touch = Field_touch;
+    tfield.nextthink = time + 0.25;
+
+    // set pos and size
+    tfield.origin = gen1.origin + '0 0 32';
+    tfield.absmin_z = gen1.origin_z - 32;
+    tfield.absmax_z = gen1.origin_z + 32;
+
+    tfield.mins_z = 0 - 32;
+    tfield.maxs_z = 32;
+    tfield.size_z = 64;
+
+    local float diff;
+
+    if (gen1.origin_x == gen2.origin_x)
+    {
+        tfield.cnt = 0; 
+        
+        tfield.origin_x = gen1.origin_x;
+        tfield.absmin_x = gen1.origin_x - 2;
+        tfield.absmax_x = gen1.origin_x + 2;
+
+        tfield.maxs_x = 2;
+        tfield.mins_x = 0 - 2;
+        tfield.size_x = 4;
+
+        if (gen1.origin_y > gen2.origin_y)
+        {
+            diff = (gen1.origin_y - gen2.origin_y)/2;
+            
+            tfield.origin_y = gen1.origin_y - diff;
+            tfield.absmin_y = gen2.origin_y;
+            tfield.absmax_y = gen1.origin_y;
+
+            tfield.maxs_y = diff;
+            tfield.mins_y = 0 - diff;
+            tfield.size_y = diff * 2;
+        }
+        else
+        {
+            diff = (gen2.origin_y - gen1.origin_y)/2;
+
+            tfield.origin_y = gen2.origin_y - diff;
+            tfield.absmin_y = gen1.origin_y;
+            tfield.absmax_y = gen2.origin_y;
+
+            tfield.maxs_y = diff;
+            tfield.mins_y = 0 - diff;
+            tfield.size_y = diff * 2;
+        }
+    }
+    else
+    {
+        tfield.cnt = 1; 
+
+        tfield.origin_y = gen1.origin_y;
+        tfield.absmin_y = gen1.origin_y - 2;
+        tfield.absmax_y = gen1.origin_y + 2;
+        
+        tfield.maxs_y = 2;
+        tfield.mins_y = 0 - 2;
+        tfield.size_y = 4;
+
+        if (gen1.origin_x > gen2.origin_x)
+        {
+            diff = (gen1.origin_x - gen2.origin_x)/2;
+            
+            tfield.origin_x = gen1.origin_x - diff;
+            tfield.absmin_x = gen2.origin_x;
+            tfield.absmax_x = gen1.origin_x;
+
+            tfield.maxs_x = diff;
+            tfield.mins_x = 0 - diff;
+            tfield.size_x = diff * 2;
+
+        }
+        else
+        {
+            diff = (gen2.origin_x - gen1.origin_x)/2;
+            
+            tfield.origin_x = gen2.origin_x - diff;
+            tfield.absmin_x = gen1.origin_x;
+            tfield.absmax_x = gen2.origin_x;
+
+            tfield.maxs_x = diff;
+            tfield.mins_x = 0 - diff;
+            tfield.size_x = diff * 2;
+        }
+    }    
+
+    // apply stuff
+    tfield.movetype = 0;
+    tfield.solid = 2;
+    setsize(tfield, tfield.mins, tfield.maxs);
+    setorigin(tfield, tfield.origin);
+
+    // assign the pointers on the field generators
+    gen1.martyr_enemy = tfield;
+    gen2.martyr_enemy = tfield;
+
+    // assign the pointers to generators on ourselves
+    tfield.demon_one = gen1;
+    tfield.demon_two = gen2;
+
+    // make activation sound
+    sound (tfield, 2, "misc/ffact.wav", 0.2, 1);
+
+    // initialize sound flags on field
+    tfield.has_sensor = 0;
+    tfield.has_holo = 0;
+
+    // flash generators
+    gen1.effects = 8 | 128;
+    gen1.has_teleporter = 1;
+    gen1.skin = 2;
+    gen2.effects = 8 | 128;
+    gen2.has_teleporter = 1;
+    gen2.skin = 2;
+};
+
+//=================================================================
+// removes the force field (if any)
+
+void(entity gen1, entity gen2) Remove_Field =
+{
+    local float soundsoff;
+    soundsoff = 0;
+    
+    if (IsValidFieldGen(gen1))
+    {   
+        gen1.has_sensor = 0;
+
+        if (IsValidField(gen1.martyr_enemy))
+        {
+            Field_StopSounds(gen1.martyr_enemy); // Stops sounds on force field
+            soundsoff = 1;
+            
+            dremove(gen1.martyr_enemy);
+            gen1.martyr_enemy = world;
+        }
+    }
+
+    if (IsValidFieldGen(gen2))
+    {
+        gen2.has_sensor = 0;
+        
+        if (IsValidField(gen2.martyr_enemy))
+        {
+            if (!soundsoff)
+                Field_StopSounds(gen2.martyr_enemy); // Stops sounds on force field if not done
+
+            dremove(gen2.martyr_enemy);
+            gen2.martyr_enemy = world;
+        }
+    }
+};
+
+//======================================================================
+// The following 2 functions are used for safety everywhere
+
+float(entity field) IsValidField =
+{
+    if (field == world)
+        return 0;
+    
+    if (field.classname != "force_field")
+        return 0;
+
+    return 1;
+};
+
+float(entity fieldgen) IsValidFieldGen =
+{
+    if (fieldgen == world)
+        return 0;
+    
+    if (fieldgen.classname != "building_fieldgen")
+        return 0;
+  
+    return 1;
+};
+
+//========================================================
+// starts or removes sounds on the field
+
+void(entity tfield, entity gen1) Field_UpdateSounds =
+{
+    //.has_holo   : hum
+    //.has_sensor : shield
+    
+    if (IsValidField(tfield)) // only if there is a field currently
+    {
+        local float playhum, playshield;
+
+        playhum = 0; 
+        playshield = 0;
+
+        /*if (gen1.has_holo == #FIELDGEN_ISOFF) // for some reason we r not working
+        {
+            playhum = #FALSE;
+            playshield = #FALSE;
+        }
+        else if (gen1.has_holo == #FIELDGEN_ISIDLE) // awaiting for link
+        {
+            playhum = #FALSE;
+            playshield = #FALSE;
+        }
+        else if (gen1.has_holo == #FIELDGEN_ISDISABLED) // teammate passing thru the field?
+        {
+            playhum = #FALSE;
+            playshield = #FALSE;            
+        }
+        else*/
+        
+        if (gen1.has_holo == 3)
+        {
+            playhum = 1;
+            playshield = 0;
+        }
+        else if (gen1.has_holo == 4)
+        {
+            playhum = 1;
+            playshield = 1;        
+        }
+
+        // ok, lets update the sounds if needed..
+        if (!playhum)
+        {
+            if (tfield.has_holo)
+            {
+                sound(tfield,6,"misc/null.wav",0.5,1);
+                tfield.has_holo = 0;
+            }
+        }
+        else
+        {
+            if (!tfield.has_holo || tfield.has_tesla < time)
+            {
+                sound(tfield,6,"misc/ffhum.wav",0.4,1);
+                tfield.has_tesla = time + 1;
+                tfield.has_holo = 1;
+            }
+        }
+
+        if (!playshield)
+        {
+            if (tfield.has_sensor)
+            {
+                sound(tfield,3,"misc/null.wav",0.5,1);
+                tfield.has_sensor = 0;
+            }
+        }
+        else
+        {
+            if (!tfield.has_sensor || tfield.has_sentry < time)
+            {
+                //TODO?: lower volume as (FIELDGEN_WORKTIME - time) decreases
+                
+                sound(tfield,3,"misc/ffield.wav",0.5,1);
+                tfield.has_sentry = time + 1;
+                tfield.has_sensor = 1;
+            }
+        }    
+    }
+};
+
+//====================================================================
+// Called on each force field removal to stop any sounds from it
+
+void(entity tfield) Field_StopSounds =
+{
+    // We dont do any check because this function is called with everything already checked
+    sound(tfield,3,"misc/null.wav",0.5,1);
+    sound(tfield,6,"misc/null.wav",0.5,1);
+    tfield.has_sensor = 0;
+    tfield.has_holo = 0;
+};
+
+//====================================================================
+// do the lightning stuff while field is FIELDGEN_ISWORKING
+
+void(entity tfield) Field_MakeVisual =
+{
+    // To avoid some overhead, only do visual lightning effect sometimes
+    if (random() < 0.5)
+        return;
+    
+    if (IsValidField(tfield))
+    {      
+        local float fx, fy;
+        local vector tmpvec;
+
+        if (tfield.cnt)
+        {
+            fy = tfield.origin_y;
+            fx = tfield.origin_x + (tfield.size_x/2 - tfield.size_x * random());
+        }
+        else
+        {
+            fx = tfield.origin_x;
+            fy = tfield.origin_y + (tfield.size_y/2 - tfield.size_y * random());
+        }
+
+        tmpvec_x = fx;
+        tmpvec_y = fy;
+        tmpvec_z = tfield.origin_z - 12;
+
+        WriteByte (4, 23);
+        
+        if (random() > 0.5)
+            WriteByte (4, 6);
+        else
+            WriteByte (4, 5);
+
+	    WriteEntity (4, tfield);
+
+        if (random() > 0.5)
+        {
+            WriteCoord (4, fx);
+            WriteCoord (4, fy);
+            WriteCoord (4, tfield.origin_z - 12);
+            WriteCoord (4, fx);
+            WriteCoord (4, fy);
+            WriteCoord (4, tfield.origin_z + 12);
+        }
+        else
+        {
+            WriteCoord (4, fx);
+            WriteCoord (4, fy);
+            WriteCoord (4, tfield.origin_z + 22);
+            WriteCoord (4, fx);
+            WriteCoord (4, fy);
+            WriteCoord (4, tfield.origin_z - 2);
+        }
+
+        
+        multicast (tmpvec, 1);
+        
+    }
+};
+
+//==================================================
+// called every frame by the field generators
+
+void() FieldGen_think =
+{
+    local entity othergen;
+    othergen = Find_OtherGen(self); // get our brother
+    
+    // Create the force field if it's possible, or remove it if not and exists
+    if (FieldGens_CanLink(self,othergen))
+        Create_Field(self,othergen); // checks redundancy itself
+    else
+        Remove_Field(self,othergen); // checks redundancy itself
+
+    // field gens main loop (ai? heh.. my cat is smarter than these force fields)
+    if (self.has_holo == 0) // for some reason we r not working
+    {
+        self.effects = 0;
+        self.skin = 0;
+
+        if (FieldGen_CanIdle(self)) // can we go idle?
+            self.has_holo = 1;
+    }
+    else if (self.has_holo == 1) // trying to link
+    {
+        self.effects = 0;
+        self.skin = 0;
+        
+        if (self.no_grenades_1 < time) // trying to link sound/flash time
+        {
+            sound (self, 1, "misc/fffail.wav", 0.5, 2);
+            self.skin = 1;
+            self.effects = 8;
+            self.no_grenades_1 = time + 3.5;
+        }
+    }
+    else if (self.has_holo == 2) // teammate passing thru the field?
+    {
+        self.effects = 0;
+        self.skin = 0;
+
+        // time check
+        if (self.no_grenades_2 < time) // can we go idle?
+        {    
+            self.has_holo = 1;
+            self.tp_grenades_1 = 0;
+        }        
+    }
+    else if (self.has_holo == 3) // we r ready and linked
+    {
+        if (!self.has_teleporter)
+        {
+            self.effects = 0;
+            self.skin = 1;
+        }
+
+        if (self.has_sensor == 0)
+            self.has_holo = 1;
+        
+        if (self.tp_grenades_1 >= time)
+            self.has_holo = 4;
+    }
+    else if (self.has_holo == 4) // hopefully after killing some1..
+    {
+        self.effects = 8;
+        self.skin = 2;    
+        
+        if (self.has_camera <= time)
+        {
+            self.ammo_cells = self.ammo_cells - 2;
+
+            if (self.ammo_cells <= 24 && self.ammo_cells > 24 - 2)
+                sprint(self.real_owner,2,"Your field generator is low on cells\n");
+            else if (self.ammo_cells < 2)
+                sprint(self.real_owner,2,"Your field generator has run out of cells\n");
+
+            self.has_camera = time + 1;
+        }
+
+        if (self.has_sensor == 0)
+            self.has_holo = 1;
+        else if (self.tp_grenades_1 <= time)
+            self.has_holo = 3;
+    }
+
+    if (!FieldGen_CanIdle(self)) // turn us off if needed
+        self.has_holo = 0;
+    
+    Field_UpdateSounds(self.martyr_enemy,self); // update force field sounds
+   
+    self.has_teleporter = 0; // resets 'flash' status bypass
+    self.nextthink = time + 0.1;
+};
+
+//=======================================================================
+// returns TRUE if the generator could currently go to idle status
+
+float(entity fieldgen) FieldGen_CanIdle =
+{
+    if (!(IsValidFieldGen(fieldgen)))
+        return 0;
+
+    if (fieldgen.ammo_cells >= 2 &&
+        !(fieldgen.is_malfunctioning & 8)
+        && fieldgen.health > 0)
+        return 1;
+
+    return 0;
+};
+
+//=======================================================================
+// returns TRUE if both generators could currently generate the field
+
+float(entity fieldgen1, entity fieldgen2) FieldGens_CanLink =
+{
+    if (!(IsValidFieldGen(fieldgen1)) || !(IsValidFieldGen(fieldgen2)))
+        return 0;
+
+    if (!visible2(fieldgen1,fieldgen2))
+        return 0;
+    
+    local float r;
+    r = vlen(fieldgen1.origin - fieldgen2.origin); // get distance between generators
+
+    // Both fieldgens hacked
+    if ((fieldgen1.all_active & 8 && fieldgen2.all_active & 8) && r > 600)
+        return 0;
+
+    // Only 1 fieldgen hacked
+    if ( ((fieldgen1.all_active & 8 && !(fieldgen2.all_active & 8)) || (fieldgen2.all_active & 8 && !(fieldgen1.all_active & 8))) && r > 475)
+        return 0;
+
+    // None hacked for range
+    if (r > 285 && !(fieldgen1.all_active & 8 || fieldgen2.all_active & 8))
+        return 0;
+
+    if (fieldgen1.origin_z != fieldgen2.origin_z) // Different heights?
+        return 0;
+
+    if (fieldgen1.origin_x != fieldgen2.origin_x && fieldgen1.origin_y != fieldgen2.origin_y) // Unaligned?
+        return 0;
+    
+    if (fieldgen1.has_holo == 2 || fieldgen2.has_holo == 2)
+        return 0;
+
+    if (fieldgen1.has_holo == 0 || fieldgen2.has_holo == 0)
+        return 0;
+
+    // Return TRUE only if basic conditions on CanIdle() are meet
+    if (FieldGen_CanIdle(fieldgen1) && FieldGen_CanIdle(fieldgen2))
+        return 1;
+    
+    return 0;
+};
+
+//=============================================================================================
+// initialize field generator stuff just after beeing built, called on engineer.qc
+
+void(entity fieldgen) FieldGen_Built =
+{
+    fieldgen.touch = SUB_Null;
+    fieldgen.think = FieldGen_think;
+    fieldgen.nextthink = time + 0.1;
+    fieldgen.has_holo = 1; // we start on IDLE status (searching for other gen to link)
+    fieldgen.has_sensor = 0;
+    fieldgen.no_grenades_1 = time + 3;
+    fieldgen.martyr_enemy = world;
+};
+
+//==============================================================
+// returns our other generator (if any)
+
+entity(entity fieldgen) Find_OtherGen =
+{
+    local entity te;
+    local float foundit;
+    te = world;
+    foundit = 0;
+
+    te = find(world, classname, "building_fieldgen");
+    while (te != world && foundit == 0)
+    {
+        if (te.real_owner == fieldgen.real_owner) // is it ours?
+        if (te != fieldgen)                       // and not the same generator..
+            foundit = 1; // yeah, found it
+        
+        if (foundit == 0) // our search must continue...
+            te = find(te, classname, "building_fieldgen");
+    }
+
+    return te;
+};
+
+//=========================================================================================
+// returns the place where field gen will be built related to player current pos and yaw
+// called on engineer.qc, place is the origin passed where other kind of buildings are placed
+
+vector(vector place) WhereGen =
+{
+    // if we have no field generator currently, it can be placed anywhere
+    if (self.has_fieldgen == 0) return place;
+
+    local vector retval;
+    local float r, distx, disty, foundit;
+    local entity te;
+
+    foundit = 0;
+
+    // find the other generator
+    te = find(world, classname, "building_fieldgen");
+    while (te != world && foundit == 0)
+    {
+        if (te.real_owner == self) // is it ours?
+            foundit = 1; // yeah, found it
+        
+        if (foundit == 0) // our search must continue...
+            te = find(te, classname, "building_fieldgen");
+    }
+
+    // check for error getting the other gen
+    if (te == world || te.classname != "building_fieldgen" || foundit == 0)
+    {
+        RPrint("BUG: Error in field generator placement routine. 'WhereGen()'\n");
+        return place;
+    }
+
+    // calculate the new generator pos
+    distx = fabs(place_x - te.origin_x);
+    disty = fabs(place_y - te.origin_y);
+    retval = place;
+
+    if (distx < disty)
+    {
+        retval_x = te.origin_x; // adjust it in line
+
+        r = vlen(self.origin - retval); // get distance from us (player)
+        if (r > 200) // we r too far away?
+            retval = place; // then bypass the calc
+    }
+    else
+    {
+        retval_y = te.origin_y; // adjust line up
+
+        r = vlen(self.origin - retval); // get distance from us (player)
+        if (r > 200) // we r too far away?
+            retval = place; // then bypass the calc
+    }
+    
+    // print message if they wont link
+    if (!vis2orig(te.origin,retval))
+        sprint(self, 2, "Your field generators won't link, there are obstacles between them!\n");
+    
+    r = vlen(te.origin - retval); // get distance between generators
+    if (te.all_active & 8 && r > 475)
+        sprint(self, 2, "Your field generators are too far away to link, even hacked\n");
+    
+    if (r > 285 && !(te.all_active & 8))
+        sprint(self, 2, "Your field generators are too far away to link\n");
+    
+    /*if (retval_z != te.origin_z)
+        sprint(self, #PRINT_HIGH, "Your field generators are at different heights, they won't link\n");*/
+    
+    if (retval_x != te.origin_x && retval_y != te.origin_y)
+        sprint(self, 2, "Your field generators are not lined up, they won't link\n");
+
+    // return the final building place
+    return retval;
+};
+
+//======================================================================
+// damn! our field generator was destroyed. Force field must go down..
+
+void() FieldGen_Die =
+{
+    self.real_owner.has_fieldgen = self.real_owner.has_fieldgen - 1;
+    if (self.real_owner.has_fieldgen < 0) self.real_owner.has_fieldgen = 0;
+
+    WriteByte (4, 23);
+    WriteByte (4, 3);
+	WriteCoord (4, self.origin_x);
+	WriteCoord (4, self.origin_y);
+	WriteCoord (4, self.origin_z);
+
+	multicast (self.origin, 1);
+
+
+    // check if field should be removed..
+    local entity othergen;
+    othergen = Find_OtherGen(self);
+    
+    if (IsValidFieldGen(othergen))
+       Remove_Field(self, othergen);    
+    else
+       Remove_Field(self, world); // extra removal, not needed i think...
+    
+    sprint(self.real_owner, 2, "Your field generator was destroyed.\n");
+
+    local entity sprite;
+
+    sprite = SpawnSprite(1,2,self.origin,'0 0 0',2,0.1);
+
+    if (sprite)
+    {
+        sprite.effects = 8;
+
+        if (self.real_owner.team_no == 1)
+            sprite.effects = 8 | 64;
+        else if (self.real_owner.team_no == 2)
+            sprite.effects = 8 | 128;
+    }
+
+	ThrowGib("progs/tesgib3.mdl", -70,1,0,0, 0);
+
+    dremove(self);
+};
+
+//=========================================================================
+// Engineer has used a Spanner on the field generator
+
+void(entity field) Engineer_UseFieldGen =
+{
+	self.building = field;
+    
+    if (Teammate(self.building.real_owner.team_no,self.team_no) && self.building.is_malfunctioning & 4)
+    {        
+        sprint(self,2,"Trapped field generator, have a nice day!\n");
+            
+        deathmsg = 67;
+        sound (self, 6, "effects/crunch.wav", 1, 0);
+        TF_T_Damage(self, self, self, self.health + 60, 0, 0);
+        return;
+    }
+
+    local entity dist_checker;
+	local string st;
+
+	sprint(self, 2, "Field Generator has ");
+	st = ftos(field.health);
+	sprint(self, 2, st);
+    sprint(self, 2, "¯");
+	st = ftos(field.max_health);
+    sprint(self, 2, st);
+	sprint(self, 2, " èåáìôè, ");
+	st = ftos(field.ammo_cells);
+	sprint(self, 2, st);
+	sprint(self, 2, "¯");
+	st = ftos(field.maxammo_cells);
+    sprint(self, 2, st);
+	sprint(self, 2, " ãåììó\n");
+
+    // Pop up the menu
+	self.current_menu = 24;
+	self.menu_count = 25;
+
+	//dodgy
+	if (teamplay != 0 && !Teammate(self.building.real_owner.team_no,self.team_no)) {
+		Menu_EngineerFix_FieldGen_Input(4);
+		return;
+	}
+
+	// Start a Distance checker, which removes the menu if the player
+	// gets too far away from the field generator.
+	dist_checker = spawn();
+	dist_checker.classname = "timer";
+	dist_checker.owner = self;
+	dist_checker.enemy = field;
+	dist_checker.think = CheckDistance;
+	dist_checker.nextthink = time + 0.3;
+};
+
+//===========================================================================
+// Any external code should use this function, where needed
+
+void(entity tfield, vector where, entity thing) FieldEvent =
+{
+    FieldExplosion(tfield, where, thing);
+    PutFieldWork(tfield);
+};
+

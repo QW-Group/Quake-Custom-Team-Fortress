@@ -1,0 +1,4108 @@
+/*=======================================================//
+// CPStuff.QC - CustomTF 3.2.OfN		   - 30/1/2001 - //
+// by Sergio FumaÒa Grunwaldt  - OfteN [cp] 			 //
+=========================================================//
+ Additional stuff, basicaly things i dunno where to put :)
+=========================================================*/
+
+void() HoloThink;
+void(entity player) RemoveHolo;
+float(entity player, float itemid, float storechange, float resetstored) StripSpecificItem;
+//float(float itemid, float stuff1, float stuff2, float stuff3, float stuff4, float stuff5) ItemInside;
+float(entity player) StripDisallowed;
+float(entity player, float itemid, float storechange, float resetstored) GiveSpecificItem;
+float(entity player) GiveFreeStuff;
+float(entity ent, float type, float itemid, float value) SetItemInside;
+float(entity player) RestoreOriginalItems;
+string(float ver) ver_ftos;
+void() InitMegaTF;
+
+//====================================================================//
+// Initialize stuff, localinfos etc...								  //
+// This is called on worldspawn and with the Admin infos command	  //
+//====================================================================//
+
+// If startup is TRUE, even values that imply precachees are updated
+// so it should only be set on wordspawn
+
+void (float startup) UpdateInfos = 
+{
+	local string st;
+	
+	st = infokey(world, "allow_debug"); //
+	if (st == "1" || st =="on")
+		allow_debug = 1;
+	else
+	{
+		debug_target=world;
+		allow_debug = 0;
+	}
+
+	st = infokey(world, "bodyque_size"); //
+	bodyque_size = stof(st);
+	if (bodyque_size < 4)
+		bodyque_size = 10;
+	if (bodyque_size > 40)
+		bodyque_size = 40;
+	
+	
+	st = infokey(world, "cool_gibs"); //
+	if (st == "0" || st =="off")
+		cool_gibs = 0;
+	else
+		cool_gibs = 1;
+	
+
+	
+	st = infokey(world,"kickable_heads");
+	if (st == "0" || st =="off")
+		kickable_heads = 0;
+	else
+		kickable_heads = 1;
+	
+
+	
+	//if (startup) // Only update on map restart, avoids precache error
+	//{
+	
+	st = infokey(world,"menu_sounds");
+	if (st == "0" || st =="off")
+		menu_sounds = 0;
+	else
+		menu_sounds = 1;
+	
+	//}
+	
+
+	st = infokey(world, "drop_items"); //
+	if (st == "1" || st == "on")
+		drop_items = 1;
+	else
+		drop_items = 0;
+
+	st = infokey(world, "pay_msgs"); //
+	if (st == "1" || st =="on")
+		pay_msgs = 1;
+	else
+		pay_msgs = 0;
+
+	st = infokey(world, "team_prefix"); //
+	if (st == "0" || st =="off")
+		team_prefix = 0;
+	else
+		team_prefix = 1;
+
+	/*st = infokey(world, "headless"); //
+	if (st == "1" || st =="on" )
+		headless = 1;
+	else
+		headless = 0;*/
+
+	st = infokey(world, "no_grapple"); //
+	if (st == "1" || st =="on" )
+		no_grapple = 1;
+	else
+		no_grapple = 0;
+
+	/*st = infokey(world, "smooth_sentry");
+	if (st == "1" || st == "on")
+		smooth_sentry = 1;
+	else
+		smooth_sentry = 0;*/
+
+	st = infokey(world, "nicecolors"); //
+	if (st == "1" || st =="on" )
+		nicecolors = 1;
+	else
+		nicecolors = 0;
+
+	st = infokey(world, "relax_cheatcheck"); //
+	if (st == "1" || st =="on" )
+		relax_cheatcheck = 1;
+	else
+		relax_cheatcheck = 0;
+
+	st = infokey(world, "no_punish"); //
+	if (st == "1" || st =="on" )
+		no_punish = 1;
+	else
+		no_punish = 0;
+
+	st = infokey(world, "no_votemap"); //
+	if (st == "1" || st =="on" )
+		no_votemap = 1;
+	else
+		no_votemap = 0;
+
+	st = infokey(world, "no_detpush"); //
+	if (st == "1" || st =="on" )
+		no_detpush = 1;
+	else
+		no_detpush = 0;
+
+	/*st = infokey(world, "no_monstercolors"); //
+	if (st == "1" || st =="on" )
+		no_monstercolors = 1;
+	else
+		no_monstercolors = 0;*/
+
+	st = infokey(world, "custom_mode"); //
+	if (st==string_null) st="0"; //sets default
+	custom_mode = stof(st);
+	if (custom_mode < 0 ) custom_mode = 0; // the allowed minimum 
+	else if (custom_mode > 2) custom_mode = 2; //the allowed maximum
+
+	st = infokey(world, "stock_mode"); //
+	if (st==string_null) st="0"; //sets default
+	stock_mode = stof(st);
+	if (stock_mode < 0 ) stock_mode = 0; // the allowed minimum 
+	else if (stock_mode > 2) stock_mode = 2; //the allowed maximum
+
+	st = infokey(world, "extras_mode"); //
+	if (st==string_null) st="0"; //sets default
+	extras_mode = stof(st);
+	if (extras_mode < 0 ) extras_mode = 0; // the allowed minimum 
+	else if (extras_mode > 2) extras_mode = 2; //the allowed maximum
+
+	st = infokey(world, "sniper_factor"); //ARE YOU HAPPY XSETZER?? :P
+	if (st==string_null) st="0.85"; //sets default
+	sniper_factor = stof(st);
+	if (sniper_factor < 0.1 ) sniper_factor = 0.1; // the allowed minimum 
+	else if (sniper_factor > 2) sniper_factor = 2; //the allowed maximum
+
+	if (stock_mode == 2 && custom_mode == 2) custom_mode = 0;
+
+	// Attackers Go Red mode -PZ
+	//AGR_initialize();
+
+	st = infokey(world, "army_delay"); //
+
+	if ( st == string_null ) {
+		if ( !deathmatch )
+			st = "2";
+		else
+			st = "5";
+	}
+
+
+
+	army_delay = stof(st);
+
+	if ( !deathmatch ) {
+		if ( army_delay < 1 )
+			army_delay = 1; // the allowed minimum 
+		else if ( army_delay > 60 )
+			army_delay = 60; //the allowed maximum
+	} else {
+		if ( army_delay < 2 )
+			army_delay = 2; // the allowed minimum 
+		else if ( army_delay > 60 )
+			army_delay = 60; //the allowed maximum
+	}
+
+
+
+
+
+	st = infokey(world, "allow_watermonsters"); //
+	if (st == "1" || st =="on" || mapname == "frontlin") //
+		allow_watermonsters = 1;
+	else
+		allow_watermonsters = 0;
+
+	st = infokey(world, "spec_menu"); //
+	if (st == "0" || st =="off")
+		spec_menu = 0;
+	else
+		spec_menu = 1;
+
+	// Gets amount of money 
+	st = infokey(world, "m");
+	if (st == string_null)
+		st = infokey(world, "money");
+	local float numba;
+	numba = stof(st);
+	if (numba)
+		custom_money = numba;
+	else
+		custom_money = 10000;
+
+	if (startup) // Map startup?
+	{
+		// Retrieve and do precaches if needed for megatf stuff..
+		InitMegaTF();
+
+		// Report initialization has been done
+		RPrint("INFO: Prozac-specific localinfos retrieved and initialized.\n");
+	}
+	else
+	{
+		// Retrieve environment settings and apply them
+		local float oldstorm, oldeq, olddt, oldrunes;
+
+		oldstorm = storm;
+		oldeq = earthquake;
+		olddt = daytime;
+		oldrunes = runes;
+		
+		GetEnvironmentGlobals();
+
+		UpdateEnvironment(oldstorm,oldeq,olddt,oldrunes);
+
+		if (!ceasefire && !specialstate)
+			World_FadeIn(0,0,0);
+
+		RPrint("INFO: Localinfos updated successfully.\n");
+	}
+};
+
+//====================================================================//
+// Sprints to all the members on one team except one the Team> Prefix //
+// It should be used prior any teamsprint (look at tforttm.qc)		  //
+//====================================================================//
+
+void(float tno, entity ignore) teamprefixsprint =
+{
+	if ( team_prefix != 1 )
+	  return;
+	
+	local entity te;
+
+	// Don't do teamprints in DM
+	if (tno == 0)
+		return;
+
+	te = find(world, classname, "player");
+	while (te)
+	{
+		if (Teammate(te.team_no,tno) && te != ignore)
+			sprint(te, 2, "Teamç ");
+
+		te = find(te, classname, "player");
+	}
+};
+
+//==========================================================
+// same shit but ignores 2 players
+
+void(float tno, entity ignore, entity ignore2) teamprefixsprintbi =
+{
+	if ( team_prefix != 1 )
+	  return;
+	
+	local entity te;
+
+	// Don't do teamprints in DM
+	if (tno == 0)
+		return;
+
+	te = find(world, classname, "player");
+	while (te)
+	{
+		if (Teammate(te.team_no,tno) && te != ignore && te != ignore2)
+		{
+			sprint(te, 2, "Teamç ");
+		}
+
+		te = find(te, classname, "player");
+	}
+};
+
+//- For better performance i added this: --//
+void(entity ignore, string st, string st2, string st3, string st4, string st5, string st6) teamsprint6 =
+{
+	local entity te;
+
+	te = find(world, classname, "player");
+	while (te)
+	{
+		if (Teammate(te.team_no,ignore.team_no) && te != ignore)
+		{
+			sprint(te, 2, st);
+			sprint(te, 2, st2);
+			sprint(te, 2, st3);
+			sprint(te, 2, st4);
+			sprint(te, 2, st5);
+			sprint(te, 2, st6);
+		}
+
+		te = find(te, classname, "player");
+	}
+};
+
+//==========================================================
+// same shit but ignores 2 players
+
+void(entity ignore, entity ignore2, string st, string st2, string st3, string st4, string st5, string st6) teamsprintbi =
+{
+	local entity te;
+
+	te = find(world, classname, "player");
+	while (te)
+	{
+		if (Teammate(te.team_no,ignore.team_no) && te != ignore && te != ignore2)
+		{
+			sprint(te, 2, st);
+			sprint(te, 2, st2);
+			sprint(te, 2, st3);
+			sprint(te, 2, st4);
+			sprint(te, 2, st5);
+			sprint(te, 2, st6);
+		}
+
+		te = find(te, classname, "player");
+	}
+};
+
+//================================================//
+// Kicks any player with no TF skin on tforttm.qc //
+//================================================//
+
+float (string skin_str) Is_TF_Skin =
+{
+   // if relax_cheatcheck is "on" return its a valid skin
+   if (relax_cheatcheck==1) return 1;
+   
+   if ( skin_str != "tf_scout"
+	&& skin_str != "tf_snipe"
+	&& skin_str != "tf_sold"
+	&& skin_str != "tf_demo"
+	&& skin_str != "tf_medic"
+	&& skin_str != "tf_hwguy"
+	&& skin_str != "tf_pyro"
+	&& skin_str != "tf_spy"
+	&& skin_str != "tf_eng")
+		return 0;
+   else
+		return 1;
+};
+
+//============================================================================//
+// Return the new "NICE" color for the team corresponding to the no passed in //
+//============================================================================//
+
+string (float tno) TeamGetNiceColor =
+{
+	if (tno == 1)
+		return "2 13";
+	if (tno == 2)
+		return "9 4";
+	if (tno == 3)
+		return "5 12";
+	if (tno == 4)
+		return "3 11";
+
+	return "";
+};
+
+float (float tno, float theColor ) IsValidTopColor =
+{
+	theColor = floor(theColor);
+	
+	// if relax_cheatcheck is "on" return its a valid color value
+	if (relax_cheatcheck==1)
+	{
+		if (theColor > 13 || theColor < 0)
+			return 0;
+		
+		if (tno == 1)
+		{
+			if (theColor == 4)
+				return 0;
+			
+			if (number_of_teams > 2 && theColor == 12)
+				return 0;
+			if (number_of_teams > 3 && theColor == 11)
+				return 0;
+		}
+		
+		if (tno == 2)
+		{
+			if (theColor == 13)
+				return 0;
+		
+			if (number_of_teams > 2 && theColor == 12)
+				return 0;
+			if (number_of_teams > 3 && theColor == 11)
+				return 0;
+		}
+		
+		if (tno == 3)
+		{
+			if (theColor==4||theColor==13)
+				return 0;
+
+			if (number_of_teams > 3 && theColor == 11)
+				return 0;
+		}
+
+		if (tno == 4 && (theColor==4||theColor==13||theColor==12))
+			return 0;
+
+		return 1;
+	}
+
+	if (tno == 1 && (theColor==2||theColor==13))
+		return 1;
+	if (tno == 2 && (theColor==9||theColor==4))
+		return 1;
+	if (tno == 3 && (theColor==12||theColor==5))
+		return 1;
+	if (tno == 4 && (theColor==11||theColor==3))
+		return 1;
+
+	return 0;
+};
+
+
+//==========================//
+// The new holograph device //
+//==========================//
+void(entity player) UpdateCells =
+{
+	/*if (player.current_weapon == #WEAP_SPANNER 
+	|| player.current_weapon == #WEAP_LIGHTNING
+	|| player.current_weapon == #WEAP_FLAMETHROWER
+	|| player.current_weapon == #WEAP_DAEDALUS
+	|| player.current_weapon == #WEAP_LASERCANNON
+	|| player.current_weapon == #WEAP_AIRF)
+	{
+		player.currentammo = player.ammo_cells;
+		player.items = player.items | #IT_CELLS;
+	}*/
+
+	if (player.items & 2048)
+		player.currentammo = player.ammo_cells;
+	else if (player.current_weapon == 8)
+		player.currentammo = player.ammo_cells;
+};
+
+void(entity player) ActivateHolo =
+{
+	if (!(player.cutf_items & 131072))
+	{
+		//sprint(player, #PRINT_MEDIUM, "You do not have the holograph!\n");
+		return;
+	}
+
+	if (player.has_holo == 2) return; // avoids overflow, turns to 1 after first think
+
+	if (player.ammo_cells < 10 && player.has_holo == 0)
+	{
+		local string st;
+		sprint(player, 2, "Your holograph needs "); 
+		st=ftos(10);
+		sprint(player, 2, st);
+		sprint(player, 2," cells at least!\n");
+		return;
+	}
+
+	if (player.has_holo == 1)
+	{
+		sprint(player, 2, "You turn off the holograph device\n");
+		RemoveHolo(player);
+		return;
+	}
+
+	newmis = spawn();
+	newmis.solid = 0;
+	newmis.movetype = 8;
+	newmis.origin = player.origin;
+	newmis.angles = player.angles;
+	newmis.colormap = player.colormap;
+	newmis.skin = player.skin;
+	setmodel (newmis, "progs/player.mdl");
+	newmis.classname = "holo";
+	newmis.owner=player;
+	newmis.frame=player.frame;
+	newmis.nextthink = time + 1.5; 
+	newmis.think = HoloThink;
+	newmis.effects = 8;
+	player.ammo_cells = player.ammo_cells - 10;
+
+	newmis.has_holo = 1; // needed for targeting - has_holo goes to 0 b4 removed
+	newmis.team_no = player.team_no;
+	newmis.takedamage = 0;
+	newmis.real_owner = player;
+	newmis.netname = "øøø";
+	//newmis.health = 1; // needed for tesla?
+	
+	UpdateCells(player);
+
+	stuffcmd (player, "bf\nbf\n");
+	sprint(player,2,"you turn on your holograph...\n");
+	//sound (newmis, #CHAN_MISC, "effects/bodyhit2.wav", 0.5, #ATTN_NORM);
+	player.has_holo = 2; // 2 makes it wait until first think for turning off the holo 
+};
+
+void() HoloThink =
+{
+	//local entity oldself;
+
+	if (self.owner.ammo_cells < 2)
+	{
+		sprint(self.owner, 1, "your hologram runs out of energy\n");
+		//sound (self, #CHAN_MISC, "effects/bodyhit1.wav", 0.6, #ATTN_NORM);
+		spawnFOG(self.origin);
+		self.owner.has_holo = 0;
+		self.has_holo = 0; // notifies to "targeters" as a dead holo
+		//self.health = 0;
+		dremove(self);
+		return;
+	}
+
+	self.owner.ammo_cells = self.owner.ammo_cells - 2;
+
+	UpdateCells(self.owner);
+	
+	self.nextthink = time + 1.5;	
+	self.owner.has_holo = 1; // ready to be turned off
+};
+
+void (entity player) RemoveHolo =
+{
+	local entity te;
+	te = find(world, classname, "holo");
+	while (te)
+	{
+		if (te.owner == player) {
+		  te.owner.has_holo = 0;
+		  //sound (te, #CHAN_MISC, "effects/bodyhit1.wav", 0.6, #ATTN_NORM);
+		  spawnFOG(te.origin);
+		  te.has_holo = 0;
+		  //te.health = 0;
+		  dremove(te);
+		  return;
+		}
+
+		te = find(te, classname, "holo");
+	}
+};
+
+//===========================//
+// THE FLARES ARE BACK! hehe //
+//===========================//
+
+void() FlareBounce;
+
+//---------------------------//
+// Flare touch function.	 //
+
+void() FlareGrenadeTouch =
+{
+	if (other == self.owner)
+		return; 	// don't bounce on owner
+
+	if (pointcontents(self.origin) == -6 || pointcontents(self.origin) == -2) // if in wall or sky
+	{
+	   dremove(self);
+	   return;
+	}
+
+	if (self.has_holo==0)
+	{
+		self.skin=1;
+		//setmodel (self, "progs/flare.mdl");
+	}
+
+	if (other == world && self.movetype != 10)
+	{
+		self.velocity = '0 0 0';
+		
+		/*
+		if (random()<0.6)
+		{
+		   sound (self, #CHAN_MISC, "effects/bodyhit2.wav", 0.7, #ATTN_NORM);	// bounce sound
+		}
+		else
+		{
+		   sound (self, #CHAN_MISC, "effects/bodyhit1.wav", 0.6, #ATTN_NORM);	// bounce sound
+		}*/
+	}
+	else
+	{
+		self.movetype = 10;
+		self.avelocity = '1000 200 850';
+		self.touch = FlareBounce;
+
+	}
+
+	if (self.velocity == '0 0 0')
+		self.avelocity = '0 0 0';
+	
+};
+
+void() FlareBounce =
+{
+	if (other == self.owner)
+		return; 	// don't bounce on owner
+
+   
+	if (self.velocity == '0 0 0')
+		self.avelocity = '0 0 0';
+};
+
+//---------------------------//
+// Flare grenade explosion.  //
+
+void() FlareGrenadeExplode =
+{
+	sound (self, 6, "items/flare1.wav", 1, 1);
+
+	//setmodel (self, "progs/flare.mdl");
+	self.skin=0;
+	self.has_holo=1;
+
+	local vector org;
+	org=self.origin;
+
+		WriteByte (4, 23);
+		WriteByte (4, 2);
+		
+			WriteByte (4, 3);
+		
+		WriteCoord (4, org_x);
+		WriteCoord (4, org_y);
+		WriteCoord (4, org_z);
+		
+			multicast (org, 2);
+		
+
+	self.effects = self.effects | 8;
+
+	self.think = SUB_Remove;
+	self.nextthink = time + 60;
+};
+
+//========================================================//
+// My stupid contributions to optimize something!		  //
+//========================================================//
+
+float( entity thing ) IsMonster = {
+	if ( thing.flags & 32 )
+		return 1;
+
+	return 0;
+};
+
+float(entity thing) IsOwnedMonster =
+{
+/*
+	if (thing.classname=="monster_shambler")
+		return #TRUE;
+	if (thing.classname=="monster_demon1")
+		return #TRUE;
+	if (thing.classname=="monster_wizard")
+		return #TRUE;
+	if (thing.classname=="monster_army")
+		return #TRUE;
+	if (thing.classname=="monster_fish")
+		return #TRUE;
+	if (thing.classname=="monster_gremlin")
+		return #TRUE;
+*/
+
+	if ( thing.flags & 32 )
+	if ( thing.real_owner != world )	// Gizmo - added this because not all monsters are pets
+		return 1;
+
+	return 0;
+};
+
+float(entity thing) IsSummon =
+{
+/*
+	if (thing.classname=="monster_shambler")
+		return #TRUE;
+	if (thing.classname=="monster_demon1")
+		return #TRUE;
+	if (thing.classname=="monster_wizard")
+		return #TRUE;
+	if (thing.classname=="monster_fish")
+		return #TRUE;
+	if (thing.classname=="monster_gremlin")
+		return #TRUE;
+*/
+
+	if ( thing.flags & 32 )
+	if ( thing.real_owner != world )	// Gizmo - added this because not all monsters are pets
+	if ( thing.classname != "monster_army" )
+		return 1;
+	
+	return 0;
+};
+
+float(entity player) HasMonster =
+{
+	local float res;
+	res = 0;
+
+	if ( player.job & 4
+		|| player.job & 128 )
+	{
+		if (player.demon_one)
+			res = 1;	 
+		if (player.demon_two)
+			res = res + 1;
+		if (player.demon_three)
+			res = res + 1;
+	}	 
+   
+	return res;
+};
+
+string(entity themonster) GetMonsterName =
+{
+	if (themonster.classname == "monster_wizard")
+		return "scrag";
+	if (themonster.classname == "monster_shambler")
+		return "shambler";
+	if (themonster.classname == "monster_demon1")
+		return "fiend";
+	if (themonster.classname == "monster_army")
+		return "army soldier";
+	if (themonster.classname == "monster_fish")
+		return "piranha";
+	if (themonster.classname == "monster_gremlin")
+		return "gremlin";
+
+
+	if ( COOP_IsCoopMonster( themonster ) )
+		return themonster.netname;
+
+	
+	return "unknown monster";
+};
+
+void(entity themonster) MonsterDie =
+{
+	//Needed for "die" functions
+	local entity oself;
+	oself=self;
+
+	self=themonster;
+
+	/*if (themonster.classname == "monster_wizard")
+		wiz_die();
+	else if (themonster.classname == "monster_shambler")
+		custom_shambler_die();
+	else if (themonster.classname == "monster_demon1")
+		custom_demon_die();
+	else if (themonster.classname == "monster_army")
+		custom_grunt_die();
+	else if (themonster.classname == "monster_fish")
+		fish_death();
+	else if (themonster.classname == "monster_gremlin")
+		gremlin_die();*/
+	
+	if (self.th_die)
+		self.th_die();
+
+	self=oself;
+};
+
+string(entity thebuilding) GetBuildingName =
+{
+	if (thebuilding.classname == "building_dispenser")
+		return "dispenser";
+	if (thebuilding.classname == "building_sentrygun")
+		return "sentry gun";
+	if (thebuilding.classname == "building_tesla")
+		return "tesla sentry";
+	if (thebuilding.classname == "building_sensor")
+		return "motion sensor";
+	if (thebuilding.classname == "building_camera")
+		return "security camera";
+	if (thebuilding.classname == "building_teleporter")
+		return "teleporter";
+	if (thebuilding.classname == "building_fieldgen")
+		return "field generator";
+
+	return "unknown machine";
+};
+
+// soldiers don't target unoffensive buildings, or cloaked teslas!
+float(entity thebuilding) IsOffenseBuilding =
+{
+	if (!IsBuilding(thebuilding))
+		return 0;
+
+	if (thebuilding.classname == "building_sentrygun") 
+		return 1;
+
+	if (thebuilding.classname == "building_tesla")
+	{
+		if (thebuilding.tf_items & 512)  
+		{
+			if (thebuilding.job == 2)
+				return 1; // tesla is uncloaked, so soldier can see it
+		}
+		else
+		{
+			return 1;
+		}
+	}
+
+	return 0;
+};
+
+string(entity thething) GetEnemyName =
+{
+	if (thething.classname == "player")
+		return thething.netname;
+
+	if (IsMonster(thething))
+		return GetMonsterName(thething);
+	
+	if (IsBuilding(thething))
+		return GetBuildingName(thething);
+
+	if (thething.classname == "grenade" && thething.netname == "land_mine")
+		return "land mine";
+	
+	if (thething.netname != "")
+		return thething.netname;
+	
+	if (thething.classname != "")
+		return thething.classname;
+	   
+	return "unknown stuff";
+};
+
+/*
+===============
+PrintOwnedMonsterInfo
+
+Prints basic information about the specified owned monster.
+===============
+*/
+void( entity printDest, entity thething ) PrintOwnedMonsterInfo = {
+	if ( IsSummon( thething ) )
+		Summon_PrintDetails( printDest, thething );
+	else
+		Grunty_PrintDetails( printDest, thething, 0 );
+};
+
+/*
+===============
+PrintOwnedMonsterDetails
+
+Prints detailed information about the specified owned monster.
+===============
+*/
+void( entity printDest, entity thething ) PrintOwnedMonsterDetails = {
+	if ( IsSummon( thething ) )
+		Summon_PrintDetails( printDest, thething );
+	else
+		Grunty_PrintDetails( printDest, thething, 2 );
+};
+
+//======================================================//
+void() ExpBodyThink;
+
+void(entity body) ExpBody =
+{	 
+	newmis=spawn();
+	newmis.owner=body;
+	newmis.think=ExpBodyThink;
+	newmis.nextthink=time;	  
+	newmis.origin=body.origin;
+	newmis.origin_z = newmis.origin_z - 46;
+	newmis.origin_x = newmis.origin_x - crandom()*6;
+	newmis.origin_y = newmis.origin_y - crandom()*6;
+};
+
+void() ExpBodyThink =
+{
+	if (self.owner.classname != "player" || !self.owner.is_connected)
+	{
+		dremove(self);
+		return;
+	}
+	
+	TF_T_Damage(self.owner, self.owner, self.owner.martyr_enemy, self.owner.health + 60, 1, 0);// #TF_TD_OTHER);
+
+	WriteByte (4, 23);
+	WriteByte (4, 3);
+	WriteCoord (4, self.origin_x);
+	WriteCoord (4, self.origin_y);
+	WriteCoord (4, self.origin_z);
+  
+	multicast (self.origin, 1);
+  
+
+	deathmsg = 52;
+	T_RadiusDamage (self.owner, self.owner, 160, self.owner);
+
+	dremove(self);
+};
+
+//===========================================//
+
+void(vector where) spawnFOG =
+{
+	WriteByte (4, 23);
+	WriteByte (4, 11);
+	WriteCoord (4, where_x);
+	WriteCoord (4, where_y);
+	WriteCoord (4, where_z);
+
+	multicast (where, 1);
+
+};
+
+//=========================================================//
+// called on any try to dismantle something from menu.qc
+// returns true if the thing should be dismantled
+
+float() CheckEnemyDismantle =
+{
+	if (Teammate(self.building.real_owner.team_no,self.team_no)) return 1;
+
+	local string st;
+	st=GetBuildingName(self.building); 
+	
+	if (GetICELevel(self.building) == 1 && random() > 0.25)
+	{
+		sprint(self, 2, "This ");
+		sprint(self, 2, st);
+		sprint(self, 2, " isn't easy to dismantle, it has a level 1 ICE!\n");
+
+		sprint(self.building.real_owner, 2, "Somebody is trying to dismantle your ");
+		sprint(self.building.real_owner, 2,st);
+		sprint(self.building.real_owner, 2, "!\n");
+
+		return 0;
+	} 
+	else if (GetICELevel(self.building) == 2)
+	{
+		sprint(self, 2, "You can't dismantle this ");
+		sprint(self, 2, st);
+		sprint(self, 2, ", it's protected with a level 2 ICE!\n");
+
+		sprint(self.building.real_owner, 2, "Somebody tried to dismantle your ");
+		sprint(self.building.real_owner, 2,st);
+		sprint(self.building.real_owner, 2, "!\n");
+
+		return 0;
+	} 
+	else if (GetICELevel(self.building) == 3)
+	{
+		sprint(self, 2, "This ");
+		sprint(self, 2, st);
+		sprint(self, 2, " is protected with a level 3 ICE!\n");
+		deathmsg=54;
+		TF_T_Damage(self, self, self.building, self.health + 50, 1, 0);
+		sound (self, 6, "effects/crunch.wav", 1, 0);
+
+		return 0;
+	}
+	
+	bprint(1, self.building.real_owner.netname);
+	bprint(1, "'s ");
+	bprint(1, st);
+	bprint(1, " has been dismantled by ");
+	bprint(1, self.netname);
+	bprint(1, "\n");
+
+	sprint(self.building.real_owner, 2, "The enemy has dismantled your ");
+	sprint(self.building.real_owner, 2, st);
+	sprint(self.building.real_owner, 2, "!\n");
+
+
+	logfrag(self, self.building.real_owner);
+
+	
+	self.real_frags = self.real_frags + 1; 
+	if (!(toggleflags & 128))
+		self.frags = self.real_frags;
+
+	return 1;
+};
+
+//- OfN - Checks spots are visible between them
+float (vector spot1, vector spot2) vis2orig =
+{
+	traceline (spot1, spot2, 1, world);	// see through other monsters
+	
+	if (trace_inopen && trace_inwater)
+		return 0;			// sight line crossed contents
+
+	if (trace_fraction == 1 && trace_endpos == spot2) //CH just extra check
+		return 1;
+
+	return 0;
+};
+
+//=========================================================================
+// Return the number of players in game
+// PZ - use checkIP option to differentiate IP's of users 
+//		(counts unique IP's instead of counting players)
+// PZ - use noIdlers option to not count players not on a team 
+//		(has no effect if checkIP is off)
+float(float checkIP, float noIdlers) GetNoPlayers =
+{
+	if (!checkIP)
+		return num_players;
+
+	// PZ - one part stolen from Often's modified bodyque
+	// linked list of ip addresses
+	local entity ipList; ipList = world; // always the first entity in the list
+	local entity element; element = world; // varies with traversal of the list
+	local entity player; player = world;
+	local string ip;
+	local float ipCount; ipCount = 0;
+	local float counter;
+	local entity pt; pt = world; // first empty slot in list
+	local float listed; // bool
+
+	/*
+	construct the list
+	*/
+
+	counter = 1;
+	element = spawn();
+	element.ltime = 0;
+	element.classname = "playerIP";
+	element.modelindex = modelindex_null;
+	ipList = element;
+
+	while (counter < num_players)
+	{
+		element.owner = spawn();
+		element.owner.ltime = 0;
+		element.owner.classname = "playerIP";
+		element.owner.modelindex = modelindex_null;
+		
+		element = element.owner;
+
+		counter = counter + 1;
+	}
+	element.owner = world;
+
+	/*
+	enter IP's into the list - only if they're not already listed
+	*/
+
+	player = find(world, classname, "player");
+	while (player != world)
+	{
+		if (!noIdlers || player.team_no)
+		{
+			pt = world; // first empty slot in list
+			ip = infokey(player, "ip");
+			ip = strcat(ip, ""); // this is simply to get around Quake string buffer issue..
+								 // a problem which I don't completely understand at the moment
+
+			counter = 1;
+			element = ipList;
+			listed = 0;
+			while (counter <= num_players)
+			{
+				// is this an empty slot?
+				if (element.netname == string_null)
+				{
+					if (pt == world) // only set pt to this element if pt isn't already set
+						pt = element;
+				}
+				// if this element of the list holds this player's IP ..
+				else if (!strcasecmp(element.netname, ip))
+				{
+					listed = 1;
+					break;
+				}
+				// else continue looking through list
+				element = element.owner;
+				counter = counter + 1;
+			}
+			if (!listed) // if the player's IP is not listed, list in first empty slot
+			{
+				pt.netname = ip;
+				ipCount = ipCount + 1;
+			}
+		}
+
+		player = find(player, classname, "player");
+	}
+
+	/*
+	clean-up.. remove list
+	*/
+	
+	element = find(world, classname, "playerIP");
+	while (element != world)
+	{
+		dremove(element);
+		element = find(element, classname, "playerIP");
+	}
+
+	/*
+	return the number of individual IP addresses
+	*/
+
+	return ipCount;
+	// PZ - end
+};
+
+//==================================================================
+// prints the overall resutls, best player etc.. on intermission
+
+entity() GetBestPlayer =
+{
+	local float bestscore;//, tempscore;
+	local entity theplayer, search;
+
+	theplayer = world;
+	bestscore = 0;
+
+	search = find (world, classname, "player");
+	while (search != world)
+	{
+		if (search.frags > bestscore)
+		{
+			bestscore = search.frags;
+			theplayer = search;
+		}
+
+		search = find (search, classname, "player");
+	}
+
+	return theplayer;
+};
+
+entity() GetBestKiller =
+{
+	local float bestscore;//, tempscore;
+	local entity theplayer, search;
+
+	theplayer = world;
+	bestscore = 0;
+
+	search = find (world, classname, "player");
+	while (search != world)
+	{
+		if (search.frags - TeamFortress_TeamGetScore(search.team_no) > bestscore && search.team_no > 0)
+		{
+			bestscore = search.frags - TeamFortress_TeamGetScore(search.team_no);
+			theplayer = search;
+		}
+
+		search = find (search, classname, "player");
+	}
+
+	return theplayer;
+};
+
+// Gizmo
+entity() GetBestTeamKiller = {
+	local entity	bestplayer, head;
+	local float		bestValue;
+
+	bestValue = 0;
+	bestplayer = world;
+
+	head = find( world, classname, "player" );
+	while ( head ) {
+		if ( head.cnt > bestValue ) {
+			bestValue = head.cnt;
+			bestplayer = head;
+		}
+
+		head = find( head, classname, "player" );
+	}
+
+	return bestplayer;
+};
+entity() GetBestDamager = {
+	local entity	bestplayer, head;
+	local float		bestvalue;
+
+	bestplayer	= world;
+	bestvalue	= 0;
+
+	head = find( world, classname, "player" );
+	while ( head ) {
+		if ( head.volume > bestvalue ) {
+			bestplayer = head;
+			bestvalue = head.volume;
+		}
+
+		head = find( head, classname, "player" );
+	}
+
+	return bestplayer;
+};
+entity() GetBiggestTarget = {
+	local entity	bestplayer, head;
+	local float		bestvalue;
+
+	bestplayer	= world;
+	bestvalue	= 0;
+
+	head = find( world, classname, "player" );
+	while ( head ) {
+		if ( head.distance > bestvalue ) {
+			bestplayer = head;
+			bestvalue = head.distance;
+		}
+
+		head = find( head, classname, "player" );
+	}
+
+	return bestplayer;
+};
+
+void() bprintline =
+{
+	bprint(2,"\nùûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûü\n\n");
+};
+
+void() PrintResults =
+{
+	local string winteam;
+	local entity theplayer;    
+
+	local string tmps;
+	local float tmpf,tmpf2;
+
+	//bprintline();
+
+	bprint(2,"\nùûûûûûûûûûü ≈Ó‰ œÊ «·ÌÂ! ùûûûûûûûûûü\n\n");
+
+	// Gizmo - fixed printing this with a zero timelimit
+	if (time >= timelimit && timelimit > 0)
+	{
+		bprint(2,"Time limit reached!\n");
+	}
+
+	tmpf = time/60;
+	tmpf2 = floor(tmpf);
+	tmps = ftos(tmpf2);
+
+	bprint(2,"Map ");
+	bprint(2,mapname);
+	bprint(2," was played for ");
+	bprint(2,tmps);
+	bprint(2," minutes\n");
+
+	bprint(2,"\nùûûûûûûûûûûü “ÂÛıÏÙÛ: ùûûûûûûûûûûûûü\n\n");
+
+	winteam = GetTrueTeamName(TeamFortress_TeamGetWinner());
+
+	if (winteam != "ERROR")
+	{
+		bprint(2,winteam);
+		bprint(2," team ◊…Œ” the game!!\n\n");
+	}
+
+	TeamFortress_TeamShowScores(3,0,0);
+
+	// best player
+	bprint(2,"\n¬ÂÛÙ –Ï·˘ÂÚ: ");
+	theplayer = GetBestPlayer();
+
+	if (theplayer != world)
+	{
+		tmpf = floor(theplayer.frags);
+		tmps = ftos(tmpf);
+
+		bprint(2,theplayer.netname);
+		bprint(2," (");
+		bprint(2,GetTrueTeamName(theplayer.team_no));
+		bprint(2,") with ");
+		bprint(2,tmps);
+		bprint(2," frags");
+	}
+	else
+		bprint(2,"None");
+
+	// best killer
+	bprint(2,"\nÀÈÏÏÈÓÁ Õ·„ËÈÓÂ: ");
+	theplayer = GetBestKiller();
+
+	if (theplayer != world)
+	{
+		tmpf = floor(theplayer.frags - TeamFortress_TeamGetScore(theplayer.team_no));
+		tmps = ftos(tmpf);
+
+		bprint(2,theplayer.netname);
+		bprint(2," (");
+		bprint(2,GetTrueTeamName(theplayer.team_no));
+		bprint(2,") with ");
+		bprint(2,tmps);
+		bprint(2," kills");
+	}
+	else
+		bprint(2,"None");
+
+	// Gizmo - player that dealt the most damage
+	bprint(2,"\nÕÔÛÙ ƒ·Ì·ÁÂ: ");
+	theplayer = GetBestDamager();
+
+	if (theplayer != world)
+	{
+		tmpf = floor(theplayer.volume);
+		tmps = ftos(tmpf);
+
+		bprint(2,theplayer.netname);
+		bprint(2," (");
+		bprint(2,GetTrueTeamName(theplayer.team_no));
+		bprint(2,") with ");
+		bprint(2,tmps);
+		bprint(2," damage dealt to enemies");
+	}
+	else
+		bprint(2,"None");
+
+	// Gizmo - best team killer
+	bprint(2,"\n\n‘Â·Ì ÀÈÏÏÈÓÁ Õ·„ËÈÓÂ: ");
+	theplayer = GetBestTeamKiller();
+
+	if (theplayer != world)
+	{
+		tmpf = floor(theplayer.cnt);
+		tmps = ftos(tmpf);
+
+		bprint(2,theplayer.netname);
+		bprint(2," (");
+		bprint(2,GetTrueTeamName(theplayer.team_no));
+		bprint(2,") with ");
+		bprint(2,tmps);
+		bprint(2," team-damage dealt");
+	}
+	else
+		bprint(2,"None");
+
+	// Gizmo - player that took the most damage
+	bprint(2,"\n¬ÈÁÁÂÛÙ ‘·ÚÁÂÙ: ");
+	theplayer = GetBiggestTarget();
+
+	if (theplayer != world)
+	{
+		tmpf = floor(theplayer.distance);
+		tmps = ftos(tmpf);
+
+		bprint(2,theplayer.netname);
+		bprint(2," (");
+		bprint(2,GetTrueTeamName(theplayer.team_no));
+		bprint(2,") with ");
+		bprint(2,tmps);
+		bprint(2," damage taken");
+	}
+	else
+		bprint(2,"None");
+
+	bprint(2,"\n");
+	bprintline();
+};
+
+//======================================================================================
+// called on clientobituary to check if warlock knife kills should be increased
+
+void(entity attacker) MonsterKill =
+{
+	if (attacker.job & 4)
+	if (deathmsg == 17 || deathmsg == 22)
+		WarlockKnifeKill(attacker);
+};
+
+//===============================================================================
+// this function returns the max amount of grens a player can carry
+
+float(entity theplayer, float grenslot) GetMaxGrens =
+{
+	
+
+
+	
+	if (theplayer.tf_items & 256) // player can carry more grens cause he got bandolier
+	{
+		if (grenslot == 2) //2nd slot
+		{
+			if (theplayer.tp_grenades_2 == 0)
+				return 0;
+
+			
+			if (theplayer.tp_grenades_2 == 9)
+				return 4;
+			
+			
+			if (theplayer.tp_grenades_2 == 3)
+				return 3;// was 1
+			if (theplayer.tp_grenades_2 == 10)
+				return 4;// was 1
+			if (theplayer.tp_grenades_2 == 14)
+				return 4;// was 1
+			if (theplayer.tp_grenades_2 == 4)
+				return 3;// was 1
+			if (theplayer.tp_grenades_2 == 6)
+				return 6;
+			if (theplayer.tp_grenades_2 == 5)
+				return 3;
+
+			return 5;
+		}
+		else // first slot, or bug :)
+		{
+			if (theplayer.tp_grenades_1 == 0)
+				return 0;
+
+			
+			if (theplayer.tp_grenades_1 == 9)
+				return 4;
+			
+
+			if (theplayer.tp_grenades_1 == 3)
+				return 3;// was 1
+			if (theplayer.tp_grenades_1 == 10)
+				return 4;// was 1
+			if (theplayer.tp_grenades_1 == 14)
+				return 4;// was 1
+			if (theplayer.tp_grenades_1 == 4)
+				return 3;// was 1
+			if (theplayer.tp_grenades_1 == 6)
+				return 6;
+			if (theplayer.tp_grenades_1 == 5)
+				return 3;
+			
+			return 5;
+		}		 
+	}
+	
+	if (grenslot == 2) //2nd slot
+	{
+		if (theplayer.tp_grenades_2 == 0)
+			return 0;
+
+		
+		if (theplayer.tp_grenades_2 == 9)
+			return 3;
+		
+
+		if (theplayer.tp_grenades_2 == 3)
+			return 2;// was 1
+		if (theplayer.tp_grenades_2 == 10)
+			return 3;// was 1
+		if (theplayer.tp_grenades_2 == 14)
+			return 3;// was 1
+		if (theplayer.tp_grenades_2 == 4)
+			return 2;// was 1
+		if (theplayer.tp_grenades_2 == 6)
+			return 5;
+		if (theplayer.tp_grenades_2 == 5)
+			return 2;
+
+		return 4;
+	}
+	else // first slot, or bug :)
+	{
+		if (theplayer.tp_grenades_1 == 0)
+			return 0;
+
+		
+		if (theplayer.tp_grenades_1 == 9)
+			return 3;
+		
+
+		if (theplayer.tp_grenades_1 == 3)
+			return 2;// was 1
+		if (theplayer.tp_grenades_1 == 10)
+			return 3;// was 1
+		if (theplayer.tp_grenades_2 == 14)
+			return 3;// was 1
+		if (theplayer.tp_grenades_1 == 4)
+			return 2;// was 1
+		if (theplayer.tp_grenades_1 == 6)
+			return 5;
+		if (theplayer.tp_grenades_1 == 5)
+			return 2;
+		
+		return 4;
+	}
+
+	return 0; // shouldnt happen ever.
+};
+
+//=====================================================//
+
+/*void(entity attacker) Check_PainInflictor =
+{
+	if (self.health <= 0)
+		return;
+
+	local entity real_attacker;
+	real_attacker = attacker;
+
+	if (!IsMonster(attacker) && attacker.classname!="player")
+	{
+		if (!IsMonster(atta
+	}
+	  
+	
+	if (self.enemy!=self && self.enemy!=world && self.enemy!=attacker && self.enemy!=attacker.owner)
+	{
+		if (!visible(self.enemy))
+		{
+			
+
+		}
+	}
+};*/
+/*
+
+void(entity player) SwitchToCamera =
+{
+	if (player.classname!="player")
+	{
+		RPrint("OFTEN BUG REPORT: Object '");
+		RPrint(player.classname);
+		RPrint("' in SwitchToCamera()\n");
+		return;
+	}
+
+	local entity camera;
+	local float done;
+	
+	if (!player.has_camera)
+		return;
+	if (player.is_cameraviewing)
+		return;
+
+	 // FIXME: no inair, no water, no moving, no haxxxoring, no building, no detpacking, no throwing a det, 
+	 // no feinginG? (special)
+	
+	camera = find(world, classname, "building_camera");
+	if (camera.real_owner == player)
+		done = #TRUE;
+	while (!done)
+	{
+		camera = find(camera, classname, "building_camera");
+		if (camera.real_owner == player)
+			done = #TRUE;
+		if (camera == world)
+			done = #TRUE;
+	}
+	
+	if (camera == world)
+		return;
+		
+	/*
+	
+	msg_entity = player;
+	WriteByte(#MSG_ONE, #SVC_SETVIEWPORT);
+	WriteEntity(#MSG_ONE, camera);
+	WriteByte(#MSG_ONE, #SVC_SETANGLES);
+	WriteAngle(#MSG_ONE, camera.angles_x);
+	WriteAngle(#MSG_ONE, camera.angles_y);
+	WriteAngle(#MSG_ONE, camera.angles_z);
+	
+	*/
+
+	/*
+
+	//- OfN create the "fake" player image
+	newmis=spawn();
+	newmis.solid = #SOLID_BBOX; //#SOLID_BSP
+	newmis.movetype = #MOVETYPE_NONE;
+	newmis.takedamage = #DAMAGE_AIM;
+	newmis.origin = player.origin;
+	newmis.angles = player.angles;
+	newmis.colormap = player.colormap;
+	newmis.skin = player.skin;
+	setmodel (newmis, "progs/player.mdl");
+	//setsize (newmis,????); // NEEDED?
+	//setorigin (newmis, newmis.origin); // NEEDED?
+	newmis.classname = "fake_player";
+	newmis.owner=player;
+	newmis.frame=player.frame;
+	
+	newmis.th_pain = FakePain;
+	newmis.th_die = FakeDie;
+	
+	newmis.max_health = 9999;
+	newmis.health = 9999;
+
+	//newmis.nextthink = time + #HOLO_CYCLE_TIME;	
+	//newmis.think = HoloThink;
+	//newmis.effects = #EF_DIMLIGHT;
+	//player.ammo_cells = player.ammo_cells - #HOLO_POWER_COST;
+
+	player.fixangle = #TRUE;
+	player.is_cameraviewing = #TRUE;
+	player.t_s_h = player.weaponmodel; // FIXME: reloadingø?
+	player.weaponmodel= ""; // FIXME: reloadingø?
+	player.view_ofs = '0 0 0';
+
+	setorigin (player, camera.origin);
+
+	sprint(player, #PRINT_HIGH, "Camera view activated.\n");
+};
+
+void(entity player) SwitchFromCamera =
+{
+	if (player.classname!="player")
+	{
+		RPrint("OFTEN BUG REPORT: Object '");
+		RPrint(player.classname);
+		RPrint("' in SwitchFromCamera()\n");
+		return;
+	}
+	
+	if (!player.has_camera)
+		return;
+	if (!player.is_cameraviewing)
+		return;
+	
+	/*
+	
+	msg_entity = player;
+	WriteByte(#MSG_ONE, #SVC_SETVIEWPORT);
+	WriteEntity(#MSG_ONE, player);
+	WriteByte(#MSG_ONE, #SVC_SETANGLES);
+	WriteAngle(#MSG_ONE, player.angles_x);
+	WriteAngle(#MSG_ONE, player.angles_y);
+	WriteAngle(#MSG_ONE, player.angles_z);
+	
+	*/
+
+	/*
+
+	player.fixangle = #FALSE;
+
+	player.weaponmodel = player.t_s_h; // FIXME: reloadingø?
+	player.view_ofs = '0 0 22';
+	
+	player.is_cameraviewing = #FALSE;
+};
+
+*/
+
+//==========================================================================================================
+// used on players after teleporting to a turretized teleport to see if its stuck in wall or outside world
+
+float(entity player) IsOutWorld =
+{
+	if (pointcontents(player.origin) == -2 || pointcontents(player.origin) == -6)
+		return 1;
+	
+	if (pointcontents(player.absmax) == -2 || pointcontents(player.absmax) == -6)
+		return 1;
+
+	if (pointcontents(player.absmin) == -2 || pointcontents(player.absmin) == -6)
+		return 1;
+   
+	return 0;
+};
+
+//===================================================================================================
+// Removes timers set on anything, used for psionic clean-up on sentries and teslas
+
+/*void(entity thing) RemoveMyTimers =
+{
+	local entity te;
+	
+	te = find(world,classname,"timer");
+
+	while(te)
+	{
+		if (te.owner == thing)
+		{
+			te.think = SUB_Remove;
+			te.nextthink = time + 0.1;
+		}
+
+		te = find(te,classname,"timer");
+	}
+};*/
+
+//=============================================================
+// returns FALSE if tesla/sentry is in invalid location
+
+/*
+float(entity gun) IsInValidLocation =
+{
+	local vector tmpvec;
+
+	if (gun.tf_items & #NIT_TURRET)
+	{
+		if (pointcontents(gun.origin) == #CONTENT_SOLID || pointcontents(gun.origin) == #CONTENT_SKY)
+			return #FALSE;
+		
+		tmpvec = gun.absmax - '1 1 41';
+
+		if (pointcontents(tmpvec) == #CONTENT_SOLID || pointcontents(tmpvec) == #CONTENT_SKY)
+			return #FALSE;
+
+		tmpvec = gun.absmin + '1 1 -11';
+
+		if (pointcontents(tmpvec) == #CONTENT_SOLID || pointcontents(tmpvec) == #CONTENT_SKY)
+			return #FALSE;
+	}
+	else
+	{
+		if (pointcontents(gun.origin) == #CONTENT_SOLID || pointcontents(gun.origin) == #CONTENT_SKY)
+			return #FALSE;
+		
+		tmpvec = gun.absmax - '1 1 1';
+
+		if (pointcontents(tmpvec) == #CONTENT_SOLID || pointcontents(tmpvec) == #CONTENT_SKY)
+			return #FALSE;
+
+		tmpvec = gun.absmin + '1 1 1';
+
+		if (pointcontents(tmpvec) == #CONTENT_SOLID || pointcontents(tmpvec) == #CONTENT_SKY)
+			return #FALSE;
+	}
+   
+	return #TRUE;
+};*/
+
+
+float(float imp) GoodIntermissionImpulse =
+{
+	if (imp == 119 ||
+	imp == 118	 ||
+	imp == 119 ||
+	imp == 131 ||
+	imp == 136 ||
+	imp == 155 ||
+	imp == 83 ||
+	imp == 212 || 
+	//imp == #IMPULSE_PUNISH ||
+	//imp == #IMPULSE_VOTEMAP ||
+	imp == 217 ||
+	imp == 218)
+	//inp == #IMPULSE_TESTRANGE)
+	return 1;
+
+	return 0;
+};
+
+//==================================================================
+// Returns TRUE if a server update is taking place
+
+float() ServerUpdating =
+{
+	if (cvar("sv_updating")==0)
+		return 0;
+
+	return 1;
+};
+
+//============================================================
+// Reports current server main settings
+
+void(float broadcastmsg) PrintGameSettings =
+{
+	local string st, temp;
+	local float fl, fl2;
+
+	st = strcat("\nùûûûûûûü Õ·ÈÓ «·ÌÂ ”ÂÙÙÈÓÁÛ ùûûûûûûü\nÕ·: ¢",mapname);
+
+	st = strcat(st, "¢ ú ‘ÈÌÂ ÃÂÊÙ: ");
+
+	if (timelimit <= 0)
+		st = strcat(st,"No limit");
+	else
+	{
+		if (time >= timelimit)
+			return;
+
+		fl = floor(((timelimit - time)/60)/60);
+		temp = ftos(fl);
+		st = strcat(st,temp);
+		st = strcat(st,"∫");
+
+		fl2 = floor((timelimit - time)/60);
+		fl = fl2 - (fl*60);
+		temp = ftos(fl);
+		if (strlen(temp)< 2)
+			st = strcat(st,"0");	
+		st = strcat(st,temp);
+		st = strcat(st,"∫");
+		
+		fl = floor(timelimit - time) - (fl2*60);
+		temp = ftos(fl);
+		if (strlen(temp)< 2)
+			st = strcat(st,"0");	
+		st = strcat(st,temp);	 
+	}
+
+	st = strcat(st,"\n√ıÛÙÔÌ");
+
+	if (custom_mode == 0)
+	{
+		temp = ftos(custom_money);
+		temp = colstr(temp,4);
+
+		st = strcat(st,": Enabled ú ÕÔÓÂ˘: ");
+		st = strcat(st,temp);		 
+	}
+	else
+		st = strcat(st," √Ï·ÛÛÂÛ: Disabled");
+
+	// first step printing purge (due to strcat limit)
+	if (broadcastmsg)
+		bprint(2,st);
+	else
+		sprint(self,2,st);
+	
+	st = "";
+
+	st = strcat(st,"\n≈ÓˆÈÚÔÓÌÂÓÙ: ");
+
+	if (!(storm | earthquake | daytime | runes))
+		st = strcat(st,"Standard World");
+	else
+	{
+		local float first;
+
+		first = 1;
+
+		if (storm != 0)
+		{
+			st = strcat(st,"Lightning Storm º");
+			temp = ftos(floor(storm*100));
+			temp = colstr(temp,4);
+			st = strcat(st,temp);
+			st = strcat(st,"•©");
+			
+			first = 0;
+		}
+
+		if (earthquake != 0)
+		{
+			if (first)
+				st = strcat(st,"EarthQuakes º");
+			else
+				st = strcat(st,"\n             EarthQuakes º");
+
+			temp = ftos(floor(earthquake*100));
+			temp = colstr(temp,4);
+			st = strcat(st,temp);
+			st = strcat(st,"•©");
+
+			first = 0;
+		}
+
+		// second step printing (due to strcat limit)
+		if (broadcastmsg)
+			bprint(2,st);
+		else
+			sprint(self,2,st);
+	
+		st = "";
+
+		if (daytime != 0)
+		{
+			if (first)
+				st = strcat(st,"Day Light º");
+			else
+				st = strcat(st,"\n             Day Light º");
+
+			temp = ftos(floor(daytime));
+			temp = colstr(temp,4);
+			st = strcat(st,temp);
+			st = strcat(st," ‰·˘Û©");
+			
+			first = 0;
+		}		 
+
+		if (runes != 0)
+		{
+			if (first)
+				st = strcat(st,"Ancient Runes º");
+			else
+				st = strcat(st,"\n             Ancient Runes º");
+
+			temp = ftos(floor(runes));
+			temp = colstr(temp,4);
+			st = strcat(st,temp);
+			st = strcat(st,"©");
+		}
+	}
+
+	// third step printing (due to strcat limit)
+	if (broadcastmsg)
+		bprint(2,st);
+	else
+		sprint(self,2,st);
+
+	//st = "\nùûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûûü\n\n";
+	st = "\n\n";
+
+	// 4th step printing (due to strcat limit)
+	if (broadcastmsg)
+		bprint(2,st);
+	else
+		sprint(self,2,st);
+};
+
+//==========================================================================
+// Used on TF_T_Damage, returns the outgoing damage multiplier for entity
+
+float(entity thing) GetDamageOutFactor =
+{
+	local float factor;
+	factor = 1;
+	
+	if (thing.super_damage_finished > time) {
+		if (thing.tfstate & 131072)
+			factor = factor * 1.8; // was 1.5
+		if (thing.job & 16 && thing.job & 2048)
+			factor = factor * 2.1;
+		else
+			factor = factor * 4; // quad
+	}
+
+	if (thing.aura == 1)
+		factor = factor * 2; // was 1.5
+
+	if (thing.runes_owned & 1)
+		factor = factor * 3;
+
+	if (factor > 5)
+		factor = 5;
+
+	return factor;
+};
+
+//==========================================================================
+// Used on TF_T_Damage, returns the incoming damage multiplier for entity
+
+float(entity thing) GetDamageInFactor =
+{
+	local float factor;
+	factor = 1;
+
+	if (thing.aura == 2)
+		factor = factor * 0.6; // was 0.66
+
+	if (thing.runes_owned & 2)
+		factor = factor * 0.5;
+
+	if (thing.tfstate & 131072) //Chaplan defense
+		factor = factor * 0.66;
+
+	if (factor < 0.25)
+		factor = 0.25;
+
+	return factor;
+};
+
+//=========================================================================
+// Used to muzzle flash any entity
+
+void(entity ent) MuzzleFlash =
+{
+	
+	WriteByte (4, 39);
+	WriteEntity (4, ent);
+	multicast (ent.origin, 2);
+	
+
+
+};
+
+//===========================================================================
+// This is used for any leg damage performed, returns the damage done if any
+
+float(entity player, float damage) HurtLegs =
+{
+
+	// Gizmo - enabled leg damage for coop monsters
+	if ( COOP_IsCoopMonster( player ) ) {
+		if ( player.monsterflags & 128 || player.monsterflags & 64 )
+			return 0;
+
+		// decrease monster speed by 10% each wound
+		if ( !player.speed )
+			player.speed = 0.9;
+		else {
+			player.speed = player.speed - 0.1;
+			if ( player.speed < 0.1 )
+				player.speed = 0.1;
+		}
+
+		return damage;
+	}
+
+	if (player.classname != "player") return 0;
+	
+	if (player.runes_owned & 2)
+		return 0;
+
+	player.leg_damage = player.leg_damage + damage;
+
+	TeamFortress_SetSpeed(player);
+
+	return damage;
+};
+
+//==========================================================================
+// This restores leg damage on player
+
+void(entity player) HealLegs =
+{
+	if (player.classname != "player") return;
+
+	player.leg_damage = 0;
+	TeamFortress_SetSpeed(player);
+};
+
+//==========================================================================
+// Displays a lesson when a player really needs it :P (ban/kick etc..)
+
+
+
+
+void(entity player, string st, float action, float predefined) PlayerFinal =
+{
+	if (player.classname != "player")
+		return;
+	
+	local entity oself;
+	oself = self;
+			
+	self = player;
+
+	self.message = "";
+	
+	// Throw gib/head stuff if appropiate only
+	if (!(self.done_custom & 4)) // customizing, so nope
+	if (!(self.playerclass == 0))	// observing, so nope
+	if (self.modelindex == modelindex_player)	// are we visible and on a player model? (not a head)
+		GibPlayerOut(); // ok, gib him
+
+	CleanUpEverything();
+
+	// Drop any runes he would carry
+	PlayerDropRunes(self);
+
+	player.effects = 0;
+	player.job = 0;
+	player.current_menu = 0;
+	player.items = 0;
+	player.weapon = 0;
+	player.weapons_carried = 0;
+	player.cutf_items = 0;
+	player.tf_items = 0;
+	player.aura = 0;
+	player.takedamage = 0;
+	player.tfstate = 0;
+
+	player.flags = player.flags | 8192; // Our server code ignores centerprints for players with this set, any centerprint clears the FINALE text
+
+	// QF guys told me the following does nothing on player entity but..
+	self.solid = 0;
+	self.movetype = 0; 
+	//-
+	
+	self.modelindex = modelindex_null;
+	setsize(self, '0 0 0', '0 0 0');
+	self.touch = SUB_Null;
+	self.velocity = '0 0 0';
+	self.gravity = 0;
+	self.playerclass = 0;
+
+	msg_entity = self;
+	WriteByte (1, 31);
+		
+	if (predefined == 1)
+		WriteString(1,"You are supposed to not kill your\nteammates in this game, if you are\nunable to understand that you better\ngo to play on another server.\n");
+	else if (predefined == 2)
+		WriteString(1,"Don't cheat on this server please,\nwe all want to play and have fun here.\nPeople that cheat spoil the game, and\nwill not be tolerated.\n");
+	else
+		WriteString (1, st);
+
+	self.health = 0;
+	self.deadflag = 2; 
+
+	stuffcmd(self,"color 1 1\n");
+
+	if (action == 1)
+		stuffcmd(self,"team kick\n");
+	else if (action == 2)
+		stuffcmd(self,"team ban\n");
+	else
+		stuffcmd(self,"team serm\n");
+
+	if (action == 2)
+		sprint(self,2,"You are going to be banned after reading the sermon, if you disconnect you will be banned anyway, so better read it!\n");
+
+	self.dont_do_triggerwork = action;
+
+	self.ex_skill_max = time;
+	self.ex_skill_min = time + 1;
+	self.option2 = 0;
+
+	self = oself;	 
+};
+
+void() FinalizedPerformAction =
+{
+	local string foo;
+
+	if (self.dont_do_triggerwork == 2) // Ban
+	{
+		bprint(2, self.netname);
+		bprint(2, " is ¬¡ŒŒ≈ƒ after the sermon\n");
+
+		sprint(self,2,"\nYou have been ¬¡ŒŒ≈ƒ from the server!\n");
+		
+		foo = infokey(self,"ip");
+		localcmd("addip ");
+		localcmd(foo);
+		localcmd("\n");
+
+		self.dont_do_triggerwork = 4;
+
+		stuffcmd(self, "disconnect\n"); //Kick them!
+
+		BroadcastSound("player/teledth1");
+	}
+	else if (self.dont_do_triggerwork == 1) // Kick
+	{
+		bprint(2, self.netname);
+		bprint(2, " is À…√À≈ƒ after the sermon\n");
+
+		sprint(self,2,"\nYou have been À…√À≈ƒ from the server!\n");
+		
+		stuffcmd(self, "disconnect\n"); //Kick them!
+
+		BroadcastSound("player/teledth1");
+	}
+	else
+	{
+		self.dont_do_triggerwork = 4; // Stop team flashes
+	}
+};
+
+//=========================================================================
+// Improved/extended SpawnBlood()
+
+void(vector where, float bloodtype, float bloodammount) SpawnBloodEx =
+{
+	if (random() < bloodtype)
+	{
+		WriteByte (4, 23);
+		WriteByte (4, 13);
+		WriteCoord (4, where_x);
+		WriteCoord (4, where_y);
+		WriteCoord (4, where_z);
+		multicast (where, 2);
+	}
+	else
+	{
+		WriteByte (4, 23);
+		WriteByte (4, 12);
+		WriteByte (4, bloodammount);
+		WriteCoord (4, where_x);
+		WriteCoord (4, where_y);
+		WriteCoord (4, where_z);
+		multicast (where, 2);
+	}
+};
+
+//==========================================================================
+// Same thing but for spike particles instead
+
+void(vector where, float spiketype) SpawnSpikeFX =
+{
+	WriteByte (4, 23);
+	if (random() < spiketype)
+		WriteByte (4, 1);
+	else
+		WriteByte (4, 0);
+	WriteCoord (4, where_x);
+	WriteCoord (4, where_y);
+	WriteCoord (4, where_z);
+	multicast (where, 1);
+};
+
+//=========================================================================================
+// Does effect stuff on the entity ala SpawnBlood but with the specified type of blood
+// Also takes into account the type of effect, if player is invincible, or target is
+// a machine or bsp solid, no blood and does spike effect stuff instead
+
+void(entity targetent, vector where, float spiketype, float bloodtype, float bloodammount) SpawnDmgFX =
+{
+	// If the specified spot is in sky, do nothing
+	if (pointcontents(where) == -6)
+		return;
+	
+	// handle effect on BSP
+	if (targetent == world || targetent.solid == 4)
+	{		 
+		SpawnSpikeFX(where,spiketype);
+		return;
+	}
+
+	// Solid models that doesnt take damage
+	if (targetent.takedamage == 0)
+	{
+		SpawnSpikeFX(where,spiketype);
+		return;
+	}
+
+	// handle effect on machines
+	if (IsBuilding(targetent))
+	{
+		SpawnSpikeFX(where,spiketype);		  
+		return;
+	}
+
+	// handle effect on monsters
+	if (IsMonster(targetent))
+	{
+		SpawnBloodEx(where,bloodtype,bloodammount);
+		return;
+	}
+
+	// handle effect on players
+	if (targetent.classname == "player") 
+	{
+		if (!targetent.is_connected) return;
+		if (targetent.health <= 0) return;
+		if (targetent.done_custom & 4) // skip ppl customizing
+			return;
+		if (targetent.playerclass == 0) // skip observers
+			return;
+
+		// If invincible spawn spike particle
+		if ((targetent.invincible_finished > time) || (targetent.items & 1048576))
+			SpawnSpikeFX(where,spiketype);
+		else // Otherwise just bleed..
+			SpawnBloodEx(where,bloodtype,bloodammount);
+	}
+};
+
+//========================================================================
+// Returns TRUE if a player has enough ammo to build something
+
+float(entity player, float buildtype) EnoughToBuild =
+{
+	if (buildtype == 4)
+	{
+		if (player.ammo_cells >= 55)
+			return 1;
+	}
+	else if (buildtype == 7)
+	{
+		if (player.ammo_cells >= 60)
+			return 1;
+	}
+	else if (buildtype == 1)
+	{
+		if (player.ammo_cells >= 100)
+			return 1;
+	}
+	else if (buildtype == 2)
+	{
+		if (player.ammo_cells >= 130)
+			return 1;
+	}
+	else if (buildtype == 3)
+	{
+		if (player.ammo_cells >= 100)
+			return 1;
+	}
+	else if (buildtype == 6)
+	{
+		if (player.ammo_cells >= 120)
+			return 1;
+	}
+	else if (buildtype == 5)
+	{
+		if (player.ammo_cells >= 90)
+			return 1;
+	}
+	
+	return 0;
+};
+
+//=============================================================================
+// Subroutine to engage a map change, takes stuff into account
+
+void() ExecCycleStandard;
+
+void(string nfmap) LaunchMap =
+{
+	local string temp;
+
+	bprint(2,"\nLoading ");
+	bprint(2,nfmap);
+	bprint(2," map file...\n");
+
+	localcmd("localinfo nmap \"\"\n");
+
+	ExecCycleStandard();
+	
+	// Set a local indicating map to be executed - used only only for timeout/error timers report
+	localcmd("localinfo tmap \"");
+	localcmd(nfmap);
+	localcmd("\"\n");
+
+	// execute map cfg
+	temp = infokey(world, "cycledir");
+	if ( temp == string_null )
+		localcmd("exec cpcycle/");
+	else
+	{
+		localcmd("exec ");
+		localcmd(temp);
+		localcmd("/");
+	} //.................//
+
+	localcmd(nfmap);
+	localcmd(".cfg\n");
+
+	// Set timeout timer just in case couldn't launch map yet
+	SetCycleTimeoutTimer();
+};
+
+void() ExecCycleStandard =
+{
+	if (infokey(world,"specialmap")!="") return;
+
+	local string temp;
+		
+	// Exec "standard.cfg" also to reset stuff if needed if changed by any custom map
+	temp = infokey(world, "cycledir");
+	if ( temp == string_null )
+		localcmd("exec cpcycle/");
+	else
+	{
+		localcmd("exec ");
+		localcmd(temp);
+		localcmd("/");
+	} 
+
+	localcmd("standard.cfg\n");
+};
+
+//=============================================================================
+// Removes the stuff that is currently disallowed on a player
+
+float(entity player) StripDisallowed =
+{
+	if (!(disabledstuff1 | disabledstuff2 | disabledstuff3 | disabledstuff4 | disabledstuff5))
+		return 0;
+
+	local float itemid, counter;
+
+	counter = 0;
+
+	if (disabledstuff1)
+	{
+		itemid = 1;
+	
+		while (itemid < 22)
+		{
+			if (disabledstuff1 & itob(itemid))
+			if (StripSpecificItem(player,itemid,0,0))
+				counter = counter + 1;
+			
+			itemid = itemid + 1;
+		}
+	}
+
+	if (disabledstuff2)
+	{
+		itemid = 25;
+
+		while (itemid < 22 + 24)
+		{
+			if (disabledstuff2 & itob(itemid - 24))
+			if (StripSpecificItem(player,itemid,0,0))
+				counter = counter + 1;
+			
+			itemid = itemid + 1;
+		}
+	}
+	
+	if (disabledstuff3)
+	{
+		itemid = 25+24;
+
+		while (itemid < 22 + 24 + 24)
+		{
+			if (disabledstuff3 & itob(itemid - (24+24)))
+			if (StripSpecificItem(player,itemid,0,0))
+				counter = counter + 1;
+			
+			itemid = itemid + 1;
+		}
+	}
+	
+	if (disabledstuff4)
+	{
+		itemid = 25+24+24;
+
+		while (itemid < 22 + 24 + 24 + 24)
+		{
+			if (disabledstuff4 & itob(itemid - (24+24+24)))
+			if (StripSpecificItem(player,itemid,0,0))
+				counter = counter + 1;
+			
+			itemid = itemid + 1;
+		}
+	}
+	
+	if (disabledstuff5)
+	{
+		itemid = 25+24+24+24;
+
+		while (itemid < 22 + 24 + 24 + 24 + 24)
+		{
+			if (disabledstuff5 & itob(itemid - (24+24+24+24)))
+			if (StripSpecificItem(player,itemid,0,0))
+				counter = counter + 1;
+			
+			itemid = itemid + 1;
+		}
+	}
+
+	if (counter)
+	{
+		local entity oself;
+		oself = self;
+		self = player;
+		self.current_weapon = W_BestWeapon ();
+		W_SetCurrentAmmo ();
+		
+		UpdateWeaponItems();
+		self = oself;		 
+	}
+
+	return counter;
+};
+
+//====================================================================================================
+// Removes an specific item from a player, storing change for restore, or cleaning up stored flag
+
+float(entity player, float itemid, float storechange, float resetstored) StripSpecificItem =
+{
+	local float done;
+	done = 0;
+	
+	// PAGE 1 - Primary Weapons
+	if (itemid == 1)
+	{
+		if (player.weapons_carried & 32)
+		{
+			player.weapons_carried = player.weapons_carried - (player.weapons_carried & (32 | 64));
+			done = 1;
+		}		 
+	}	
+	else if (itemid == 2)
+	{
+		if (player.weapons_carried & 32768)
+		{
+			player.weapons_carried = player.weapons_carried - 32768;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 3)
+	{
+		if (player.weapons_carried & 8192)
+		{
+			player.weapons_carried = player.weapons_carried - 8192;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 4)
+	{
+		if (player.weapons_carried & 16384) 
+		{
+			player.weapons_carried = player.weapons_carried - (player.weapons_carried & (16384 | 4096));
+			done = 1;
+		}		 
+	}  
+	else if (itemid == 5)
+	{
+		if (player.weapons_carried & 2048)
+		{
+			player.weapons_carried = player.weapons_carried - 2048;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 6)
+	{
+		if (player.weapons_carried & 65536)
+		{
+			player.weapons_carried = player.weapons_carried - 65536;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 7)
+	{
+		if (player.weapons_carried & 1024)
+		{
+			player.weapons_carried = player.weapons_carried - 1024;
+			done = 1;
+		}		 
+	}
+
+	// PAGE 2 - Secondary Weapons
+	else if (itemid == 8)
+	{
+		if (player.weapons_carried & 8388608)
+		{
+			player.weapons_carried = player.weapons_carried - 8388608;
+			done = 1;
+		}		 
+	}	
+	else if (itemid == 9)
+	{
+		if (player.cutf_items & 2)
+		{
+			player.cutf_items = player.cutf_items - 2;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 10)
+	{
+		if (player.weapons_carried & 256)
+		{
+			player.weapons_carried = player.weapons_carried - 256;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 11)
+	{
+		if (player.weapons_carried & 524288) 
+		{
+			player.weapons_carried = player.weapons_carried - 524288;
+			done = 1;
+		}		 
+	}  
+	else if (itemid == 12)
+	{
+		if (player.weapons_carried & 512)
+		{
+			player.weapons_carried = player.weapons_carried - 512;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 13)
+	{
+		if (player.weapons_carried & 262144)
+		{
+			player.weapons_carried = player.weapons_carried - 262144;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 14)
+	{
+		if (player.weapons_carried & 128)
+		{
+			player.weapons_carried = player.weapons_carried - 128;
+			done = 1;
+		}		 
+	}
+
+	// PAGE 3 - Misc/Extra Weapons
+	else if (itemid == 15)
+	{
+		if (player.weapons_carried & 1048576)
+		{
+			player.weapons_carried = player.weapons_carried - 1048576;
+			done = 1;
+		}		 
+	}	
+	else if (itemid == 16)
+	{
+		if (player.weapons_carried & 2097152)
+		{
+			player.weapons_carried = player.weapons_carried - 2097152;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 17)
+	{
+		if (player.cutf_items & 1048576)
+		{
+			player.cutf_items = player.cutf_items - 1048576;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 18)
+	{
+		if (player.weapons_carried & 131072) 
+		{
+			player.weapons_carried = player.weapons_carried - 131072;
+			done = 1;
+		}		 
+	}  
+	else if (itemid == 19)
+	{
+		if (player.weapons_carried & 4194304)
+		{
+			player.weapons_carried = player.weapons_carried - 4194304;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 20)
+	{
+		if (player.cutf_items & 131072)
+		{
+			player.cutf_items = player.cutf_items - 131072;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 21)
+	{
+		if (player.cutf_items & 262144)
+		{
+			player.cutf_items = player.cutf_items - 262144;
+			done = 1;
+		}		 
+	}
+
+	// (skipped: Legs and Health)...
+
+	// PAGE 6 - Special Armors & Ammo
+	else if (itemid == 39)
+	{
+		if (player.tf_items & 32)
+		{
+			player.tf_items = player.tf_items - 32;
+			done = 1;
+		}		 
+	}	
+	else if (itemid == 40)
+	{
+		if (player.tf_items & 8)
+		{
+			player.tf_items = player.tf_items - 8;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 41)
+	{
+		if (player.tf_items & 64)
+		{
+			player.tf_items = player.tf_items - 64;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 42)
+	{
+		if (player.tf_items & 4) 
+		{
+			player.tf_items = player.tf_items - 4;
+			done = 1;
+		}		 
+	}  
+	else if (itemid == 43)
+	{
+		if (player.tf_items & 16)
+		{
+			player.tf_items = player.tf_items - 16;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 44)
+	{
+		if (player.tf_items & 128)
+		{
+			player.tf_items = player.tf_items - 128;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 45)
+	{
+		if (player.tf_items & 256)
+		{
+			player.tf_items = player.tf_items - 256;
+			done = 1;
+		}		 
+	}
+	
+	if (done)
+	{
+		if (storechange)
+			SetItemInside(player,0,itemid,1);
+	}
+
+	if (resetstored)
+		SetItemInside(player,1,itemid,0);
+
+	return done;
+};
+
+//====================================================================================================
+// Gives an specific item to a player, storing change for restore, or cleaning up stored flag
+
+float(entity player, float itemid, float storechange, float resetstored) GiveSpecificItem =
+{
+	local float done;
+	done = 0;
+	
+	// PAGE 1 - Primary Weapons
+	if (itemid == 1)
+	{
+		if (!(player.weapons_carried & 32))
+		{
+			player.weapons_carried = player.weapons_carried | 32 | 64;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 2)
+	{
+		if (!(player.weapons_carried & 32768))
+		{
+			player.weapons_carried = player.weapons_carried | 32768;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 3)
+	{
+		if (!(player.weapons_carried & 8192))
+		{
+			player.weapons_carried = player.weapons_carried | 8192;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 4)
+	{
+		if (!(player.weapons_carried & 16384))
+		{
+			player.weapons_carried = player.weapons_carried | 16384 | 4096;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 5)
+	{
+		if (!(player.weapons_carried & 2048))
+		{
+			player.weapons_carried = player.weapons_carried | 2048;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 6)
+	{
+		if (!(player.weapons_carried & 65536))
+		{
+			player.weapons_carried = player.weapons_carried | 65536;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 7)
+	{
+		if (!(player.weapons_carried & 1024))
+		{
+			player.weapons_carried = player.weapons_carried | 1024;
+			done = 1;
+		}		 
+	}
+
+	// PAGE 2 - Secondary Weapons
+	else if (itemid == 8)
+	{
+		if (!(player.weapons_carried & 8388608))
+		{
+			player.weapons_carried = player.weapons_carried | 8388608;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 9)
+	{
+		if (!(player.cutf_items & 2))
+		{
+			player.cutf_items = player.cutf_items | 2;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 10)
+	{
+		if (!(player.weapons_carried & 256))
+		{
+			player.weapons_carried = player.weapons_carried | 256;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 11)
+	{
+		if (!(player.weapons_carried & 524288))
+		{
+			player.weapons_carried = player.weapons_carried | 524288;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 12)
+	{
+		if (!(player.weapons_carried & 512))
+		{
+			player.weapons_carried = player.weapons_carried | 512;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 13)
+	{
+		if (!(player.weapons_carried & 262144))
+		{
+			player.weapons_carried = player.weapons_carried | 262144;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 14)
+	{
+		if (!(player.weapons_carried & 128))
+		{
+			player.weapons_carried = player.weapons_carried | 128;
+			done = 1;
+		}		 
+	}
+	
+	// PAGE 3 - Misc/Extra Weapons
+	else if (itemid == 15)
+	{
+		if (!(player.weapons_carried & 1048576))
+		{
+			player.weapons_carried = player.weapons_carried | 1048576;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 16)
+	{
+		if (!(player.weapons_carried & 2097152))
+		{
+			player.weapons_carried = player.weapons_carried | 2097152;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 17)
+	{
+		if (!(player.cutf_items & 1048576))
+		{
+			player.cutf_items = player.cutf_items | 1048576;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 18)
+	{
+		if (!(player.weapons_carried & 131072))
+		{
+			player.weapons_carried = player.weapons_carried | 131072;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 19)
+	{
+		if (!(player.weapons_carried & 4194304))
+		{
+			player.weapons_carried = player.weapons_carried | 4194304;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 20)
+	{
+		if (!(player.cutf_items & 131072))
+		{
+			player.cutf_items = player.cutf_items | 131072;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 21)
+	{
+		if (!(player.cutf_items & 262144))
+		{
+			player.cutf_items = player.cutf_items | 262144;
+			done = 1;
+		}		 
+	}
+
+	// (skipped: Legs and Health)...
+
+	// PAGE 6 - Special Armors & Ammo
+	else if (itemid == 39)
+	{
+		if (!(player.tf_items & 32))
+		{
+			player.tf_items = player.tf_items | 32;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 40)
+	{
+		if (!(player.tf_items & 8))
+		{
+			player.tf_items = player.tf_items | 8;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 41)
+	{
+		if (!(player.cutf_items & 64))
+		{
+			player.cutf_items = player.cutf_items | 64;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 42)
+	{
+		if (!(player.tf_items & 4))
+		{
+			player.tf_items = player.tf_items | 4;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 43)
+	{
+		if (!(player.tf_items & 16))
+		{
+			player.tf_items = player.tf_items | 16;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 44)
+	{
+		if (!(player.cutf_items & 128))
+		{
+			player.cutf_items = player.cutf_items | 128;
+			done = 1;
+		}		 
+	}
+	else if (itemid == 45)
+	{
+		if (!(player.cutf_items & 256))
+		{
+			player.cutf_items = player.cutf_items | 256;
+			done = 1;
+		}		 
+	}
+
+	if (done)
+	{
+		if (storechange)
+			SetItemInside(player,1,itemid,1);		 
+	}
+
+	if (resetstored)
+		SetItemInside(player,0,itemid,0);
+
+	return done;
+};
+
+//==================================================================================
+// Gives the free stuff to the player (no cost and every1 gets it)
+
+float(entity player) GiveFreeStuff =
+{
+	if (!(givenstuff1 | givenstuff2 | givenstuff3 | givenstuff4 | givenstuff5))
+		return 0;
+
+	local float itemid, counter;
+	local entity oself;
+	
+	counter = 0;
+	
+	if (givenstuff1)
+	{
+		itemid = 1;
+
+		while (itemid < 22)
+		{
+			if (givenstuff1 & itob(itemid))
+			if (GiveSpecificItem(player,itemid,0,0))
+				counter = counter + 1;
+			
+			itemid = itemid + 1;
+		}
+	}
+	
+	if (givenstuff2)
+	{
+		itemid = 25;
+
+		while (itemid < 22 + 24)
+		{
+			if (givenstuff2 & itob(itemid - 24))
+			if (GiveSpecificItem(player,itemid,0,0))
+				counter = counter + 1;
+			
+			itemid = itemid + 1;
+		}
+	}
+	
+	if (givenstuff3)
+	{
+		itemid = 25+24;
+
+		while (itemid < 22 + 24 + 24)
+		{
+			if (givenstuff3 & itob(itemid - (24+24)))
+			if (GiveSpecificItem(player,itemid,0,0))
+				counter = counter + 1;
+			
+			itemid = itemid + 1;
+		}
+	}
+
+	if (givenstuff4)
+	{
+		itemid = 25+24+24;
+
+		while (itemid < 22 + 24 + 24 + 24)
+		{
+			if (givenstuff4 & itob(itemid - (24+24+24)))
+			if (GiveSpecificItem(player,itemid,0,0))
+				counter = counter + 1;
+			
+			itemid = itemid + 1;
+		}
+	}
+
+	if (givenstuff5)
+	{
+		itemid = 25+24+24+24;
+
+		while (itemid < 22 + 24 + 24 + 24 + 24)
+		{
+			if (givenstuff5 & itob(itemid - (24+24+24+24)))
+			if (GiveSpecificItem(player,itemid,0,0))
+				counter = counter + 1;
+			
+			itemid = itemid + 1;
+		}
+	}
+
+	if (counter)
+	{
+		oself = self;
+		self = player;
+		UpdateWeaponItems();
+		self = oself;
+	}
+
+	return counter;
+};
+
+//=====================================================================================
+// Checks if the specified item flag is in the supplied fields or not
+
+/*float(float itemid, float stuff1, float stuff2, float stuff3, float stuff4, float stuff5) ItemInside =
+{
+	local float bit;
+
+	bit = itemid - (floor(itemid/24)*24);
+
+	if (itemid < 24)
+	{
+		if (stuff1 & itob(bit))
+			return #TRUE;
+	}
+	else if (itemid < 48)
+	{
+		if (stuff2 & itob(bit))
+			return #TRUE;
+	}
+	else if (itemid < 72)
+	{
+		if (stuff3 & itob(bit))
+			return #TRUE;
+	}
+	else if (itemid < 96)
+	{
+		if (stuff4 & itob(bit))
+			return #TRUE;
+	}
+	else if (itemid < 120)
+	{
+		if (stuff5 & itob(bit))
+			return #TRUE;
+	}
+	else
+		return #FALSE; // bug, anyway
+
+	return #FALSE;
+};*/
+
+//=====================================================================
+// Modifies the striped/given flags on an entity
+
+float(entity ent, float type, float itemid, float value) SetItemInside =
+{
+	local float bit;
+
+	bit = itemid - (floor(itemid/24)*24);
+	bit = itob(bit);
+
+	if (type == 0) // Striped/Disabled fields
+	{
+		if (value) // Set bit
+		{
+			if (itemid < 24)
+			{
+				if (!(ent.display_item_status1 & bit))
+				{
+					ent.display_item_status1 = ent.display_item_status1 | bit;
+					return 1;
+				}
+			}
+			else if (itemid < 48)
+			{
+				if (!(ent.display_item_status2 & bit))
+				{
+					ent.display_item_status2 = ent.display_item_status2 | bit;
+					return 1;
+				}
+			}
+			else if (itemid < 72)
+			{
+				if (!(ent.display_item_status3 & bit))
+				{
+					ent.display_item_status3 = ent.display_item_status3 | bit;
+					return 1;
+				}
+			}
+			else if (itemid < 96)
+			{
+				if (!(ent.display_item_status4 & bit))
+				{
+					ent.display_item_status4 = ent.display_item_status4 | bit;
+					return 1;
+				}
+			}
+			else if (itemid < 120)
+			{
+				if (!(ent.restore_group_no & bit))
+				{
+					ent.restore_group_no = ent.restore_group_no | bit;
+					return 1;
+				}
+			}
+			else
+				return 0; // bug, anyway
+		}
+		else // un-set bit
+		{
+			if (itemid < 24)
+			{
+				if (ent.display_item_status1 & bit)
+				{
+					ent.display_item_status1 = ent.display_item_status1 - bit;
+					return 1;
+				}
+			}
+			else if (itemid < 48)
+			{
+				if (ent.display_item_status2 & bit)
+				{
+					ent.display_item_status2 = ent.display_item_status2 - bit;
+					return 1;
+				}
+			}
+			else if (itemid < 72)
+			{
+				if (ent.display_item_status3 & bit)
+				{
+					ent.display_item_status3 = ent.display_item_status3 - bit;
+					return 1;
+				}
+			}
+			else if (itemid < 96)
+			{
+				if (ent.display_item_status4 & bit)
+				{
+					ent.display_item_status4 = ent.display_item_status4 - bit;
+					return 1;
+				}
+			}
+			else if (itemid < 120)
+			{
+				if (ent.restore_group_no & bit)
+				{
+					ent.restore_group_no = ent.restore_group_no - bit;
+					return 1;
+				}
+			}
+			else
+				return 0; // bug, anyway
+		}
+	}
+	else // Given fields
+	{
+		if (value) // Set bit
+		{
+			if (itemid < 24)
+			{
+				if (!(ent.if_goal_is_active & bit))
+				{
+					ent.if_goal_is_active = ent.if_goal_is_active | bit;
+					return 1;
+				}
+			}
+			else if (itemid < 48)
+			{
+				if (!(ent.if_goal_is_inactive & bit))
+				{
+					ent.if_goal_is_inactive = ent.if_goal_is_inactive | bit;
+					return 1;
+				}
+			}
+			else if (itemid < 72)
+			{
+				if (!(ent.if_goal_is_removed & bit))
+				{
+					ent.if_goal_is_removed = ent.if_goal_is_removed | bit;
+					return 1;
+				}
+			}
+			else if (itemid < 96)
+			{
+				if (!(ent.if_group_is_active & bit))
+				{
+					ent.if_group_is_active = ent.if_group_is_active | bit;
+					return 1;
+				}
+			}
+			else if (itemid < 120)
+			{
+				if (!(ent.if_group_is_inactive & bit))
+				{
+					ent.if_group_is_inactive = ent.if_group_is_inactive | bit;
+					return 1;
+				}
+			}
+			else
+				return 0; // bug, anyway
+		}
+		else // un-set bit
+		{
+			if (itemid < 24)
+			{
+				if (ent.if_goal_is_active & bit)
+				{
+					ent.if_goal_is_active = ent.if_goal_is_active - bit;
+					return 1;
+				}
+			}
+			else if (itemid < 48)
+			{
+				if (ent.if_goal_is_inactive & bit)
+				{
+					ent.if_goal_is_inactive = ent.if_goal_is_inactive - bit;
+					return 1;
+				}
+			}
+			else if (itemid < 72)
+			{
+				if (ent.if_goal_is_removed & bit)
+				{
+					ent.if_goal_is_removed = ent.if_goal_is_removed - bit;
+					return 1;
+				}
+			}
+			else if (itemid < 96)
+			{
+				if (ent.if_group_is_active & bit)
+				{
+					ent.if_group_is_active = ent.if_group_is_active - bit;
+					return 1;
+				}
+			}
+			else if (itemid < 120)
+			{
+				if (ent.if_group_is_inactive & bit)
+				{
+					ent.if_group_is_inactive = ent.if_group_is_inactive - bit;
+					return 1;
+				}
+			}
+			else
+				return 0; // bug, anyway
+		}
+	}
+	
+	return 0;
+};
+
+//=================================================================================
+// Returns/strips on a player the stuff that has been striped/given to him or her
+
+float(entity player) RestoreOriginalItems =
+{	 
+	local float itemid, counter, all;
+	local entity oself;
+
+	all = 0;
+	counter = 0;
+
+	if (player.if_goal_is_active | player.if_goal_is_inactive | player.if_goal_is_removed | player.if_group_is_active | player.if_group_is_inactive)
+	{		 
+		if (player.if_goal_is_active)
+		{
+			itemid = 1;
+
+			while (itemid < 22)
+			{
+				if (player.if_goal_is_active & itob(itemid))
+				if (StripSpecificItem(player,itemid,0,0))
+					counter = counter + 1;
+				
+				itemid = itemid + 1;
+			}
+		}
+
+		if (player.if_goal_is_inactive)
+		{
+			itemid = 25;
+			
+			while (itemid < 22 + 24)
+			{
+				if (player.if_goal_is_inactive & itob(itemid - 24))
+				if (StripSpecificItem(player,itemid,0,0))
+					counter = counter + 1;
+				
+				itemid = itemid + 1;
+			}
+		}
+
+		if (player.if_goal_is_removed)
+		{
+			itemid = 25+24;
+			
+			while (itemid < 22 + 24 + 24)
+			{
+				if (player.if_goal_is_removed & itob(itemid - (24+24)))
+				if (StripSpecificItem(player,itemid,0,0))
+					counter = counter + 1;
+				
+				itemid = itemid + 1;
+			}
+		}
+
+		if (player.if_group_is_active)
+		{
+			itemid = 25+24+24;
+
+			while (itemid < 22 + 24 + 24 + 24)
+			{
+				if (player.if_group_is_active & itob(itemid - (24+24+24)))
+				if (StripSpecificItem(player,itemid,0,0))
+					counter = counter + 1;
+				
+				itemid = itemid + 1;
+			}
+		}
+		
+		if (player.if_group_is_inactive)
+		{
+			itemid = 25+24+24+24;
+
+			while (itemid < 22 + 24 + 24 + 24 + 24)
+			{
+				if (player.if_group_is_inactive & itob(itemid - (24+24+24+24)))
+				if (StripSpecificItem(player,itemid,0,0))
+					counter = counter + 1;
+				
+				itemid = itemid + 1;
+			}
+		}
+		
+		if (counter)
+		{			 
+			oself = self;
+			self = player;
+			self.current_weapon = W_BestWeapon ();
+			W_SetCurrentAmmo ();
+			UpdateWeaponItems();
+			self = oself;
+		}
+	}
+	
+	if (player.display_item_status1 | player.display_item_status2 | player.display_item_status3 | player.display_item_status4 | player.restore_group_no)
+	{
+		all = counter;
+		counter = 0;
+				
+		if (player.display_item_status1)
+		{
+			itemid = 1;
+		
+			while (itemid < 22)
+			{
+				if (player.display_item_status1 & itob(itemid))
+				if (GiveSpecificItem(player,itemid,0,0))
+					counter = counter + 1;
+				
+				itemid = itemid + 1;
+			}
+		}
+		
+		if (player.display_item_status2)
+		{
+			itemid = 25;
+
+			while (itemid < 22 + 24)
+			{
+				if (player.display_item_status2 & itob(itemid - 24))
+				if (GiveSpecificItem(player,itemid,0,0))
+					counter = counter + 1;
+				
+				itemid = itemid + 1;
+			}
+		}
+		
+		if (player.display_item_status3)
+		{
+			itemid = 25+24;
+
+			while (itemid < 22 + 24 + 24)
+			{
+				if (player.display_item_status3 & itob(itemid - (24+24)))
+				if (GiveSpecificItem(player,itemid,0,0))
+					counter = counter + 1;
+				
+				itemid = itemid + 1;
+			}
+		}
+		
+		if (player.display_item_status4)
+		{
+			itemid = 25+24+24;
+
+			while (itemid < 22 + 24 + 24 + 24)
+			{
+				if (player.display_item_status4 & itob(itemid - (24+24+24)))
+				if (GiveSpecificItem(player,itemid,0,0))
+					counter = counter + 1;
+				
+				itemid = itemid + 1;
+			}
+		}
+		
+		if (player.restore_group_no)
+		{
+			itemid = 25+24+24+24;
+
+			while (itemid < 22 + 24 + 24 + 24 + 24)
+			{
+				if (player.restore_group_no & itob(itemid - (24+24+24+24)))
+				if (GiveSpecificItem(player,itemid,0,0))
+					counter = counter + 1;
+				
+				itemid = itemid + 1;
+			}
+		}
+
+		if (counter)
+		{
+			oself = self;
+			self = player;
+			UpdateWeaponItems();
+			self = oself;			 
+		}
+	}
+
+	// Clear bits
+	ResetStripedAndGiven(player);
+
+	return all + counter;
+};
+
+//============================================================================
+// Subroutine for easy checking the disabled global fields
+
+float(float fieldnum) DisabledStuff =
+{
+	if (fieldnum == 1)
+		return disabledstuff1;
+	else if (fieldnum == 2)
+		return disabledstuff2;
+	else if (fieldnum == 3)
+		return disabledstuff3;
+	else if (fieldnum == 4)
+		return disabledstuff4;
+	else if (fieldnum == 5)
+		return disabledstuff5;
+
+	return 0;
+};
+
+//============================================================================
+// Subroutine for easy changing the disabled global fields
+
+void(float fieldnum, float value) SetDisabledStuff =
+{
+	if (fieldnum == 1)
+		disabledstuff1 = value;
+	else if (fieldnum == 2)
+		disabledstuff2 = value;
+	else if (fieldnum == 3)
+		disabledstuff3 = value;
+	else if (fieldnum == 4)
+		disabledstuff4 = value;
+	else if (fieldnum == 5)
+		disabledstuff5 = value;
+};
+
+//============================================================================
+// Subroutine for easy checking the free items global fields
+
+float(float fieldnum) GivenStuff =
+{
+	if (fieldnum == 1)
+		return givenstuff1;
+	else if (fieldnum == 2)
+		return givenstuff2;
+	else if (fieldnum == 3)
+		return givenstuff3;
+	else if (fieldnum == 4)
+		return givenstuff4;
+	else if (fieldnum == 5)
+		return givenstuff5;
+
+	return 0;
+};
+
+//============================================================================
+// Subroutine for easy changing the free items global fields
+
+void(float fieldnum, float value) SetGivenStuff =
+{
+	if (fieldnum == 1)
+		givenstuff1 = value;
+	else if (fieldnum == 2)
+		givenstuff2 = value;
+	else if (fieldnum == 3)
+		givenstuff3 = value;
+	else if (fieldnum == 4)
+		givenstuff4 = value;
+	else if (fieldnum == 5)
+		givenstuff5 = value;
+};
+
+//=======================================================================
+// Resets directly all the striped/given flags on a player
+
+void(entity player) ResetStripedAndGiven =
+{
+	player.display_item_status1 = 0;
+	player.display_item_status2 = 0;
+	player.display_item_status3 = 0;
+	player.display_item_status4 = 0;
+	player.restore_group_no = 0;
+
+	player.if_goal_is_active = 0;
+	player.if_goal_is_inactive = 0;
+	player.if_goal_is_removed = 0;
+	player.if_group_is_active = 0;
+	player.if_group_is_inactive = 0;
+};
+
+//==========================================================================
+// Returns a string with client's description and version number
+
+string(entity client) GetClientDescription =
+{
+	local string result, tmp;
+
+	if (client.cltype == 1)
+	{
+		result = "OriginalØUnknown client";
+
+		if (client.clversion != 0)
+		{
+			tmp = ver_ftos(client.clversion);
+			result = strcat(result," ˆ");
+			result = strcat(result,tmp);
+		}
+
+		return result;
+	}
+
+	if (client.cltype == 2)
+	{
+		result = "–rozac—◊";
+
+		tmp = ver_ftos(client.clversion);
+		result = strcat(result," ˆ");
+		result = strcat(result,tmp);
+		
+		return result;
+	}
+
+	if (client.cltype == 3)
+	{
+		result = "∆uh—uake";
+
+		tmp = ver_ftos(client.clversion);
+		result = strcat(result," ˆ");
+		result = strcat(result,tmp);
+		
+		return result;
+	}
+
+	if (client.cltype == 4)
+	{
+		result = "¡Õ∆—uake";
+
+		tmp = ver_ftos(client.clversion);
+		result = strcat(result," ˆ");
+		result = strcat(result,tmp);
+		
+		return result;
+	}
+
+	if (client.cltype == 5)
+	{
+		result = "⁄—uake";
+
+		tmp = ver_ftos(client.clversion);
+		result = strcat(result," ˆ");
+		result = strcat(result,tmp);
+		
+		return result;
+	}
+
+	if (client.cltype == 6)
+	{
+		result = "—uake∆orge";
+
+		tmp = ver_ftos(client.clversion);
+		result = strcat(result," ˆ");
+		result = strcat(result,tmp);
+		
+		return result;
+	}
+
+	if (client.cltype == 7)
+	{
+		result = "FTEquake";
+		return result;
+	}
+
+	if (client.cltype == 8)
+	{
+		result = "EZQuake";
+		return result;
+	}	 
+
+	return "unrecognized"; // wont happen
+};
+
+//===========================================================
+// Same thing but puts description inside "[]" chars
+
+string(entity client) GetBracedClDesc =
+{
+	local string result;
+
+	if (client.cltype <= 1)
+	{
+		result = GetClientDescription(client);
+		result = strcat("€",result);
+		result = strcat(result,"›");
+	}
+	else
+	{
+		result = GetClientDescription(client);
+		result = strcat("[",result);
+		result = strcat(result,"]");
+	}
+
+	return result;
+};
+
+//==============================================================
+// Transforms a version float into a version string
+
+string(float ver) ver_ftos =
+{
+	local float tmpf;
+	local string result, tmpst;
+
+	tmpf = floor(ver);
+	result = ftos(tmpf);
+	result = strcat(result,"Æ");
+	tmpf = floor((ver - tmpf) * 100);
+	tmpst = ftos(tmpf);
+	result = strcat(result,tmpst);
+	result = colstr(result,4);
+
+	return result;
+};
+
+//=============================================================================
+// Extended version of SpawnMeatSpray()
+
+entity(vector org, vector dir, float meatduration) SpawnMeatSprayEx =
+{
+	local	entity missile;
+
+	missile = spawn ();
+	missile.owner = self;
+	missile.movetype = 10;
+	missile.solid = 0;
+
+	makevectors (self.angles);
+
+	missile.velocity = dir;
+
+	missile.avelocity = '3000 1000 2000';
+	
+// set missile duration
+	missile.nextthink = time + meatduration;
+	missile.think = SUB_Remove;
+
+	setmodel (missile, "progs/zom_gib.mdl");
+	setsize (missile, '0 0 0', '0 0 0');		
+	setorigin (missile, org);
+
+	return missile;
+};
+
+//===========================================================================
+// Corpse related functions
+
+void(entity corpse) GibCorpse =
+{
+	
+
+	local entity oself;
+	
+	oself = self;
+	self = corpse;
+	
+	if (self.modelindex == modelindex_player)
+	{
+		ThrowHeadOut("progs/h_player.mdl", 0);
+		ThrowGib ("progs/gib1.mdl", 0,1,0,1,1);
+		ThrowGib ("progs/gib2.mdl", 0,1,0,3,1);
+		ThrowGib ("progs/gib3.mdl", 0,1,0,2,1);
+	}
+	else if (self.increase_team3 == 1)
+	{
+		ThrowMonsterHead("progs/h_wizard.mdl",0);
+		ThrowGib ("progs/gib2.mdl", 0, 1, 0, 3,1);
+		ThrowGib ("progs/gib3.mdl", 0, 1, 0, 2,1);
+		ThrowGib ("progs/gib3.mdl", 0, 1, 0, 2,1);
+	}
+	else if (self.increase_team3 == 2)
+	{
+		ThrowGib ("progs/gib2.mdl", 0, 1, 0, 3,1);
+		ThrowGib ("progs/gib3.mdl", 0, 1, 0, 2,1);
+	}
+	else if (self.increase_team3 == 3)
+	{
+		ThrowMonsterHead("progs/h_demon.mdl",0);
+		ThrowGib ("progs/gib3.mdl", 0, 1, 0, 2,1);
+		ThrowGib ("progs/gib2.mdl", 0, 1, 0, 3,1);
+		ThrowGib ("progs/gib3.mdl", 0, 1, 0, 2,1);
+	}
+	else if (self.increase_team3 == 4)
+	{
+		ThrowMonsterHead("progs/h_grem.mdl",0);
+		ThrowGib ("progs/gib1.mdl", 0,1,0,1,1);
+		ThrowGib ("progs/gib2.mdl", 0,1,0,3,1);
+		ThrowGib ("progs/gib3.mdl", 0,1,0,2,1);
+	}
+	else if (self.increase_team3 == 5)
+	{
+		ThrowMonsterHead("progs/h_shams.mdl",0);
+		ThrowGib ("progs/gib1.mdl", 0, 1, 0,1,1);
+		ThrowGib ("progs/gib2.mdl", 0, 1, 0,3,1);
+		ThrowGib ("progs/gib3.mdl", 0, 1, 0,2,1);		
+		ThrowGib ("progs/gib3.mdl", 0, 1, 0,2,1);
+	}
+	else if (self.increase_team3 == 6)
+	{
+		ThrowMonsterHead("progs/h_player.mdl",0);
+		ThrowGib ("progs/gib1.mdl", 0,1,0,1,1);
+		ThrowGib ("progs/gib2.mdl", 0,1,0,3,1);
+		ThrowGib ("progs/gib3.mdl", 0,1,0,2,1);
+	}
+
+	else if ( COOP_IsCoopMonster( self ) ) {
+		if ( self.mdl != string_null )
+			ThrowMonsterHead( self.mdl, 0 );
+
+		ThrowGib( "progs/gib1.mdl", -40, 1, 0, 1, 0 );
+		ThrowGib( "progs/gib2.mdl", -40, 1, 0, 3, 0 );
+		ThrowGib( "progs/gib3.mdl", -40, 1, 0, 2, 0 );
+	}
+
+
+	SpawnBloodEx(self.origin,0.66,9);
+
+	self = oself;
+
+	
+};
+
+void(entity corpse, float damage, vector where, entity attacker, float directdmg) DamageCorpse =
+{
+	
+
+	local float points;
+	
+	// Safety checks, first
+	if (corpse.if_group_is_removed <= 0)
+		return;
+	if (corpse.modelindex == modelindex_null)
+		return;
+	if (damage <= 0)
+		return;
+
+	// Calculate damage if needed
+	if (directdmg) // Direct damage, normal
+		points = damage;
+	else // Radius/Blast damage, we should adjust damage based on distance to explosion
+	{
+		points = 0.5*vlen (where - corpse.origin);
+
+		if (points < 0)
+			points = 0;
+
+		points = damage - points;
+
+		if (points <= 0)
+			return;
+	}
+	
+	// Apply damage to the corpse
+	corpse.if_group_is_removed = corpse.if_group_is_removed - points;
+
+	if (corpse.if_group_is_removed <= 0) // got destroyed?
+	{
+		// Corpse explodes.. throw gibs!
+		// Throw an appropiate head too! :)
+		GibCorpse(corpse);		  
+		
+		// If this is a monster corpse, just remove entity
+		if (corpse.classname == "monster_corpse")
+		{			 
+			dremove(corpse);
+			return;
+		}
+		// If a player and still on the corpse, report his corpse is destroyed and who is gibbing it
+		else if (corpse.classname == "player" && corpse.is_connected)
+		{
+			if (attacker)
+			if (attacker.classname == "player" && attacker.is_connected)
+			{
+				if (corpse != attacker)
+				{
+					sprint(corpse,1,attacker.netname," destroys your corpse!\n");
+					sprint(attacker,0,"You destroy ",corpse.netname,"'s corspe!\n");
+				}	  
+				else
+					sprint(corpse,1,"You destroy your own corpse!\n");
+			}
+		}
+
+		// Make corpse disappear, and "unmark" entity as corpse, doing cleanup
+		corpse.modelindex = modelindex_null;
+		corpse.solid = 0;
+		corpse.message = "";
+		corpse.flags = corpse.flags - (corpse.flags & 16384);
+		corpse.takedamage = 0;
+	}
+	else // still not destroyed, it should bleed
+	{
+		// Spawn corresponding ammount of blood
+		SpawnBloodEx(corpse.origin, 0.5, 15);
+		
+		// If not enough damage, dont spawn meat spray, sometimes dont also even if enough dmg
+		if (random() > 0.6 || points < 20)
+			return;
+
+		// Calculate random direction for meat spray
+		where_x = crandom()*120;
+		where_y = crandom()*120;
+		where_z = (200 + crandom()*60)*(points/40);
+		if (where_z > 300)
+			where_z = 300;
+
+		// Launch meat spray
+		SpawnMeatSprayEx(corpse.origin,where,1);
+	}
+
+	
+};
+
+//===========================================================================
+// Prepares an entity for corpse damage
+
+void(entity deadone, float corpse_dmg_tolerance) MakeCorpse =
+{
+	
+
+	deadone.message = "corpse";
+	deadone.if_group_is_removed = corpse_dmg_tolerance + crandom()*40 - random()*60;
+	if (deadone.if_group_is_removed < 1)
+		deadone.if_group_is_removed = 1;
+	deadone.touch = SUB_Null;
+	deadone.flags = deadone.flags | 16384; 
+	deadone.maxs_z = deadone.mins_z + 15;
+	setsize (deadone, deadone.mins, deadone.maxs);
+	deadone.takedamage = 1;
+	
+	
+};
+
+//=======================================================================
+// Reverts last increase of CPrint FX's counter/indicator
+
+void() NoCprintFX =
+{
+	self.endtime = self.endtime - 1;
+};
+
+//=======================================================================
+// Flashes background of a client, using "bf" command the specified times
+
+void(entity client, float ammount) BackFlash =
+{
+	local string tstr;
+	local float counter;
+
+	counter = 1;
+
+	tstr = "bf";
+
+	while (counter < ammount)
+	{
+		tstr = strcat(tstr,";bf");
+
+		counter = counter + 1;
+	}
+
+	tstr = strcat(tstr,"\n");
+
+	stuffcmd(client,tstr);
+};
+
+//=======================================================================
+// Gizmo - use object stuff
+
+float( entity object ) IsValidUseObject = {
+	if ( object.classname == "door" && object.use != fd_secret_use )
+		return 1;
+	else if ( object.classname == "plat" )
+		return 1;
+	else if ( object.classname == "train" )
+		return 1;
+	else if ( object.classname == "func_button" )
+		return 1;
+
+	return 0;
+};
+
+string( entity object ) GetUseObjectAction = {
+	if ( object.classname == "door" && object.use != fd_secret_use )
+		return "open/close";
+	else if ( object.classname == "plat" )
+		return "move up/down";
+	else if ( object.classname == "train" )
+		return "goto the next waypoint";
+	else if ( object.classname == "func_button" )
+		return "be pushed";
+
+	return "do nothing";
+};
+
+string( entity object ) GetUseObjectName = {
+	// for now, everything uses .classname as the name
+	return object.classname;
+};
+
+void() door_go_down;
+void() door_go_up;
+void() door_killed;
+void() fd_secret_use;
+void() plat_go_up;
+void() plat_go_down;
+void( entity object ) UseObject = {
+	local entity	oself;
+
+	if ( object == world ) {
+		makevectors( self.v_angle );
+		traceline( self.origin + '0 0 16', ( self.origin + '0 0 16' ) + v_forward * 4096, 0, self );
+	} else
+		trace_ent = object;
+
+	if ( trace_ent.classname == "door" && trace_ent.use != fd_secret_use ) {
+		oself = self;
+		self = trace_ent;
+
+		if ( self.state == 3 || self.state == 1 )
+			door_go_up ();
+		else
+			door_go_down ();
+
+		self = oself;
+	} else if ( trace_ent.classname == "plat" ) {
+		oself = self;
+		self = trace_ent;
+
+		if ( self.state == 3 || self.state == 1 )
+			plat_go_up ();
+		else
+			plat_go_down ();
+
+		self = oself;
+	} else if ( trace_ent.classname == "train" ) {
+		oself = self;
+		self = trace_ent;
+
+		train_next ();
+
+		self = oself;
+	} else if ( trace_ent.classname == "func_button" ) {
+		trace_ent.enemy = self;
+
+		oself = self;
+		self = trace_ent;
+
+		button_fire();
+
+		self = oself;
+	}
+};
+
+//=======================================================================
+// Used to get the team number of any entity
+
+float( entity e ) GetTeam = {
+	if ( e.flags & 32 ) {
+		if ( e.real_owner != world )
+			return e.real_owner.team_no;
+		return e.team_no;
+	}
+	if ( e.classname == "player" )
+		return e.team_no;
+	if ( e.classname == "grenade" ) {
+		if ( e.netname == "land_mine" )
+			return e.owner.team_no;
+	}
+	if ( IsBuilding( e ) )
+		return e.real_owner.team_no;
+
+	return e.team_no;
+};
+
+/*
+=============
+infront2
+
+returns 1 if the entity is in front (in sight) of check
+=============
+*/
+float( entity targ, entity check ) infront2 = {
+	local vector	vec;
+	local float		dot;
+	
+	makevectors( check.angles );
+	vec = normalize( targ.origin - check.origin );
+	dot = vec * v_forward;
+	
+	if ( dot > 0.3 )
+		return 1;
+	return 0;
+};
+
