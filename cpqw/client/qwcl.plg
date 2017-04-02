@@ -1,0 +1,91 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: qwcl - Win32 GLRelease--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\WINDOWS\TEMP\RSP30D0.TMP" with contents
+[
+/nologo /G5 /ML /GX /Ot /Ow /I "..\dxsdk\sdk\inc" /I "..\scitech\include" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "GLQUAKE" /Fp".\GLRelease/qwcl.pch" /YX /Fo".\GLRelease/" /Fd".\GLRelease/" /FD /c 
+"E:\MyProjects\Qw\client\cmd.c"
+]
+Creating command line "cl.exe @C:\WINDOWS\TEMP\RSP30D0.TMP" 
+Creating temporary file "C:\WINDOWS\TEMP\RSP30D1.TMP" with contents
+[
+comctl32.lib glu32.lib ..\dxsdk\sdk\lib\dxguid.lib opengl32.lib wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib winmm.lib /nologo /subsystem:windows /incremental:no /pdb:".\GLRelease/glqwcl.pdb" /debug /machine:I386 /out:".\GLRelease\glqwcl.exe" 
+.\GLRelease\cd_win.obj
+.\GLRelease\cl_cam.obj
+.\GLRelease\cl_demo.obj
+.\GLRelease\cl_ents.obj
+.\GLRelease\cl_input.obj
+.\GLRelease\cl_main.obj
+.\GLRelease\cl_parse.obj
+.\GLRelease\cl_pred.obj
+.\GLRelease\cl_tent.obj
+.\GLRelease\cmd.obj
+.\GLRelease\common.obj
+.\GLRelease\console.obj
+.\GLRelease\crc.obj
+.\GLRelease\cvar.obj
+.\GLRelease\gl_draw.obj
+.\GLRelease\gl_mesh.obj
+.\GLRelease\gl_model.obj
+.\GLRelease\gl_ngraph.obj
+.\GLRelease\gl_refrag.obj
+.\GLRelease\gl_rlight.obj
+.\GLRelease\gl_rmain.obj
+.\GLRelease\gl_rmisc.obj
+.\GLRelease\gl_rsurf.obj
+.\GLRelease\gl_screen.obj
+.\GLRelease\gl_test.obj
+.\GLRelease\gl_vidnt.obj
+.\GLRelease\gl_warp.obj
+.\GLRelease\in_win.obj
+.\GLRelease\keys.obj
+.\GLRelease\mathlib.obj
+.\GLRelease\md4.obj
+.\GLRelease\menu.obj
+.\GLRelease\net_chan.obj
+.\GLRelease\net_wins.obj
+.\GLRelease\nonintel.obj
+.\GLRelease\pmove.obj
+.\GLRelease\pmovetst.obj
+.\GLRelease\r_part.obj
+.\GLRelease\sbar.obj
+.\GLRelease\skin.obj
+.\GLRelease\snd_dma.obj
+.\GLRelease\snd_mem.obj
+.\GLRelease\snd_mix.obj
+.\GLRelease\snd_win.obj
+.\GLRelease\sys_win.obj
+.\GLRelease\view.obj
+.\GLRelease\wad.obj
+.\GLRelease\zone.obj
+.\GLRelease\winquake.res
+.\GLRelease\math.obj
+.\GLRelease\snd_mixa.obj
+.\GLRelease\sys_wina.obj
+]
+Creating command line "link.exe @C:\WINDOWS\TEMP\RSP30D1.TMP"
+<h3>Output Window</h3>
+Compiling...
+cmd.c
+Linking...
+Creating temporary file "C:\WINDOWS\TEMP\RSP3103.BAT" with contents
+[
+@echo off
+copy GLRelease\glqwcl.exe e:\quake\cpglqwcl.exe
+]
+Creating command line "C:\WINDOWS\TEMP\RSP3103.BAT"
+Copying GLqwcl.exe to Quake dir...
+        1 archivos copiados
+
+
+
+<h3>Results</h3>
+glqwcl.exe - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>
