@@ -1,6 +1,6 @@
 # Quake Custom Team Fortress
 
-**COMPILES & currently requires cpqw and will load with MVDSV then crashes upon a player join**
+**COMPILES & currently requires cpqw and will load with MVDSV then crashes when a player joins**
 
 The compiled qwprogs.dat is included in the fortress folder along with the server config scripts. The server configs are setup to run with any modification, though you may want to change the server name and rcon. (assuming that this mod is converted to MVDSV)
 
