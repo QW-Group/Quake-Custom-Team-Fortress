@@ -5,4 +5,4 @@ Usage:
 ./configure
 make
 
-copy the cppreqcc to the cutf_4tp_original directory and use ./cppreqcc
+copy the cppreqcc to the cutf_4tp_the_original directory and use ./cppreqcc
