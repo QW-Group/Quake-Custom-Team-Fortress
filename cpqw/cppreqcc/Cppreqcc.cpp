@@ -29,6 +29,7 @@ It has the same pragma's and behaves the same way, except:
 #include <string.h>
 #include <stdio.h>
 #include <float.h>
+#include <iostream>
 
 #include "cppreqcc.h"
 
