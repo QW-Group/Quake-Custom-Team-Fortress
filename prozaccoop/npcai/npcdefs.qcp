@@ -1,0 +1,48 @@
+// npcdefs.qc
+
+
+// misc stuff
+
+
+// .spawnflags values
+
+
+
+
+// macros for certain variables so we can reuse unused variables and still give it a unique name
+
+
+
+//#define npc_spawndelay			walkframe		// was gravity
+
+
+
+
+
+
+
+
+
+
+
+// damage multipliers
+
+
+
+
+
+
+
+
+// used for smooth movement of monsters, FIXME: change vars I just made up some crap to see if it compiles
+.void() npc_oldthink;
+
+
+//#define npc_smoothDestPos			dest2			// dest2 is also used for doors.qc, rotate.qc, and the gremlin summon
+
+
+
+
+
+
+

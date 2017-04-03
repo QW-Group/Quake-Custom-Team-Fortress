@@ -1,0 +1,36 @@
+// coop_defs.qc
+
+
+
+
+
+
+// alternate teams
+
+
+// monster weights, a monster can be inbetween these
+
+
+
+
+
+
+// monster flags
+
+
+
+
+
+
+
+
+
+// coop monster fields
+.float monsterweight;
+.float monsterflags;								// MFLAG_*** flags
+
+// coop only player fields
+
+
+
+

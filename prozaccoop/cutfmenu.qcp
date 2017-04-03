@@ -1,0 +1,3276 @@
+/*=======================================================//
+// CuTFMenu.QC - CustomTF 3.2.OfN		  - 30/10/2004 - //
+// by Sergio Fumaña Grunwaldt - OfteN [cp]				 //
+=========================================================//
+ All the stuff related to the customizing menu is here
+ Moved to its own file for organization purposes
+ Here now single price definitions also.. finally! =)
+=========================================================*/
+
+string(float itemnum, string itemdesc,float cost,float field, float bit) ConstructMenuItemStr;
+string(float itemnum, string itemdesc,float cost) ConstructMenuTeslaStr;
+string(float itemnum, string itemdesc,float cost) ConstructMenuSentryStr;
+string(float itemnum, string itemdesc,float jobid,float cost, float extra1cost, float extra2cost, string extra1st, string extra2st) ConstructMenuJobStr;
+string(float itemnum, string itemdesc,float cost,float grentype) ConstructMenuGrenStr;
+string(float itemnum, string itemdesc,float cost) ConstructMenuSpeedStr;
+string(float itemnum, string itemdesc,float cost) ConstructMenuHPStr;
+float() SpentOnJob;
+float() SpentOnGrens;
+float() SpentOnLegs;
+float() SpentOnHP;
+void(entity player) UpdateArmorItem;
+
+// Menu Item Strings
+// PAGE 1 - Primary Weapons
+
+
+
+
+
+
+
+// PAGE 2 - Secondary Weapons
+
+
+
+
+
+
+
+// PAGE 3 - Misc/Extra Weapons
+
+
+
+
+
+
+
+// PAGE 4 - Tools
+
+// PAGE 5 - Leg Enhancements
+
+
+
+
+
+
+
+// PAGE 6 - Health/Armor
+
+
+
+
+
+
+
+// PAGE 7 - Special Armors & Ammo
+
+
+
+
+
+
+
+// PAGE 8 - Special Items
+
+
+
+
+
+
+
+// PAGE 9 - More Special Items
+
+
+
+
+
+
+
+// PAGE 10 - Combat Grenades
+
+
+
+
+
+
+
+// PAGE 11 - Utility Grenades
+
+
+
+
+
+
+
+// PAGE 12 - Engineering
+
+
+
+
+
+
+
+// PAGE 13 - Professions
+
+
+
+  
+  
+
+
+
+  
+  
+
+// PAGE 14 - More Professions
+
+  
+  
+
+
+
+// PAGE 15 - Proficiencies
+
+
+
+
+
+
+
+// PAGE 16 - Optional Equipment
+
+
+
+
+
+
+
+// PAGE 17 - More Equipment
+
+
+
+
+
+
+// For the love of god, we needed this before!! (easily tweakable, SINGLE VALUES!)
+// PAGE 1 - Primary Weapons
+
+
+
+	
+
+
+
+
+
+
+
+// PAGE 2 - Secondary Weapons
+
+
+
+
+
+
+
+// PAGE 3 - Misc/Extra Weapons
+
+
+
+
+
+
+
+// PAGE 4 - Tools
+
+// PAGE 5 - Leg Enhancements
+
+
+
+
+
+
+// PAGE 6 - Health/Armor
+
+
+
+
+
+
+
+// PAGE 7 - Special Armors & Ammo
+
+
+
+
+
+
+
+// PAGE 8 - Special Items
+
+
+
+
+
+
+
+// PAGE 9 - More Special Items
+
+
+
+
+
+
+
+// PAGE 10 - Combat Grenades
+
+
+
+
+
+
+
+// PAGE 11 - Utility Grenades
+
+
+
+
+
+
+
+// PAGE 12 - Engineering
+
+
+
+
+
+
+
+// PAGE 13 - Professions
+
+
+
+  
+  
+
+
+
+  
+  
+
+// PAGE 14 - More Professions
+
+  
+  
+
+
+
+// PAGE 15 - Proficiencies
+
+
+
+
+
+
+
+// PAGE 16 - Optional Equipment
+
+
+
+
+
+
+
+// PAGE 17 - More Equipment
+
+
+
+
+// Leg settings (Speeds)
+
+
+
+
+
+
+
+
+// Char used to visually indicate a purchased item (DO NOT USE QUOTES!)
+//#define CHAR_BOUGHT * // <-- Classic "*" char
+
+
+//==============================================================================
+// The following "ancient" functions have been there doing the work for years
+// I feel sad removing them, so they r still here :P
+
+//----------------------------------------------------------------------
+// Rod May	kk@rod.net
+// mstr and mstr2 and eqstr only exist to cut down on a crap load of code.
+//
+/*string(float v,float m1,float m2,string s1,string s2,string s3,string s4) mstr =
+{
+	// return string for matching masks (m1 and m2) on value v.
+	// neither match: s1, first only: s2, second only: s3, both: s4
+
+	if ((v & m1) && (v & m2)) return s4;
+	if (v & m1) return s2;
+	if (v & m2) return s3;
+	return s1;
+};
+string(float v1,float v2,float m1,float m2,string s1,string s2,string s3,string s4) mstr2 =
+{
+	// same func as above but with a value for each mask.
+	// return string for matching mask m1 on value v1, and m2 on v2.
+
+	if ((v1 & m1) && (v2 & m2)) return s4;
+	if (v1 & m1) return s2;
+	if (v2 & m2) return s3;
+	return s1;
+};*/
+/*string(float v,float v1,float v2,string s1,string s2,string s3) eqstr =
+{
+	// return string based on v equals values v1 OR v2
+	// neither equal: s1, first only: s2, second only: s3
+
+	if (v == v1) return s2;
+	if (v == v2) return s3;
+	return s1;
+};*/
+//----------------------------------------------------------------------
+//----------------------------------------------------------------------
+
+//WK =====================================================================
+//	Prints Menu of Primary Weapons Available
+//	 =====================================================================
+void() Menu_PrimaryWeapon =
+{
+	local string temp;
+	temp = ftos(self.money);
+	
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	
+	MenuResetCount();
+	
+	local string msg_custom;
+	local string l1,l2,l3,l4, str;
+
+	l1 = ConstructMenuItemStr(1,"Sniper Rifle    ",4800,self.weapons_carried,32);
+	str = ConstructMenuItemStr(2,"Assault Cannon  ",3000,self.weapons_carried,32768);
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuItemStr(3,"Rocket Launcher ",3000,self.weapons_carried,8192);
+	str = ConstructMenuItemStr(4,"Pyro Toys       ",3000,self.weapons_carried,16384);
+	l2 = strcat(l2,str);
+
+	l3 = ConstructMenuItemStr(5,"Grenade Set     ",2200,self.weapons_carried,2048);
+	str = ConstructMenuItemStr(6,"Lightning Gun   ",2200,self.weapons_carried,65536);
+	l3 = strcat(l3,str);
+
+	l4 = ConstructMenuItemStr(7,"Light Assault   ",1800,self.weapons_carried,1024);
+	l4 = strcat(l4,"..         \n.. Îåøô    \n.. Äïîå!   \n");
+
+	if (self.done_custom & 16)
+		msg_custom	= " dollars left\n\n*CURRENTLY SELLING FRAGS*\nTyping ÃÕÓÔÏÍ again will waste your cash\n";
+	else
+		msg_custom =  " dollars left\n\nUse the ÃÕÓÔÏÍ command to start over\nUse the ÕĞÇÒÁÄÅ command to sell frags\n";
+
+	centerprint(self,"œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Primary Weapons    œ‹\n\n",l1,l2,l3,l4,temp,msg_custom);
+};													   
+
+void(float inp) Menu_PrimaryWeapon_Input =
+{
+	if (inp <= 10 && inp >= 1)
+	{
+//Snipe
+		if (inp == 1)
+				if (self.weapons_carried & 32) //Already have it
+				{
+					PrintRefund(4800);
+					self.weapons_carried = self.weapons_carried - 32;
+					self.weapons_carried = self.weapons_carried - 64;
+					self.maxammo_shells = self.maxammo_shells - 75;
+					Menu_PrimaryWeapon();
+				}
+				else if (self.money >= 4800) {
+					self.money = self.money - 4800;
+					self.weapons_carried = self.weapons_carried | 32 | 64;
+					self.maxammo_shells = self.maxammo_shells + 75;
+					PrintMoney();
+					Menu_PrimaryWeapon();
+				}
+				else
+					PrintNotEnoughMoney(4800);
+			
+		if (inp == 2)
+		{
+			BuyWeapon(3000,32768);
+			Menu_PrimaryWeapon();
+		}
+		if (inp == 3)
+		{
+			BuyWeapon(3000,8192);			
+			Menu_PrimaryWeapon();
+			UpdateWeaponItems();
+		}
+//IC
+		if (inp == 4)
+		{
+			if (self.weapons_carried & 16384) //Already have it
+			{
+				//Clean up asbestos armor
+				if (!(self.tf_items & 64))
+					self.money = self.money - 750; //Sync this with asbestos
+				self.tf_items = self.tf_items - (self.tf_items & 64);
+
+				PrintRefund(3000);
+				self.weapons_carried = self.weapons_carried - 16384;
+				self.weapons_carried = self.weapons_carried - 4096;
+				self.maxammo_cells = self.maxammo_cells - 200;
+				self.maxammo_rockets = self.maxammo_rockets - 60;
+				Menu_PrimaryWeapon();
+			}
+			else if (self.money >= 3000)
+			{
+				self.money = self.money - 3000;
+				self.weapons_carried = self.weapons_carried | 16384 | 4096;
+				//Give em asbestos armor, and a refund if they have it
+				if (self.tf_items & 64)
+					self.money = self.money + 750; //Sync this with asbestos price
+				self.tf_items = self.tf_items | 64;
+
+				
+				self.maxammo_cells = self.maxammo_cells + 200;
+				self.maxammo_rockets = self.maxammo_rockets + 60;
+				PrintMoney();
+				Menu_PrimaryWeapon();
+			}
+			else
+				PrintNotEnoughMoney(3000);
+
+			UpdateWeaponItems();
+		}
+		if (inp == 5)
+		{
+				BuyWeapon(2200,2048);
+				Menu_PrimaryWeapon();
+				UpdateWeaponItems();
+		}
+		if (inp == 6)
+		{
+				BuyWeapon(2200,65536);
+				Menu_PrimaryWeapon();
+				UpdateWeaponItems();
+		}
+		if (inp == 7)
+		{
+				BuyWeapon(1800,1024);
+				Menu_PrimaryWeapon();
+				UpdateWeaponItems();
+		}
+		if (inp == 9)
+		{
+			CuTFMenuSound(1);
+			self.current_menu = 37;
+			Menu_SecondaryWeapon(); 		
+		}
+		if (inp == 10)
+		{
+			DropFromCustomClassGen();
+		}
+
+		self.impulse = 0;
+	}
+	// Otherwise, the impulse is passed on
+	// SB to where, nobody knows
+};
+
+// ====================================================================
+//	Prints Menu of Secondary Weapons Available
+// ====================================================================
+void() Menu_SecondaryWeapon =
+{
+	local string temp;
+	temp = ftos(self.money);
+	
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+		
+	local string l1,l2,l3,l4, str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuItemStr(1,"Super Nailgun   ",800,self.weapons_carried,8388608);
+	str = ConstructMenuItemStr(2,"Knife           ",650,self.cutf_items,2);
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuItemStr(3,"Double Barrel   ",575,self.weapons_carried,256);
+	str = ConstructMenuItemStr(4,"Rail Gun        ",500,self.weapons_carried,524288);
+	l2 = strcat(l2,str);
+
+	l3 = ConstructMenuItemStr(5,"Nail Gun        ",400,self.weapons_carried,512);
+	str = ConstructMenuItemStr(6,"Tranquilizer    ",300,self.weapons_carried,262144);
+	l3 = strcat(l3,str);
+
+	l4 = ConstructMenuItemStr(7,"Single Barrel   ",50,self.weapons_carried,128);
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Secondary Weapons  œ‹\n\n",l1,l2,l3,l4,temp," dollars left\n");
+};
+
+void(float inp) Menu_SecondaryWeapon_Input =
+{ 
+  if (inp <= 10 && inp >= 1)
+  {
+	if (inp == 1) {
+		BuyWeapon(800,8388608);
+		Menu_SecondaryWeapon();
+		UpdateWeaponItems();
+	}
+
+//Knife
+	if (inp == 2) {
+		if (self.cutf_items & 2) //Already have it
+		{
+			//Clean up knife-less warlocks (sync this with Custom.qc)
+			if (self.job & 4) { // OfN Fix getting extra money with demon lore
+				sprint(self, 2, "You will need this knife being a warlock!\n");
+				CuTFMenuSound(4);
+				self.impulse=0;
+				return;
+			}
+
+			PrintRefund(650);
+			self.cutf_items = self.cutf_items - 2;
+			Menu_SecondaryWeapon();
+		}
+		else if (self.money >= 650) {
+			self.money = self.money - 650;
+			self.cutf_items = self.cutf_items | 2;
+			PrintMoney();
+			Menu_SecondaryWeapon();
+		}
+		else
+			PrintNotEnoughMoney(650);
+	}
+	if (inp == 3) {
+		BuyWeapon(575,256);
+		Menu_SecondaryWeapon();
+		UpdateWeaponItems();
+	}
+	if (inp == 4) {
+		BuyWeapon(500,524288);
+		Menu_SecondaryWeapon();
+	}
+	if (inp == 5) {
+		BuyWeapon(400,512);
+		Menu_SecondaryWeapon();
+		UpdateWeaponItems();
+	}
+	if (inp == 6) {
+		BuyWeapon(300,262144);
+		Menu_SecondaryWeapon();
+	}
+	if (inp == 7) {
+		BuyWeapon(50,128);
+		Menu_SecondaryWeapon();
+		UpdateWeaponItems();
+	}
+	if (inp == 8) {
+		CuTFMenuSound(1);
+		self.current_menu = 36;
+		Menu_PrimaryWeapon();
+		
+	}
+	if (inp == 9)
+	{
+		CuTFMenuSound(1);
+		self.current_menu = 38;
+		Menu_MiscWeapon();		  
+	}
+	if (inp == 10)
+	{
+		DropFromCustomClassGen();
+	}
+
+	 self.impulse = 0;
+  }
+};
+
+
+// ====================================================================
+//	Prints Menu of Secondary Weapons Available
+// ====================================================================
+void() Menu_MiscWeapon =
+{
+	local string temp;
+	temp = ftos(self.money);
+	
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	
+	local string l1,l2,l3,l4, str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuItemStr(1,"Mauser          ",2400,self.weapons_carried,1048576);
+	str = ConstructMenuItemStr(2,"Air-Fist        ",2000,self.weapons_carried,2097152);
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuItemStr(3,"Airfist upgrade ",1850,self.cutf_items,1048576);
+	str = ConstructMenuItemStr(4,"Impulse Rifle   ",1500,self.weapons_carried,131072);
+	l2 = strcat(l2,str);
+
+	l3 = ConstructMenuItemStr(5,"Laser Cannon    ",1400,self.weapons_carried,4194304);
+	str = ConstructMenuItemStr(6,"Holo Device     ",1200,self.cutf_items,131072);
+	l3 = strcat(l3,str);
+
+	l4 = ConstructMenuItemStr(7,"Clip Extender   ",600,self.cutf_items,262144);
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Misc¯Extra Weapons œ‹\n\n",l1,l2,l3,l4,temp," dollars left\n");
+};
+
+void(float inp) Menu_MiscWeapon_Input =
+{ 
+  if (inp <= 10 && inp >= 1)
+  {
+
+		if (inp == 1) {
+			BuyWeapon(2400, 1048576);
+			//sprint(self, #PRINT_HIGH, "Unfortunately all stocks of this item have been requisitioned to increase the glory of the Queen. God save the Queen!\n");
+			Menu_MiscWeapon();
+		}
+		if (inp == 2) {
+
+			BuyWeapon(2000,2097152);
+			//sprint(self, #PRINT_HIGH, "Unfortunately all stocks of this item have been requisitioned to increase the glory of the Queen. God save the Queen!\n");
+			Menu_MiscWeapon();
+		}
+
+		if (inp == 3) {
+			if (!(self.weapons_carried & 2097152) && !(self.cutf_items & 1048576))
+			{
+				sprint(self,2,"You need to buy an airfist to use the upgrade!\n");
+				CuTFMenuSound(4);
+			}
+			else
+			{
+				BuyCuTF(1850,1048576);
+				Menu_MiscWeapon();
+			}
+		}
+
+		if (inp == 4) {
+
+			BuyWeapon(1500,131072);
+			Menu_MiscWeapon();
+		}
+		if (inp == 5) {
+		
+			BuyWeapon(1400,4194304);
+			Menu_MiscWeapon();
+			
+		}
+		if (inp == 6) {
+			BuyCuTF(1200,131072);
+			Menu_MiscWeapon();
+		}
+
+		if (inp == 7) {
+			BuyCuTF(600,262144);
+			Menu_MiscWeapon();
+		}
+	   
+		if (inp == 8) {
+			CuTFMenuSound(1);
+			self.current_menu = 37;
+			Menu_SecondaryWeapon();
+			
+		}
+		if (inp == 9)
+		{
+			CuTFMenuSound(1);
+			self.current_menu = 51;
+			Menu_ToolWeapon();			
+		}
+		if (inp == 10)
+		{
+			DropFromCustomClassGen();
+		}
+		
+	 self.impulse = 0;
+  }
+};
+
+
+// ====================================================================
+//	Tools - Gizmo
+// ====================================================================
+void() Menu_ToolWeapon =
+{
+	local string temp;
+	temp = ftos(self.money);
+	
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	
+	local string l1,l2,l3,l4, str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuItemStr(1,"Zero-Gravity Gun",1000,self.weapons_carried,16777216);
+	str = "\n";
+	l1 = strcat(l1,str);
+
+	l2 = l3 = "\n\n";
+
+	l4 = "\n";
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Tools              œ‹\n\n", l1, l2, l3, l4, temp," dollars left\n");
+};
+
+void(float inp) Menu_ToolWeapon_Input =
+{ 
+  if (inp <= 10 && inp >= 1)
+  {
+
+		if (inp == 1) {
+
+			BuyWeapon(1000, 16777216);
+			Menu_ToolWeapon ();
+
+
+
+
+		}
+	   
+		if (inp == 8) {
+			CuTFMenuSound(1);
+			self.current_menu = 38;
+			Menu_MiscWeapon();
+			
+		}
+		if (inp == 9)
+		{
+			CuTFMenuSound(1);
+			self.current_menu = 39;
+			Menu_Legs();			
+		}
+		if (inp == 10)
+		{
+			DropFromCustomClassGen();
+		}
+		
+	 self.impulse = 0;
+  }
+};
+
+
+// =============================
+//	Prints Menu of Legs for Sale
+// =============================
+void() Menu_Legs =
+{
+	local string temp;
+	temp = ftos(self.money);
+	
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	
+	local string l1,l2,l3,l4,str;
+
+	MenuResetCount();
+
+/*
+650  9000
+420  6000
+330  3250
+310  2500
+290  1250
+270  500
+250  0
+*/
+
+	l1 = ConstructMenuSpeedStr(1,"Cheetah         ",9000);
+	str = ConstructMenuSpeedStr(2,"Cougar          ",6000);
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuSpeedStr(3,"White Rhino     ",3250);
+	str = ConstructMenuSpeedStr(4,"Scrub Jay       ",2500);
+	l2 = strcat(l2,str);
+
+	l3 = ConstructMenuSpeedStr(5,"KGB Officer     ",1250);
+	str = ConstructMenuSpeedStr(6,"Black Mamba     ",500);
+	l3 = strcat(l3,str);
+
+	l4 = ConstructMenuSpeedStr(7,"ImperialPenguin ",0);
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Leg Enhancements   œ‹\n\n", l1,l2,l3,l4, temp," dollars left\n");
+};							  
+
+void(float inp) Menu_Legs_Input =
+{
+
+	//First, prevent them from getting high speed while upgraded
+	if (inp < 3 && self.done_custom & 16)
+	{
+		sprint(self,2,"The upgraded CustomTF soldier is a fighting machine. He doesn't have access to fast legs\n");
+		CuTFMenuSound(4);
+		self.impulse = 0;
+		return;
+	}
+
+	//Second, sell off our current legs
+	if (inp < 8) {
+	if (self.custom_speed == 410) { //400 Original 650
+		PrintRefund(9000);
+		self.custom_speed = 250;
+		if (self.impulse == 1) {self.impulse = 0; Menu_Legs(); return;}
+	}
+	else if (self.custom_speed == 370) { //360 Original 420
+		PrintRefund(6000);
+		self.custom_speed = 250;
+		if (self.impulse == 2) {self.impulse = 0; Menu_Legs();	return;}
+	}
+	else if (self.custom_speed == 330) { // Original 330
+		PrintRefund(3250);
+		self.custom_speed = 250;
+		if (self.impulse == 3) {self.impulse = 0; Menu_Legs();	return;}
+	}
+	else if (self.custom_speed == 310) { // Original 310
+		PrintRefund(2500);
+		self.custom_speed = 250;
+		if (self.impulse == 4) {self.impulse = 0; Menu_Legs();	return;}
+	}
+	else if (self.custom_speed == 290) {
+		PrintRefund(1250);
+		self.custom_speed = 250;
+		if (self.impulse == 5) {self.impulse = 0; Menu_Legs();	return;}
+	}
+	else if (self.custom_speed == 270) {
+		PrintRefund(500);
+		self.custom_speed = 250;
+		if (self.impulse == 6) {self.impulse = 0; Menu_Legs();	return;}
+	}
+	}
+	
+	if (inp == 1) {
+		if (self.money >= 9000) {
+			self.money = self.money - 9000;
+			self.custom_speed = 410; // Original 650
+			PrintMoney();
+			Menu_Legs();
+		}
+		else
+			PrintNotEnoughMoney(9000);
+	}
+	if (inp == 2) {
+		if (self.money >= 6000) {
+			self.money = self.money - 6000;
+			self.custom_speed = 370; // Original 420
+			PrintMoney();
+			Menu_Legs();
+		}
+		else
+			PrintNotEnoughMoney(6000);
+	}
+	if (inp == 3) {
+		if (self.money >= 3250) {
+			self.money = self.money - 3250;
+			self.custom_speed = 330;
+			PrintMoney();
+			Menu_Legs();
+		}
+		else
+			PrintNotEnoughMoney(3250);
+	}
+	if (inp == 4) {
+		if (self.money >= 2500) {
+			self.money = self.money - 2500;
+			self.custom_speed = 310;
+			PrintMoney();
+			Menu_Legs();
+		}
+		else
+			PrintNotEnoughMoney(2500);
+	}
+	if (inp == 5) {
+		if (self.money >= 1250) {
+			self.money = self.money - 1250;
+			self.custom_speed = 290;
+			PrintMoney();
+			Menu_Legs();
+		}
+		else
+			PrintNotEnoughMoney(1250);
+	}
+	if (inp == 6) {
+		if (self.money >= 500) {
+			self.money = self.money - 500;
+			self.custom_speed = 270;
+			PrintMoney();
+			Menu_Legs();
+		}
+		else
+			PrintNotEnoughMoney(500);
+	}	
+	
+	if (inp == 7) {
+		/*if (self.money >= #PRICE) {
+			self.money = self.money - #PRICE;*/
+			self.custom_speed = 250;
+			PrintMoney();
+			Menu_Legs();
+		/*}
+		else
+			PrintNotEnoughMoney(#PRICE);*/
+	}
+	if (inp == 8) {
+		CuTFMenuSound(1);
+		self.current_menu = 51;
+		Menu_ToolWeapon();		  
+	}
+	if (inp == 9)
+	{
+		CuTFMenuSound(1);
+		self.current_menu = 40;
+		Menu_Health();		  
+	}
+	if (inp == 10) {
+		DropFromCustomClassGen();
+	}
+
+	self.impulse = 0;
+};
+
+// ==========================================
+//	Prints Menu of Armor and Health Available
+// ==========================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void() Menu_Health =
+{
+	local string temp;
+	temp = ftos(self.money);
+	
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+		
+	local string l1,l2,l3,l4,str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuHPStr(1,"50¯75 Green     ",150);
+	str = ConstructMenuHPStr(2,"50¯90 Green     ",450);
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuHPStr(3,"100¯80 Yellow   ",700);
+	str = ConstructMenuHPStr(4,"120¯90 Yellow   ",1200);
+	l2 = strcat(l2,str);
+
+	l3 = ConstructMenuHPStr(5,"150¯100 Yellow  ",1800);
+	str = ConstructMenuHPStr(6,"200¯100 Red     ",2700);
+	l3 = strcat(l3,str);
+
+	l4 = ConstructMenuHPStr(7,"300¯100 Red     ",4100);
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Armor and Health   œ‹\n\n", l1,l2,l3,l4, temp," dollars left\n");
+};
+
+float(float numitem) GetHPCost =
+{
+	if (numitem == 1)
+		return 150;
+	else if (numitem == 2)
+		return 450;
+	else if (numitem == 3)
+		return 700;
+	else if (numitem == 4)
+		return 1200;
+	else if (numitem == 5)
+		return 1800;
+	else if (numitem == 6)
+		return 2700;
+	else if (numitem == 7)
+		return 4100;
+
+	return 0;
+};
+
+void(float inp) Menu_Health_Input =
+{
+	if (inp == 8)
+	{
+		CuTFMenuSound(1);
+		self.current_menu = 39;
+		Menu_Legs();
+		self.impulse = 0;
+		return;
+	}
+	else if (inp == 9) {
+		CuTFMenuSound(1);
+		self.current_menu = 41;
+		Menu_Armor();
+		self.impulse = 0;
+		return;
+	}
+	else if (inp == 10) {
+		DropFromCustomClassGen();
+		self.impulse = 0;
+		return;
+	}
+
+	local float current;
+	local float tosell, tobuy;
+
+	if (self.maxarmor == 50)
+	{
+		if (self.health == 75)
+			current = 1;
+		else
+			current = 2;		
+	}
+	else if (self.maxarmor == 100)
+		current = 3;
+	else if (self.maxarmor == 120)
+		current = 4;
+	else if (self.maxarmor == 150)
+		current = 5;
+	else if (self.maxarmor == 200)
+		current = 6;
+	else if (self.maxarmor == 300)
+		current = 7;
+	else
+		current = 0;	// Gizmo - only set to zero if all others fail
+
+	tosell = GetHPCost(current);
+	tobuy = GetHPCost(inp);
+	if (self.money < tobuy - tosell)
+	{
+		PrintNotEnoughMoney(tobuy - tosell);
+		self.impulse = 0;
+		return;
+	}
+	
+	if (current == inp || current != 0) // sell back?
+	{
+		self.max_health = 50;
+		self.health = self.max_health;
+		self.maxarmor = 0;
+		self.armorvalue = 0;
+		self.armortype = 0;
+		self.armor_allowed = 0;
+
+		PrintRefund(tosell);
+		UpdateArmorItem(self);
+
+		if (current == inp)
+		{
+			Menu_Health();
+			self.impulse = 0;
+			return;
+		}
+	}
+
+	if (inp == 1)
+	{
+		self.max_health = 75;
+		self.health = self.max_health;
+		self.maxarmor = 50;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.3;	// Green
+		self.armor_allowed = 0.3; //Green max
+		UpdateArmorItem(self);
+	}
+	else if (inp == 2)
+	{
+		self.max_health = 90;
+		self.health = self.max_health;
+		self.maxarmor = 50;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.3;	// Green
+		self.armor_allowed = 0.3; //Green max
+		UpdateArmorItem(self);
+	}
+	else if (inp == 3)
+	{
+		self.max_health = 80;
+		self.health = self.max_health;
+		self.maxarmor = 100;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.6;
+		self.armor_allowed = 0.6;
+		UpdateArmorItem(self);
+	}
+	else if (inp == 4)
+	{
+		self.max_health = 90;
+		self.health = self.max_health;
+		self.maxarmor = 120;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.6;
+		self.armor_allowed = 0.6;
+		UpdateArmorItem(self);
+	}
+	else if (inp == 5)
+	{
+		self.max_health = 100;
+		self.health = self.max_health;
+		self.maxarmor = 150;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.6;	
+		self.armor_allowed = 0.6;
+		UpdateArmorItem(self);
+	}
+	else if (inp == 6)
+	{
+		self.max_health = 100;
+		self.health = self.max_health;
+		self.maxarmor = 200;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.8;	
+		self.armor_allowed = 0.8;
+		UpdateArmorItem(self);
+	}
+	else if (inp == 7)
+	{
+		self.max_health = 100;
+		self.health = self.max_health;
+		self.maxarmor = 300;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.8;	
+		self.armor_allowed = 0.8;
+		UpdateArmorItem(self);
+	}
+
+	self.money = self.money - tobuy;
+
+	PrintMoney();
+	Menu_Health();
+		
+	self.impulse = 0;
+};
+
+
+// ==========================================
+//	Prints Menu of Special Armor and Ammo
+// ==========================================
+void() Menu_Armor  =
+{
+	local string temp;
+	temp = ftos(self.money);
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	local string l1,l2,l3,l4,str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuItemStr(1,"Ceramic Armor   ",575,self.tf_items,32);
+	str = ConstructMenuItemStr(2,"Impact Armor    ",625,self.tf_items,8);
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuItemStr(3,"Asbestos Armor  ",750,self.tf_items,64);
+	str = ConstructMenuItemStr(4,"Kevlar Armor    ",1200,self.tf_items,4);
+	l2 = strcat(l2,str);
+
+	l3 = ConstructMenuItemStr(5,"Blast Armor     ",1500,self.tf_items,16);
+	str = ConstructMenuItemStr(6,"Ammo Backpack   ",300,self.tf_items,128);
+	l3 = strcat(l3,str);
+
+	l4 = ConstructMenuItemStr(7,"Ammo Bandolier  ",200,self.tf_items,256);
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Special Armor¯Ammo œ‹\n\n", l1,l2,l3,l4, temp," dollars left\n");
+};
+
+void(float inp) Menu_Armor_Input =
+{
+	if (inp == 1) {
+		BuyItem(575,32);
+		Menu_Armor();
+	}
+	if (inp == 2) {
+		BuyItem(625, 8);
+		Menu_Armor();
+	}
+	if (inp == 3) {
+		BuyItem(750,64);
+		Menu_Armor();
+	}
+	if (inp == 4) {
+		BuyItem(1200,4);
+		Menu_Armor();
+	}
+	if (inp == 5) {
+		BuyItem(1500,16);
+		Menu_Armor();
+	}
+	if (inp == 6) {
+		BuyItem(300,128);
+		Menu_Armor();
+	}
+	if (inp == 7) {
+
+		if ( !deathmatch ) {
+			sprint( self, 2, "Ammo Bandolier is free in coop.\n" );
+			CuTFMenuSound( 4 );
+		} else {
+			BuyItem( 200, 256 );
+			Menu_Armor();
+		}
+
+
+
+
+	}
+	if (inp == 8)
+	{
+		CuTFMenuSound(1);
+		self.current_menu = 40;
+		Menu_Health();		  
+	}
+	if (inp == 9) {
+		CuTFMenuSound(1);
+		self.current_menu = 42;
+		Menu_Special(); 	   
+	}
+	if (inp == 10) {
+		DropFromCustomClassGen();
+	}
+
+	self.impulse = 0;
+};
+
+// ==================================
+//	Prints Menu of Specials Available
+// ==================================
+void() Menu_Special =
+{
+	local string temp;
+	temp = ftos(self.money);
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	local string l1,l2,l3,l4,str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuItemStr(1,"Scanner         ",650,self.tf_items,1);
+	str = ConstructMenuItemStr(2,"  Auto-Scanner  ",250,self.tf_items,8192);
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuItemStr(3,"Detpack         ",800,self.cutf_items,1);
+	str = ConstructMenuItemStr(4,"Medikit         ",1550,self.weapons_carried,4);
+	l2 = strcat(l2,str);
+
+	l3 = ConstructMenuItemStr(5,"Spy Kit         ",2000,self.cutf_items,4);
+	str = ConstructMenuItemStr(6,"Scuba Gear      ",1000,self.tf_items,512);
+	l3 = strcat(l3,str);
+
+	l4 = ConstructMenuItemStr(7,"Grapple         ",3000,self.weapons_carried,1);
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Special Items      œ‹\n\n",l1,l2,l3,l4, temp," dollars left\n");
+};
+
+void(float inp) Menu_Special_Input =
+{
+	local string st2;
+
+//Scanner
+		
+	//st = infokey(world, "no_grapple");
+	st2 = infokey(world, "no_spam");
+	if (inp == 1) {
+		if (self.tf_items & 1)
+		{
+			//Clean up auto-medic (sync this with Custom.qc)
+			if (self.tf_items & 8192)
+				self.money = self.money + 250; //Sync this with price below
+			self.tf_items = self.tf_items - (self.tf_items & 8192);
+
+			PrintRefund(650);
+			self.tf_items = self.tf_items - 1;
+			self.tf_items_flags = self.tf_items_flags - (self.tf_items & 1);
+			Menu_Special();
+		}
+		else if (self.money >= 650) {
+			self.money = self.money - 650;
+			self.tf_items = self.tf_items | 1;
+			self.tf_items_flags = self.tf_items_flags | 1;
+			PrintMoney();
+			Menu_Special();
+		}
+		else
+			PrintNotEnoughMoney(650);
+	}
+	if (inp == 2) { //Sync this with scanner above
+		BuyItem(250,8192); 
+		Menu_Special();
+	}
+//Detpack
+	if (inp == 3) {
+		if (st2 == "on") {//If admin disable it
+			sprint(self,2,"The admin has disabled spam devices on this map.\n");
+//				  self.impulse=0;
+			return;
+		}
+		if (self.cutf_items & 1) //Already have it
+		{
+			PrintRefund(800);
+			self.cutf_items = self.cutf_items - 1;
+			self.maxammo_detpack = self.maxammo_detpack - 1;
+			Menu_Special();
+		}
+		else if (self.money >= 800) {
+			self.money = self.money - 800;
+			self.cutf_items = self.cutf_items | 1;
+			self.maxammo_detpack = self.maxammo_detpack + 1;
+			PrintMoney();
+			Menu_Special();
+		}
+		else
+			PrintNotEnoughMoney(800);
+	}
+	if (inp == 4) {
+		if (self.weapons_carried & 4)
+		{
+			PrintRefund(1550);
+			self.weapons_carried = self.weapons_carried - 4;
+			self.maxammo_medikit = self.maxammo_medikit - 80;
+			Menu_Special();
+		}
+		else if (self.money >= 1550) {
+			self.money = self.money - 1550;
+			self.weapons_carried = self.weapons_carried | 4;
+			self.maxammo_medikit = self.maxammo_medikit + 80;
+			PrintMoney();
+			Menu_Special();
+		}
+		else
+			PrintNotEnoughMoney(1550);
+	}
+	if (inp == 5) {
+		BuyCuTF(2000,4);
+		Menu_Special();
+	}
+	//Self-Contained Underwater Breathing Apparatus
+	if (inp == 6) {
+		BuyItem(1000,512);
+		Menu_Special();
+	}
+	if (inp == 7) {
+		if (no_grapple == 1) //If admin disable it
+		{
+			sprint(self,2,"The admin has disabled the grapple on this map.\n");
+			self.impulse = 0;
+			return;
+		}
+		else if (allow_hook) //If map allows it...
+		{
+		   sprint(self,2,"You can't sell your grapple on this map!\n");
+		   CuTFMenuSound(4);
+		}
+		else
+		{
+			BuyWeapon(3000,1);
+			Menu_Special();
+		}
+	}
+	if (inp == 8) {
+		CuTFMenuSound(1);
+		self.current_menu = 41;
+		Menu_Armor();		 
+	}
+	if (inp == 9) {
+		CuTFMenuSound(1);
+		self.current_menu = 43;
+		Menu_Special2();		
+	}
+	if (inp == 10) {
+		DropFromCustomClassGen();
+	}
+
+	self.impulse = 0;
+};
+
+// ============================================//
+// Prints Menu of Specials Available		   //
+// ============================================//
+void() Menu_Special2 =
+{
+	local string temp;
+	temp = ftos(self.money);
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	local string l1,l2,l3,l4,str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuItemStr(1,"Scanner Jammer  ",1000,self.cutf_items,32);
+	str = ConstructMenuItemStr(2,"CyberAug Unit   ",800,self.cutf_items,128);
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuItemStr(3,"Motion Sensor   ",450,self.cutf_items,256);
+	str = ConstructMenuItemStr(4,"Field Generator ",1400,self.cutf_items,524288);
+	l2 = strcat(l2,str);
+
+	l3 = ConstructMenuItemStr(5,"Full Armour     ",250,self.cutf_items,64);
+	str = ConstructMenuItemStr(6,"C4 Tossable Det ",1200,self.cutf_items,512);
+	l3 = strcat(l3,str);
+
+	l4 = ConstructMenuItemStr(7,"Dispenser       ",600,self.cutf_items,1024);
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ More Special Items œ‹\n\n",l1,l2,l3,l4, temp," dollars left\n");
+};
+
+void(float inp) Menu_Special2_Input =
+{
+	if (inp == 1)//SB Jammer
+	{
+		BuyCuTF(1000, 32);
+		Menu_Special2();
+	}
+	else if (inp == 2)//SB cybernetic augmentation
+	{
+		if (self.cutf_items & 128)
+		{
+			self.maxammo_medikit = self.maxammo_medikit - 80;
+			self.maxammo_cells = self.maxammo_cells - 80;
+		}
+		else
+		{
+			self.maxammo_medikit = self.maxammo_medikit + 80;
+			self.maxammo_cells = self.maxammo_cells + 80;
+		}
+		BuyCuTF(800,128); 
+		Menu_Special2();
+	}
+	else if (inp == 3)//SB motion sensor
+	{
+		BuyCuTF(450,256);
+		Menu_Special2();
+	}
+	else if (inp == 4)//OfN Field Generator
+	{
+		BuyCuTF(1400,524288);
+		Menu_Special2();
+	}
+	else if (inp == 5)//SB full armour
+	{
+
+		if ( !deathmatch ) {
+			sprint( self, 2, "Full armor is free in coop.\n" );
+			CuTFMenuSound( 4 );
+		} else {
+			BuyCuTF( 250, 64 );
+			Menu_Special2();
+		}
+
+
+
+
+	}
+	else if (inp == 6)//SB C4 tossable detpack
+	{
+		BuyCuTF(1200,512);
+		sprint(self, 2, "Type 'throwdet' to throw the detpack.\n");		 
+	}
+	else if (inp == 7)
+	{
+		BuyCuTF(600,1024);
+		Menu_Special2();
+	}
+	else if (inp == 8) {
+		CuTFMenuSound(1);
+		self.current_menu = 42;
+		Menu_Special(); 	
+	}
+	else if (inp == 9) {
+		CuTFMenuSound(1);
+		self.current_menu = 44;
+		Menu_Gren1();		
+	}
+	else if (inp == 10) {
+		DropFromCustomClassGen();
+	}
+
+	self.impulse = 0;	
+};
+
+// ====================================
+//	Prints Menu of Grenade-1s Available
+// ====================================
+
+void() Menu_Gren1 =
+{
+	local string temp;
+	temp = ftos(self.money);
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	local string l1,l2,l3,l4,str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuGrenStr(1,"Normal          ",500,1);
+	str = ConstructMenuGrenStr(2,"Napalm          ",1400,5);
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuGrenStr(3,"Gas             ",1300,7);
+	str = ConstructMenuGrenStr(4,"EMP             ",1200,8);
+	l2 = strcat(l2,str);
+	
+	l3 = ConstructMenuGrenStr(5,"Frag            ",1300,10);
+	str = ConstructMenuGrenStr(6,"Nail            ",1400,3);
+	l3 = strcat(l3,str);
+	
+	l4 = ConstructMenuGrenStr(7,"MIRV            ",1500,4);
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+	
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Grenades ­ Combat  œ‹\n\n",l1,l2,l3,l4, temp," dollars left\n");
+};
+
+void(float inp) Menu_Gren1_Input =
+{	
+	local string st, st2;
+	st = infokey(world, "no_gasgren");
+	st2 = infokey (world, "no_spam");
+
+	if (inp == 1)
+	{
+		BuyGren(500,1);
+		Menu_Gren1();
+	}
+	else if (inp == 2)
+	{
+		BuyGren(1400,5); // Flame was 750
+		Menu_Gren1();
+	}
+	else if (inp == 3)
+	{
+		if (st == "on")
+		{
+			sprint(self, 2, "The admin has disabled gas grens on this map.\n");
+			return;
+		}
+		if (st2 == "on") //If admin disable it
+		{
+			sprint(self,2,"The admin has disabled spam devices on this map.\n");
+			return;
+		}
+		BuyGren(1300,7);
+		Menu_Gren1();
+	}
+	else if (inp == 4)
+	{
+		if (st2 == "on") //If admin disable it
+		{
+			sprint(self,2,"The admin has disabled spam devices on this map.\n");
+			return;
+		}
+		BuyGren(1200,8);
+		Menu_Gren1();
+	}
+	else if (inp == 5)
+	{
+		if (st2 == "on") //If admin disable it
+		{
+			sprint(self,2,"The admin has disabled spam devices on this map.\n");
+			return;
+		}
+		BuyGren(1300,10);
+		Menu_Gren1();
+	}
+	else if (inp == 6)
+	{
+		BuyGren(1400,3);
+		Menu_Gren1();
+	}
+	if (inp == 7)
+	{
+		if (st2 == "on") //If admin disable it
+		{
+			sprint(self,2,"The admin has disabled spam devices on this map.\n");
+				return;
+		}
+		BuyGren(1500,4);
+		Menu_Gren1();
+	}
+	
+	if (inp == 8)
+	{
+		CuTFMenuSound(1);
+		self.current_menu = 43;
+		Menu_Special2();		
+	}
+	if (inp == 9)
+	{
+		CuTFMenuSound(1);
+		self.current_menu = 45;
+		Menu_Gren2();		 
+	}
+	else if (inp == 10)
+		DropFromCustomClassGen();
+
+	self.impulse = 0;
+};
+
+// ====================================
+//	Prints Menu of Grenade-2s Available
+// ====================================
+void() Menu_Gren2 =
+{
+	local string temp;
+	temp = ftos(self.money);
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	local string l1,l2,l3,l4,str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuGrenStr(1,"Flare           ",300,6);
+	str = ConstructMenuGrenStr(2,"Caltrop         ",500,14);
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuGrenStr(3,"Concussion      ",1000,2);
+	str = ConstructMenuGrenStr(4,"Psionic         ",1200,9);
+	l2 = strcat(l2,str);	
+
+	l3 = ConstructMenuGrenStr(5,"AntiGrav        ",1000,12);
+	str = ConstructMenuGrenStr(6,"Biological      ",1100,13);
+	l3 = strcat(l3,str);
+	
+	l4 = ConstructMenuGrenStr(7,"Krac            ",1400,11);
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Grenades ­ Utility œ‹\n\n",l1,l2,l3,l4, temp," dollars left\n");
+};
+
+void(float inp) Menu_Gren2_Input =
+{
+	local string st, st2;
+	st = infokey(world, "no_antigrav");
+	st2 = infokey(world, "no_spam");
+
+	//WK I should have done all the buy menus like this
+	//SB I reckon - this one actually looks nice and makes sense
+	if (inp == 1)
+	{
+		BuyGren(300, 6);
+		Menu_Gren2();
+	}
+	if (inp == 2)
+	{
+		if (st2 == "on")
+			sprint(self, 2, "The admin has disabled spam devices on this map.\n");
+		else
+		{
+			BuyGren(500, 14);
+			Menu_Gren2();
+		}
+	}
+	if (inp == 3)
+	{
+		BuyGren(1000, 2);
+		Menu_Gren2();
+	}
+	if (inp == 4)
+	{
+		
+
+
+		BuyGren(1200,9);
+		
+		Menu_Gren2();
+	}
+	if (inp == 5)
+	{	
+		if (st == "on")
+			sprint(self, 2, "The admin has disabled anti-grav grens on this map.\n");
+		else	
+		{
+			BuyGren(1000, 12);
+			Menu_Gren2();
+		}
+	}
+	if (inp == 6)
+	{
+		BuyGren(1100, 13);
+		Menu_Gren2();
+	}
+	if (inp == 7)
+	{
+		BuyGren(1400, 11);
+		Menu_Gren2();
+	}
+	else if (inp == 8)
+	{
+		CuTFMenuSound(1);
+		self.current_menu = 44;
+		Menu_Gren1();		 
+	}
+	else if (inp == 9)
+	{
+		CuTFMenuSound(1);
+		self.current_menu = 46;
+		Menu_Engineering(); 	   
+	}
+	if (inp == 10)
+	{
+		DropFromCustomClassGen();
+	}
+
+	self.impulse = 0;
+};
+
+// ====================================
+//	Prints Menu of Optional Items Here
+// ====================================
+void() Menu_Engineering =
+{
+	local string temp;
+	temp = ftos(self.money);
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	local string l1,l2,l3,l4,str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuItemStr(1,"Spanner         ",1200,self.weapons_carried,8);
+	str = ConstructMenuSentryStr(2,"Sentry Gun      ",1500);
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuItemStr(3," Sentry Upgrade ",700,self.tf_items,2);
+	str = ConstructMenuTeslaStr(4,"Tesla Coil      ",1350);
+	l2 = strcat(l2,str);
+
+	l3 = ConstructMenuItemStr(5,"  Tesla Upgrade ",1650,self.tf_items,262144);
+	str = ConstructMenuItemStr(6,"Security Camera ",350,self.tf_items,65536);
+	l3 = strcat(l3,str);
+
+	l4 = ConstructMenuItemStr(7,"Teleporter Pads ",1100,self.tf_items,131072);
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Engineering Items  œ‹\n\n", l1,l2,l3,l4, temp," dollars left\n");
+};
+void(float inp) Menu_Engineering_Input =
+{
+	if (inp == 1) {
+		BuyWeapon(1200,8);
+		Menu_Engineering();
+	}
+	if (inp == 2) {
+		if (self.cutf_items & 16)
+		{
+			if (self.cutf_items & 4194304)
+			{
+				BuyCuTF(1500*2,16 | 4194304); // will sell both
+			}
+			else
+			{
+				if (self.money < 1500)
+					BuyCuTF(1500,16); // will sell it
+				else
+				{
+					if (self.tf_items & 32768)
+						BuyCuTF(1500,16); // will sell it
+					else
+						BuyCuTF(1500,4194304);
+				}
+			}
+		}
+		else
+		{
+			if (self.tf_items & 4194304)
+			{
+				sprint(self,2,"You can only carry equipment for 2 offensive machines!\n");
+				CuTFMenuSound(4);
+				self.impulse = 0;
+				return;
+			}
+			
+			BuyCuTF(1500,16);
+		}
+
+		Menu_Engineering();
+	}
+	if (inp == 3) {
+		BuyItem(700,2); 
+		Menu_Engineering();
+	}
+	if (inp == 4) {
+		if (self.tf_items & 32768)
+		{
+			if (self.tf_items & 4194304)
+			{
+				BuyItem(1350*2,32768 | 4194304); // will sell both
+			}
+			else
+			{
+				if (self.money < 1350)
+					BuyItem(1350,32768); // will sell it
+				else
+				{
+					if (self.cutf_items & 16)
+						BuyItem(1350,32768); // will sell it			
+					else					
+						BuyItem(1350,4194304);
+				}
+			}
+		}
+		else
+		{
+			if (self.cutf_items & 4194304)
+			{
+				sprint(self,2,"You can only carry equipment for 2 offensive machines!\n");
+				CuTFMenuSound(4);
+				self.impulse = 0;
+				return;
+			}		  
+
+			BuyItem(1350,32768);
+		}
+		
+		Menu_Engineering();
+	}
+	if (inp == 5) {
+		BuyItem(1650,262144);
+		Menu_Engineering();
+	}
+	if (inp == 6) {
+		BuyItem(350,65536);
+		Menu_Engineering();
+	}
+	if (inp == 7) {
+		BuyItem(1100,131072);
+		Menu_Engineering();
+	}
+	if (inp == 8) {
+		CuTFMenuSound(1);
+		self.current_menu = 45;
+		Menu_Gren2();		 
+	}
+	if (inp == 9) {
+		CuTFMenuSound(1);
+		if (custom_mode!=1)
+		{
+			self.current_menu = 47;
+			Menu_Profession();			  
+		}
+		else
+		{
+			self.current_menu = 49;
+			Menu_Proficiency(); 		   
+		}
+	}
+	if (inp == 10) {
+		DropFromCustomClassGen();
+	}
+
+	self.impulse = 0;
+};
+
+// =====================================
+//	Prints Menu of Professions Available
+// =====================================
+void() Menu_Profession =
+{
+	local string temp;
+	temp = ftos(self.money);
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	local string l1,l2,l3,l4,str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuJobStr(1,"Thief     ¨Hide©",1,950,0,0,"","");
+	str = ConstructMenuJobStr(2,"Runner  ¨Sprint©",2,400,0,0,"","");
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuJobStr(3,"Warlock ¨Summon©",4,1150,700,950,"2nd Extra Soul  ","3rd Extra Soul  ");
+	str = ConstructMenuJobStr(4,"Chaplan¨Inspire©",8,1200,0,0,"","");
+	l2 = strcat(l2,str);
+
+	l3 = ConstructMenuJobStr(5,"Berserker ¨Fury©",16,1200,0,0,"","");
+	str = ConstructMenuJobStr(6,"Guerilla ¨Mines©",32,1600,700,950,"Mine Technician ","Mine Specialist ");
+	l3 = strcat(l3,str);
+
+	l4 = ConstructMenuJobStr(7,"Judoka  ¨Disarm©",64,1250,0,0,"","");
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+	
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Skilled Profession œ‹\n\n", l1,l2,l3,l4, temp," dollars left\n\nUse ÓËÉÌÌ to trigger ability\n");
+
+};
+void(float inp) Menu_Profession_Input =
+{
+	if (inp == 1) {
+		BuyJob( 950,1);
+		Menu_Profession();
+	}
+	if (inp == 2) {
+		BuyJob(400,2);
+		Menu_Profession();
+	}
+	if (inp == 3) { //Sync this with price in knife
+		if (extras_mode == 0)
+		{
+			if (self.job & 4)
+				BuyExtra(700,950);
+			else
+				BuyJob(1150,4); 		   
+		}
+		else
+			BuyJob(1150,4);
+
+		Menu_Profession();
+	}
+	if (inp == 4) {
+		BuyJob(1200,8);
+		Menu_Profession();
+	}
+	if (inp == 5) {
+		BuyJob(1200,16);
+		Menu_Profession();
+	}
+	if (inp == 6) {
+		if (extras_mode == 0)
+		{
+			if (self.job & 32)
+				BuyExtra(700,950);
+			else
+				BuyJob(1600,32);
+		}
+		else
+			BuyJob(1600,32);
+
+		Menu_Profession();
+	}
+	if (inp == 7) {
+		BuyJob(1250,64); // Original = 700
+		Menu_Profession();
+	}
+	if (inp == 8) {
+		CuTFMenuSound(1);
+		self.current_menu = 46;
+		Menu_Engineering(); 	   
+	}
+	if (inp == 9) {
+		CuTFMenuSound(1);
+		self.current_menu = 48;
+		Menu_Profession2(); 	   
+	}
+	if (inp == 10) {
+		DropFromCustomClassGen();
+	}
+
+	self.impulse = 0;
+};
+
+// ==================================
+//	Prints Second page of Professions
+// ==================================
+void() Menu_Profession2 =
+{
+	local string temp;
+	temp = ftos(self.money);
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	local string l1,l2,l3,l4, str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuJobStr(1,"Army  ¨Soldiers©",128,1250,700,950,"Extra Reserve 2 ","Extra Reserve 3 ");
+	str = ConstructMenuJobStr(2,"CyberNet  ¨Hack©",256,1200,0,0,"","");
+	l1 = strcat(l1,str);
+
+
+	l2 = ConstructMenuJobStr(3,"Martyr ¨Suicide©",512,1000,0,0,"","");
+	str = ConstructMenuJobStr(4,"Crusader ¨Auras©",1024,1600,0,0,"","");
+	l2 = strcat(l2,str);
+
+	l4 = "\n.. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n";
+	l3 = "\n\n";
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ More Professions   œ‹\n\n", l1,l2,l3,l4, temp," dollars left\n\nUse ÓËÉÌÌ to trigger ability\n");
+};
+
+void(float inp) Menu_Profession2_Input =
+{
+	if (inp == 1) {
+		if (extras_mode == 0)
+		{
+			if (self.job & 128)
+			   BuyExtra(700,950);
+			else
+			   BuyJob(1250,128);
+		}
+		else
+			BuyJob(1250,128);
+
+		Menu_Profession2();
+	}
+	if (inp == 2) {
+		BuyJob(1200,256);
+		Menu_Profession2();
+	}
+	if (inp == 3) { 
+		BuyJob(1000,512);
+		Menu_Profession2();
+	}
+	if (inp == 4) {
+		BuyJob(1600,1024);
+		Menu_Profession2();
+	}
+	if (inp == 8) {
+		CuTFMenuSound(1);
+		self.current_menu = 47;
+		Menu_Profession();		  
+	}
+	if (inp == 9) {
+		CuTFMenuSound(1);
+		self.current_menu = 49;
+		Menu_Proficiency(); 	   
+	}
+	if (inp == 10) {
+		DropFromCustomClassGen();
+	}
+
+	self.impulse = 0;
+};
+
+// =====================================
+//	Prints Menu of Proficiencies Available
+// =====================================
+void() Menu_Proficiency =
+{
+	local string temp;
+	temp = ftos(self.money);
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	local string l1,l2,l3,l4,str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuItemStr(1,"Stealth         ",400,self.cutf_items,2048);
+	str = ConstructMenuItemStr(2,"Highjump        ",500,self.cutf_items,4096);
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuItemStr(3,"Aspect of HWGuy ",450,self.cutf_items,8);
+	str = ConstructMenuItemStr(4,"Exp. Body       ",1200,self.cutf_items,32768);
+	l2 = strcat(l2,str);
+
+	l3 = ConstructMenuItemStr(5,"Gymnast         ",450,self.cutf_items,8192);
+	str = ConstructMenuItemStr(6,"Demon Lore      ",300,self.cutf_items,16384);
+	l3 = strcat(l3,str);
+
+	l4 = ConstructMenuItemStr(7,"Close Combat    ",600,self.cutf_items,65536);
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Proficiency        œ‹\n\n", l1,l2,l3,l4, temp," dollars left\n");
+}; 
+
+void(float inp) Menu_Proficiency_Input =
+{
+	if (inp == 1) {
+		BuyCuTF(400,2048);
+		Menu_Proficiency();
+	}
+	if (inp == 2) {
+		BuyCuTF(500,4096);
+		Menu_Proficiency();
+	}
+	if (inp == 3) {
+		if (self.cutf_items & 8192)
+		{
+			sprint(self, 2, "Having Gymnast and Aspect of HWGuy proficiencies is illogical.\n");
+			CuTFMenuSound(4);
+		}
+		else
+		{
+			BuyCuTF(450,8);
+			Menu_Proficiency();
+		}
+	}
+	if (inp == 4) {
+		BuyCuTF(1200,32768);
+		Menu_Proficiency();
+	}
+	if (inp == 5) {
+		if (self.cutf_items & 8)
+		{
+			sprint(self, 2, "Trust me, you don't want Aspect of HWGuy AND Gymnast.\n");
+			CuTFMenuSound(4);
+		}
+		else
+		{
+			BuyCuTF(450,8192);
+			Menu_Proficiency();
+		}
+	}
+	if (inp == 6) {
+		BuyCuTF(300,16384);
+		Menu_Proficiency();
+	}
+	if (inp == 7) {
+		BuyCuTF(600,65536);
+		Menu_Proficiency();
+	}
+	if (inp == 8) {
+		CuTFMenuSound(1);
+		if (custom_mode!=1)
+		{
+			self.current_menu = 48;
+			Menu_Profession2(); 		   
+		}
+		else
+		{
+			self.current_menu = 46;
+			Menu_Engineering(); 		   
+		}			  
+	}
+	if (inp == 9) {
+		CuTFMenuSound(1);
+		self.current_menu = 50;
+		Menu_Option();		  
+	}
+	if (inp == 10) {
+		DropFromCustomClassGen();
+	}
+
+	self.impulse = 0;
+};
+
+// ====================================
+//	Prints Menu of Optional Items Here
+// ====================================
+void() Menu_Option =
+{
+	local string temp;
+	temp = ftos(self.money);
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	local string l1,l2,l3,l4,str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuItemStr(1,"Auto-ID         ",25,self.tf_items,1024);
+	str = ConstructMenuItemStr(2,"Respawn Guard   ",25,self.tf_items,4096);
+	l1 = strcat(l1,str);
+
+	l2 = ConstructMenuItemStr(3,"Hover Boots     ",850,self.tf_items,16384);
+	str = ConstructMenuItemStr(4,"  Boot Upgrade  ",350,self.tf_items,524288);
+	l2 = strcat(l2,str);
+
+	l3 = ConstructMenuItemStr(5,"Laser Guided RL ",1000,self.tf_items,1048576);
+	str = ConstructMenuItemStr(6,"OTR Bullets     ",1850,self.cutf_items,2097152);
+	l3 = strcat(l3,str);
+
+	l4 = ConstructMenuItemStr(7,"Cluster Rockets ",3250,self.tf_items,2097152);
+	l4 = strcat(l4,".. Ğòåö    \n.. Îåøô    \n.. Äïîå!   \n");
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ Optional Equipment œ‹\n\n", l1,l2,l3,l4, temp," dollars left\n");
+};
+void(float inp) Menu_Option_Input =
+{
+	if (inp == 1) {
+		BuyItem(25,1024);
+		Menu_Option();
+	}
+	if (inp == 2) { 
+		BuyItem(25,4096);
+		Menu_Option();
+	}
+	if (inp == 6) { 
+		if (!(self.weapons_carried & 32) && !(self.cutf_items & 2097152))
+		{
+			CuTFMenuSound(4);
+			sprint (self, 2, "Are you going to throw these bullets at them or something?\n");
+			self.impulse = 0;
+			return;
+		}
+
+		BuyCuTF(1850,2097152);
+		Menu_Option();
+	}
+	if (inp == 3) {
+		BuyItem(850,16384);
+		Menu_Option();
+	}
+	if (inp == 4) {
+		BuyItem(350, 524288); //sync price with buyitem
+		Menu_Option();
+	}
+	if (inp == 5) {
+		BuyItem(1000, 1048576); //sync with RL
+		Menu_Option();
+	}
+	if (inp == 7) {
+		  BuyItem(3250, 2097152); //sync with RL
+		  Menu_Option();
+	}
+	if (inp == 8) {
+		CuTFMenuSound(1);
+		self.current_menu = 49;
+		Menu_Proficiency(); 	   
+	}
+	if (inp == 9) {
+		CuTFMenuSound(1);
+		self.current_menu = 52;
+		Menu_MoreOption ();			
+	}
+	if (inp == 10) {
+		DropFromCustomClassGen();
+	}
+
+	self.impulse = 0;
+};
+
+
+// ====================================================================
+//	Menu of more optional equipment - Gizmo
+// ====================================================================
+void() Menu_MoreOption =
+{
+	local string temp;
+	temp = ftos(self.money);
+	
+	if (self.tfstate & 2097152)
+		temp = colstr(temp,2);
+	
+	local string l1,l2,l3,l4, str;
+
+	MenuResetCount();
+
+	l1 = ConstructMenuItemStr(1, "Faster Rockets  ", 800, self.cutf_moreitems, 1);
+	str = ConstructMenuItemStr(2, "Anti-Stick Grens", 450, self.cutf_moreitems, 2);
+	l1 = strcat(l1, str);
+	l2 = ConstructMenuItemStr( 3, "Friend or Foe   ", 25, self.cutf_moreitems, 4 );
+
+	l3 = "\n\n\n";
+
+	l4 = "\n";
+	l4 = strcat(l4, ".. Ğòåö    \n..         \n.. Äïîå!   \n");
+
+	centerprint(self, "œ‹ Cõsôoíiúe Ùïõòóåìæ ‹œ\n‹œ More Equipment     œ‹\n\n", l1, l2, l3, l4, temp," dollars left\n");
+};
+
+void(float inp) Menu_MoreOption_Input =
+{
+	if (inp >= 1 && inp <= 10) {
+		// Gizmo - modified version of avirox's mods
+		if (inp == 1) {
+			if (self.weapons_carried & 8192) {
+				if (self.cutf_moreitems & 1) {
+					PrintRefund (800);
+					self.cutf_moreitems = self.cutf_moreitems - 1;
+				} else if (self.money >= 800) {
+					self.money = self.money - 800;
+					self.cutf_moreitems = self.cutf_moreitems | 1;
+					PrintMoney ();
+				} else
+					PrintNotEnoughMoney (800);
+			} else {
+				// TODO: add these into custom.qc; infact all this should be in a new moreitems function in custom.qc
+				sprint( self, 2, "Sorry, you have to buy the rocket launcher first!\n" );
+				CuTFMenuSound( 4 );
+			}
+
+			Menu_MoreOption ();
+		} else if (inp == 2) {
+			sprint (self, 2, "Sorry, non-sticky grenades are disabled till a serious bug/exploit is fixed!\n");
+			CuTFMenuSound (4);
+/*
+			if (self.cutf_moreitems & #CUTF_MI_NONSTICKYGRENS) {
+				PrintRefund (#COST_NONSTICKYGRENS);
+				self.cutf_moreitems = self.cutf_moreitems - #CUTF_MI_NONSTICKYGRENS;
+			} else if (self.money >= #COST_NONSTICKYGRENS) {
+				self.money = self.money - #COST_NONSTICKYGRENS;
+				self.cutf_moreitems = self.cutf_moreitems | #CUTF_MI_NONSTICKYGRENS;
+				PrintMoney ();
+			} else
+				PrintNotEnoughMoney (#COST_NONSTICKYGRENS);
+
+			Menu_MoreOption ();
+*/
+		} else if ( inp == 3 ) {
+			if ( self.cutf_moreitems & 4 ) {
+				PrintRefund( 25 );
+				self.cutf_moreitems = self.cutf_moreitems - 4;
+			} else if ( self.money >= 25 ) {
+				self.money = self.money - 25;
+				self.cutf_moreitems = self.cutf_moreitems | 4;
+				PrintMoney();
+			} else
+				PrintNotEnoughMoney( 25 );
+
+			Menu_MoreOption();
+		}
+
+		if (inp == 8) {
+			CuTFMenuSound(1);
+			self.current_menu = 50;
+			Menu_Option();
+		}
+		if (inp == 10)
+		{
+			DropFromCustomClassGen();
+		}
+
+		self.impulse = 0;
+	}
+};
+
+//___________________________________________________________________________________
+//===================================================================================
+// Item string constructors for menu displayers  
+
+string(float itemnum, string itemdesc,float cost,float field, float bit) ConstructMenuItemStr =
+{
+	local string result;
+	
+	result = ftos(itemnum);
+	result = colstr(result,4);
+	
+	if (field & bit)
+		result = strcat("œ ",result);
+	else
+		result = strcat("  ",result);	 
+
+	if (!CanBuyItem(itemnum))
+	{
+		result = strcat(result,"®® ");
+		itemdesc = colstr(itemdesc,2);
+	}
+	else if (ItemIsFree(itemnum))
+	{
+		result = strcat(result,"®® ");
+	}
+	else
+	{
+		result = strcat(result,".. ");
+		if (cost > self.money && !(field & bit))
+			itemdesc = colstr(itemdesc,2);
+	}
+
+	result = strcat(result,itemdesc);
+
+	if (cost < 100)
+		result = strcat(result,"­   ");
+	else if (cost < 1000)
+		result = strcat(result,"­  ");
+	else if (cost < 10000)
+		result = strcat(result,"­ ");
+	else
+		result = strcat(result,"­");
+	
+	itemdesc = ftos(cost);
+
+	if (field & bit)
+		itemdesc = colstr(itemdesc,4);
+	/*else
+	{
+		if (cost > self.money)
+			itemdesc = colstr(itemdesc,#COLSTR_RED);		
+	}*/
+
+	result = strcat(result,itemdesc);
+
+	result = strcat(result,"\n");
+
+	return result;
+};
+
+string(float itemnum, string itemdesc,float cost) ConstructMenuSentryStr =
+{
+	local string result;
+	local float numbought;
+
+	result = ftos(itemnum);
+	result = colstr(result,4);
+	
+	if (!(self.cutf_items & 16))
+	{
+		result = strcat("  ",result);
+		numbought = 0;
+	}
+	else
+	{
+		if (self.cutf_items & 4194304)
+		{
+			result = strcat("2 ",result);	 
+			numbought = 2;
+		}
+		else
+		{
+			result = strcat("1 ",result);	 
+			numbought = 1;
+		}
+	}
+
+	if (!CanBuyItem(itemnum))
+	{
+		result = strcat(result,"®® ");
+		itemdesc = colstr(itemdesc,2);
+	}
+	else if (ItemIsFree(itemnum))
+	{
+		result = strcat(result,"®® ");
+	}
+	else
+	{
+		result = strcat(result,".. ");
+		if (cost > self.money && !numbought)
+			itemdesc = colstr(itemdesc,2);
+	}
+
+	result = strcat(result,itemdesc);
+
+	if (cost < 100)
+		result = strcat(result,"­   ");
+	else if (cost < 1000)
+		result = strcat(result,"­  ");
+	else if (cost < 10000)
+		result = strcat(result,"­ ");
+	else
+		result = strcat(result,"­");
+	
+	itemdesc = ftos(cost);
+
+	if (numbought)
+	{
+		if (numbought == 2)
+			itemdesc = ftos(cost*2);
+
+		itemdesc = colstr(itemdesc,4);
+	}
+	/*else
+	{
+		if (cost > self.money)
+			itemdesc = colstr(itemdesc,#COLSTR_RED);		
+	}*/
+
+	result = strcat(result,itemdesc);
+
+	result = strcat(result,"\n");
+
+	return result;
+};
+
+string(float itemnum, string itemdesc,float cost) ConstructMenuTeslaStr =
+{
+	local string result;
+	local float numbought;
+
+	result = ftos(itemnum);
+	result = colstr(result,4);
+	
+	if (!(self.tf_items & 32768))
+	{
+		result = strcat("  ",result);
+		numbought = 0;
+	}
+	else
+	{
+		if (self.tf_items & 4194304)
+		{
+			result = strcat("2 ",result);	 
+			numbought = 2;
+		}
+		else
+		{
+			result = strcat("1 ",result);	 
+			numbought = 1;
+		}
+	}
+
+	if (!CanBuyItem(itemnum))
+	{
+		result = strcat(result,"®® ");
+		itemdesc = colstr(itemdesc,2);
+	}
+	else if (ItemIsFree(itemnum))
+	{
+		result = strcat(result,"®® ");
+	}
+	else
+	{
+		result = strcat(result,".. ");
+		if (cost > self.money && !numbought)
+			itemdesc = colstr(itemdesc,2);
+	}
+
+	result = strcat(result,itemdesc);
+
+	if (cost < 100)
+		result = strcat(result,"­   ");
+	else if (cost < 1000)
+		result = strcat(result,"­  ");
+	else if (cost < 10000)
+		result = strcat(result,"­ ");
+	else
+		result = strcat(result,"­");
+	
+	itemdesc = ftos(cost);
+
+	if (numbought)
+	{
+		if (numbought == 2)
+			itemdesc = ftos(cost*2);
+
+		itemdesc = colstr(itemdesc,4);
+	}
+	/*else
+	{
+		if (cost > self.money)
+			itemdesc = colstr(itemdesc,#COLSTR_RED);		
+	}*/
+
+	result = strcat(result,itemdesc);
+
+	result = strcat(result,"\n");
+
+	return result;
+};
+
+string(float itemnum, string itemdesc,float jobid,float cost, float extra1cost, float extra2cost, string extra1st, string extra2st) ConstructMenuJobStr =
+{
+	local string result;
+	local float numbought;
+
+	result = ftos(itemnum);
+	result = colstr(result,4);
+	
+	if (!(self.job & jobid))
+	{
+		result = strcat("  ",result);
+		numbought = 0;
+	}
+	else
+	{
+		if (self.job & 131072)
+		{
+			result = strcat("3 ",result);	 
+			numbought = 3;
+		}
+		else if (self.job & 65536)
+		{
+			result = strcat("2 ",result);	 
+			numbought = 2;
+		}
+		else
+		{
+			if (!extra1cost || extras_mode)
+				result = strcat("œ ",result);	
+			else
+				result = strcat("1 ",result);	 
+			
+			numbought = 1;
+		}
+	}
+
+	if (numbought)
+	if (!extras_mode)
+	if (extra1cost)
+	{
+		if (numbought == 1)
+			itemdesc = extra1st;
+		else if (numbought == 2)
+			itemdesc = extra2st;
+		else if (numbought == 3)
+			itemdesc = "Sell stuff back ";
+	}
+
+	if (!CanBuyItem(itemnum))
+	{
+		result = strcat(result,"®® ");
+		itemdesc = colstr(itemdesc,2);
+	}
+	else if (ItemIsFree(itemnum))
+	{
+		result = strcat(result,"®® ");
+	}
+	else
+	{
+		result = strcat(result,".. ");
+
+		if (!numbought)
+		if (cost > self.money + SpentOnJob())
+			itemdesc = colstr(itemdesc,2);		
+	}
+
+	result = strcat(result,itemdesc);
+
+	if (cost < 100)
+		result = strcat(result,"­  ");
+	else if (cost < 1000)
+		result = strcat(result,"­ ");
+	else if (cost < 10000)
+		result = strcat(result,"­");
+	else
+		result = strcat(result,"");
+
+	if (numbought && extra1cost && numbought != 3 && !extras_mode)
+		result = strcat(result," +");
+	else
+		result = strcat(result," ");
+	
+	itemdesc = ftos(cost);
+
+	if (numbought)
+	{
+		if (numbought == 3)
+			itemdesc = ftos(cost+extra1cost+extra2cost);
+		else if (numbought == 2)
+			itemdesc = ftos(extra2cost);
+		else if (extra1cost && !extras_mode)
+			itemdesc = ftos(extra1cost);
+
+		itemdesc = colstr(itemdesc,4);
+	}
+	/*else
+	{
+		if (cost > self.money)
+			itemdesc = colstr(itemdesc,#COLSTR_RED);		
+	}*/
+
+	result = strcat(result,itemdesc);
+
+	result = strcat(result,"\n");
+
+	return result;
+};
+
+float() SpentOnJob =
+{
+	if (self.job & 1)
+		return 950;
+	if (self.job & 2)
+		return 400;
+	if (self.job & 4)
+	{
+		if (self.job & 131072)
+			return 1150 + 700 + 950;
+		if (self.job & 65536)
+			return 1150 + 700;
+		
+		return 1150;
+	}
+	if (self.job & 8)
+		return 1200;
+	if (self.job & 16)
+		return 1200;
+	if (self.job & 32)
+	{
+		if (self.job & 131072)
+			return 1600 + 700 + 950;
+		if (self.job & 65536)
+			return 1600 + 700;
+		
+		return 1600;
+	}
+	if (self.job & 64)
+		return 1250;
+	if (self.job & 128)
+	{
+		if (self.job & 131072)
+			return 1250 + 700 + 950;
+		if (self.job & 65536)
+			return 1250 + 700;
+		
+		return 1250;
+	}
+	if (self.job & 256)
+		return 1200;
+	if (self.job & 512)
+		return 1000;
+	if (self.job & 1024)
+		return 1600;
+};
+
+string(float itemnum, string itemdesc,float cost,float grentype) ConstructMenuGrenStr =
+{
+	local string result;
+	local float numbought;
+
+	result = ftos(itemnum);
+	result = colstr(result,4);
+	
+	if ((self.tp_grenades_1 != grentype) && (self.tp_grenades_2 != grentype))
+	{
+		result = strcat("  ",result);
+		numbought = 0;
+	}
+	else
+	{
+		if ((self.tp_grenades_1 == grentype) && (self.tp_grenades_2 == grentype))
+		{
+			result = strcat("2 ",result);	 
+			numbought = 2;
+		}
+		else
+		{
+			result = strcat("1 ",result);	 
+			numbought = 1;
+		}		 
+	}
+	
+	if (!CanBuyItem(itemnum))
+	{
+		result = strcat(result,"®® ");
+		itemdesc = colstr(itemdesc,2);
+	}
+	else if (ItemIsFree(itemnum))
+	{
+		result = strcat(result,"®® ");
+	}
+	else
+	{
+		result = strcat(result,".. ");
+
+		if (!numbought)
+		if (cost > self.money + SpentOnGrens())
+			itemdesc = colstr(itemdesc,2);		
+	}
+
+	result = strcat(result,itemdesc);
+
+	if (numbought == 2)
+		cost = cost * 2;
+
+	if (cost < 100)
+		result = strcat(result,"­   ");
+	else if (cost < 1000)
+		result = strcat(result,"­  ");
+	else if (cost < 10000)
+		result = strcat(result,"­ ");
+	else
+		result = strcat(result,"­");
+	 
+	itemdesc = ftos(cost);
+
+	if (numbought)
+		itemdesc = colstr(itemdesc,4);
+	/*else
+	{
+		if (cost > self.money)
+			itemdesc = colstr(itemdesc,#COLSTR_RED);		
+	}*/
+
+	result = strcat(result,itemdesc);
+
+	result = strcat(result,"\n");
+
+	return result;
+};
+
+float(float grentype) GetGrenCost =
+{
+	if (grentype == 0)
+		return 0;
+	if (grentype == 1)
+		return 500;
+	if (grentype == 2)
+		return 1000;
+	if (grentype == 3)
+		return 1400;
+	if (grentype == 4)
+		return 1500;
+	if (grentype == 5)
+		return 1400;
+	if (grentype == 6)
+		return 300;
+	if (grentype == 7)
+		return 1300;
+	if (grentype == 8)
+		return 1200;
+	if (grentype == 9)
+		return 1200;
+	if (grentype == 10)
+		return 1300;
+	if (grentype == 11)
+		return 1400;
+	if (grentype == 12)
+		return 1000;
+	if (grentype == 13)
+		return 1100;
+	if (grentype == 14)
+		return 500;
+
+	return 0;
+};
+
+float() SpentOnGrens =
+{
+	local float result;
+
+	result = GetGrenCost(self.tp_grenades_1);
+	result = result + GetGrenCost(self.tp_grenades_2);
+
+	return result;
+};
+
+float() SpentOnLegs =
+{
+	if (self.custom_speed == 410)
+		return 9000;
+	if (self.custom_speed == 370)
+		return 6000;
+	if (self.custom_speed == 330)
+		return 3250;
+	if (self.custom_speed == 310)
+		return 2500;
+	if (self.custom_speed == 290)
+		return 1250;
+	if (self.custom_speed == 270)
+		return 500;
+	
+	return 0;
+};
+
+float() GetCurrentLegs =
+{
+	if (self.custom_speed == 410)
+		return 1;
+	if (self.custom_speed == 370)
+		return 2;
+	if (self.custom_speed == 330)
+		return 3;
+	if (self.custom_speed == 310)
+		return 4;
+	if (self.custom_speed == 290)
+		return 5;
+	if (self.custom_speed == 270)
+		return 6;
+	
+	return 7;
+};
+
+string(float itemnum, string itemdesc,float cost) ConstructMenuSpeedStr =
+{
+	local string result;
+	local float bought;
+	
+	result = ftos(itemnum);
+	result = colstr(result,4);
+	
+	bought = 0;
+
+	if (GetCurrentLegs() == itemnum)
+	{
+		result = strcat("œ ",result);
+		bought = 1;
+	}
+	else
+		result = strcat("  ",result);	 
+
+	if (!CanBuyItem(itemnum))
+	{
+		result = strcat(result,"®® ");
+		itemdesc = colstr(itemdesc,2);
+	}
+	else if (ItemIsFree(itemnum))
+	{
+		result = strcat(result,"®® ");
+	}
+	else
+	{
+		result = strcat(result,".. ");
+
+		if (!bought)
+		if (cost > self.money + SpentOnLegs())
+			itemdesc = colstr(itemdesc,2);
+	}
+
+	result = strcat(result,itemdesc);
+
+	if (cost < 10)
+		result = strcat(result,"­    ");
+	else if (cost < 100)
+		result = strcat(result,"­   ");
+	else if (cost < 1000)
+		result = strcat(result,"­  ");
+	else if (cost < 10000)
+		result = strcat(result,"­ ");
+	else
+		result = strcat(result,"­");
+	
+	itemdesc = ftos(cost);
+
+	if (bought && cost)
+		itemdesc = colstr(itemdesc,4);
+	/*else
+	{
+		if (cost > self.money)
+			itemdesc = colstr(itemdesc,#COLSTR_RED);		
+	}*/
+
+	result = strcat(result,itemdesc);
+
+	result = strcat(result,"\n");
+
+	return result;
+};
+
+float() SpentOnHP =
+{
+	//WK 1/7/7 This needs to be aligned with the constants
+	if (self.maxarmor == 300)
+		return 4100;
+	if (self.maxarmor == 200)
+		return 2700;
+	if (self.maxarmor == 150)
+		return 1800;
+	if (self.maxarmor == 120)
+		return 1200;
+	if (self.maxarmor == 100)
+		return 700;
+	if (self.health == 90)
+		return 450;
+	if (self.health == 75)
+		return 150;
+	
+	return 0;
+};
+
+float() GetCurrentHPItem =
+{
+	//WK 1/7/7 This needs to be aligned with the constants
+	if (self.maxarmor == 300)
+		return 7;
+	if (self.maxarmor == 200)
+		return 6;
+	if (self.maxarmor == 150)
+		return 5;
+	if (self.maxarmor == 120)
+		return 4;
+	if (self.maxarmor == 100)
+		return 3;
+	if (self.health == 90)
+		return 2;
+	if (self.health == 75)
+		return 1;
+	
+	return 0;
+};
+
+string(float itemnum, string itemdesc,float cost) ConstructMenuHPStr =
+{
+	local string result;
+	local float bought;
+	
+	result = ftos(itemnum);
+	result = colstr(result,4);
+	
+	bought = 0;
+
+	if (GetCurrentHPItem() == itemnum)
+	{
+		result = strcat("œ ",result);
+		bought = 1;
+	}
+	else
+		result = strcat("  ",result);	 
+
+	if (!CanBuyItem(itemnum))
+	{
+		result = strcat(result,"®® ");
+		itemdesc = colstr(itemdesc,2);
+	}
+	else if (ItemIsFree(itemnum))
+	{
+		result = strcat(result,"®® ");
+	}
+	else
+	{
+		result = strcat(result,".. ");
+
+		if (!bought)
+		if (cost > self.money + SpentOnHP())
+			itemdesc = colstr(itemdesc,2);
+	}
+
+	result = strcat(result,itemdesc);
+
+	if (cost < 10)
+		result = strcat(result,"­    ");
+	else if (cost < 100)
+		result = strcat(result,"­   ");
+	else if (cost < 1000)
+		result = strcat(result,"­  ");
+	else if (cost < 10000)
+		result = strcat(result,"­ ");
+	else
+		result = strcat(result,"­");
+	
+	itemdesc = ftos(cost);
+
+	if (bought && cost)
+		itemdesc = colstr(itemdesc,4);
+	/*else
+	{
+		if (cost > self.money)
+			itemdesc = colstr(itemdesc,#COLSTR_RED);		
+	}*/
+
+	result = strcat(result,itemdesc); 
+	
+	result = strcat(result,"\n");
+
+	return result;
+};
+
+void(entity player) UpdateArmorItem =
+{
+	player.items = player.items - (player.items & (8192 | 16384 | 32768));	
+	if (player.armortype >= 0.8)
+		player.items = player.items | 32768;
+	else if (player.armortype >= 0.6)
+		player.items = player.items | 16384;
+	else if (player.armortype >= 0.3)
+		player.items = player.items | 8192;
+};

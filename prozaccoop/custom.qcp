@@ -1,0 +1,2073 @@
+/*======================================================
+	CUSTOM.QC			Custom TeamFortress v3.2	
+
+	(c) William Kerney			5/21/00
+========================================================
+All the functions pertaining to custom class generation and 
+the miscellanious new features of Custom TF
+======================================================*/
+
+float(float t1, float t2) Teammate; //KK: are team_no's current teammates
+void() DropToCustomClassGen; //Called when starting class generation
+void() DropFromCustomClassGen; //Called when finished class generation
+void() PrintMoney;
+void(float in) PrintRefund;
+void(float in) PrintNotEnoughMoney;
+void( float type ) BuyHealth;
+void(float cost, float type) BuyWeapon;
+void(float cost, float type) BuyCuTF;
+void(float cost, float type) BuyItem;
+void(float cost, float type) BuyJob;
+/*void(float cost, float type) BuyGren1;
+void(float cost, float type) BuyGren2;*/
+void(entity tif, float pain) RevealThief;
+void() FragGrenadeTouch;
+void() FragGrenadeExplode;
+void() KracGrenadeTouch;
+void() KracGrenadeExplode; 
+void(entity bastard,float threshold) createBastard;
+void(entity immuner,float timer) makeImmune;
+void() UseJobSkill; //Function for handling professions
+void() DetonateAllGuns;
+/*void (string temp) DebugSprint;
+void (float temp)  DebugSprintFloat;*/
+float(entity tester) IsBuilding;
+void() autoteam_think;
+//Extern
+void (vector org, entity death_owner) spawn_tdeath;
+//void (string gib, float health) ThrowGib;
+void(string gibname, float dm, float makecool, float gibskin, float gibkgs, float randorg) ThrowGib;
+void() TeamFortress_SetHealth;
+void() TeamFortress_SetEquipment;
+float() W_BestWeapon;
+void() W_SetCurrentAmmo;
+void(entity p) TeamFortress_SetSpeed;
+void(entity p) TeamFortress_SetSkin;
+void(entity Viewer, float pc) TeamFortress_PrintJobName;
+void () BecomeExplosion;
+void(entity bomb, entity attacker, float rad, entity ignore) T_RadiusDamage;
+void() SUB_regen;
+float modelindex_eyes, modelindex_player, modelindex_null;
+void(float inAuto) W_FireMedikit;
+void(float inAuto) TeamFortress_ID;
+void(float range,float inAuto) TeamFortress_Scan;
+void() kill_my_demons;
+void() player_assaultcannondown1;
+void (entity rhook) Reset_Grapple;
+void() GuerillaExplode;
+void(float krac) TeamFortress_DetpackStop;
+void(float all, float teamscored, float scorepoints) TeamFortress_TeamShowScores;
+void () execute_changelevel;
+void(entity Item, entity AP, float method) tfgoalitem_RemoveFromPlayer;
+
+//- OfN
+void(entity mine_owner) DetonateMines; //external, job.qc
+string (float tno) TeamGetNiceColor;
+void(entity player, float start) SetArmyTimer; 
+void() RemoveArmyTimer;
+entity() SelectSpawnPoint;
+void() CleanUpEverything;
+//void(entity tfield, vector where, entity thing) FieldExplosion;
+void(entity tfield, vector where, entity thing) FieldEvent;
+float(entity player) GiveFreeStuff;
+
+void(entity player, float usage) SetMeatUsage;
+void(entity player, float usage) SetHeadsUsage;
+void(entity player, float soul) SetCurrentSoul;
+
+void(entity player) PlayerDropRunes;
+void(entity player) ResetStripedAndGiven;
+
+//KK: are team_no's current teammates
+float(float targteam, float attackteam) Teammate =
+{
+	local float teammask;
+
+	if ( !targteam ) return 0;
+	if ( targteam == attackteam ) return 1;
+	if ( number_of_teams < 3 ) return 0;
+
+	if		( targteam == 1 ) teammask = 1;
+	else if ( targteam == 2 ) teammask = 2;
+	else if ( targteam == 3 ) teammask = 4;
+	else if ( targteam == 4 ) teammask = 8;
+	else
+		teammask = 0;						// Gizmo - only happens if there's a bug
+
+	if		( attackteam == 1 && (friends1_mask & teammask)) return 1;
+	else if ( attackteam == 2 && (friends2_mask & teammask)) return 1;
+	else if ( attackteam == 3 && (friends3_mask & teammask)) return 1;
+	else if ( attackteam == 4 && (friends4_mask & teammask)) return 1;
+
+	return 0;
+};
+
+/*
+void (string temp) DebugSprint =
+{
+	sprint(self,#PRINT_HIGH,temp);
+	sprint(self,#PRINT_HIGH,"\n");
+};
+
+void (float foo)  DebugSprintFloat =
+{
+	local string temp;
+	temp = ftos(foo);
+	sprint(self,#PRINT_HIGH,temp);
+	sprint(self,#PRINT_HIGH,"\n");
+};
+*/
+
+/*
+==============
+BuyStockClassItems
+
+Used to buy all the items of a stock class, if we
+have enough money. This way we can start from an
+already built class and make a few changes.
+==============
+*/
+void( float stockClass ) BuyStockClassItems = {
+	if ( stockClass == 1 ) {
+		BuyHealth( 1 );
+		if ( self.custom_speed == 250 && self.money >= 9000 ) {
+			self.money = self.money - 9000;
+			self.custom_speed = 410; // Original 650
+			PrintMoney();
+		}
+		BuyWeapon( 50, 128 );
+		BuyWeapon( 400, 512 );
+		BuyWeapon( 2000, 2097152 );
+		BuyGren( 500, 14 );
+		BuyGren( 1000, 2 );
+		BuyItem( 350, 65536 );
+		BuyJob( 950, 1 );
+	}
+};
+
+void() DropToCustomClassGen =
+{
+	//local entity te;
+	local float sell_no;
+	//local string st;
+	sell_no = 0;
+
+	self.gravity = 1;
+	self.aura = 0;
+
+	//Remove everything he's carrying	
+	self.job = 0;
+	
+	// This is the appropiate place to: (after clearing job due to armytimer stuff weirdness)
+	CleanUpEverything();
+
+	ResetStripedAndGiven(self);
+
+	self.is_malfunctioning = 0;
+	//self.is_cameraviewing = 0;
+
+	if ( !deathmatch )
+		self.tf_items = 256;
+	else
+		self.tf_items = 0;
+
+
+
+
+	if ( !deathmatch )
+		self.cutf_items = 64;
+	else
+		self.cutf_items = 0;
+
+
+
+	// Gizmo - new item flags
+	self.cutf_moreitems = 0;
+
+	self.tf_items_flags = 0;
+	self.items = 0;
+	self.ammo_rockets = 0;
+	self.ammo_nails = 0;
+	self.ammo_shells = 0;
+	self.ammo_cells = 0;
+	self.maxammo_rockets = 10; //Give em a minimal carrying capacity
+	self.maxammo_nails = 10;
+	self.maxammo_shells = 10;
+	self.maxammo_cells = 10;
+	self.maxammo_medikit = 0;
+	self.maxammo_detpack = 0;
+	self.ammo_c4det = 0;
+	
+	self.demon_one = world; //SB - this tells us who our demon is for easy reference
+	self.demon_two = world; //- OfN-  Used for hacker job, target building and for timer (% on sbar)
+	self.demon_three = world;
+
+	self.demon_blood = 0;
+
+	self.all_active = 0; // OfN Number of mines set by the player
+
+	self.no_grenades_1 = 0;
+	self.no_grenades_2 = 0;
+	self.tp_grenades_1 = 0;
+	self.tp_grenades_2 = 0;
+
+	self.armor_allowed = 0.3; //Red yellow or green
+	self.armorclass = 0; //Red yellow or green
+	self.armorvalue = 0; //200 etc
+	self.maxarmor = 0;	//200 etc
+	self.weapon = 0; // #WEAP_HOOK & #WEAP_SHOTGUN etc
+	self.current_weapon = 0; // No current weapon
+	
+	if ((allow_hook) && (no_grapple != 1)) //If map allows it...
+		self.weapons_carried = 1; // Start with grapple
+	else
+		self.weapons_carried = 0; // Or remove everything
+
+	self.weaponmodel = ""; //Remove the model of a weapon in front
+
+	self.solid = 0;
+	self.movetype = 0;
+	self.takedamage = 0;
+
+//Ready to buy
+	self.maxspeed = 0; //Can't move while buying
+	self.max_health = 50;
+	self.health = 50;
+
+	GiveFreeStuff(self);
+
+
+
+//Calculate starting money
+//This means the most someone can get is 50*100 = $5000
+	if (self.done_custom & 16)
+	{
+		if (self.real_frags >= 50)
+			sell_no = 50;
+		else if (self.real_frags > 0)
+			sell_no = self.real_frags;
+		else {
+			sell_no = 0;
+			self.done_custom = self.done_custom - (self.done_custom & 16);
+		}
+
+		self.real_frags = self.real_frags - sell_no;
+		self.frags = self.real_frags; //TODO: Make this work with TEAMFRAGS on
+		self.money = custom_money + sell_no * 100;
+	}
+	else
+		self.money = custom_money;
+
+	self.custom_speed = 250; //HWGUY Speed
+
+	//Overrides the menu handler to always display my menu
+	//Hack alert! This preserves the selling flag. :p
+	if (self.done_custom & 16)
+		self.done_custom = 4 | 16; 
+	else
+		self.done_custom = 4; 
+	
+	//Destroy Buildings... again. :p
+	//DetonateAllGuns();
+	
+
+	//And then kill all demons I own
+	
+	//kill_my_demon();
+	//DetonateMines(self);
+	//RemoveArmyTimer();
+
+	  self.current_menu = 36;
+	  Menu_PrimaryWeapon();
+	//return;
+};
+
+void(vector org) spawn_tfog;
+
+void() DropFromCustomClassGen =
+{
+	// OfN
+	self.is_killed = 0;
+
+	self.done_custom = 2;
+	self.maxspeed = self.custom_speed;
+	self.gravity = 1;
+
+	if (self.cutf_items & 512)
+		self.maxammo_detpack = 1;
+
+	//Make sure they have at least one axe-like weapon
+	if (!(self.weapons_carried & (4 | 8)) || (self.cutf_items & 2))
+		self.weapons_carried = self.weapons_carried | 16;
+
+	//CH if you bought Guerilla, you get 20 rockets :)
+	if (self.job & 32)
+		self.maxammo_rockets = self.maxammo_rockets + 20;
+
+	//OfN if we got the holo we get extra cells ammo space
+	if (self.cutf_items & 131072)
+		self.maxammo_cells = self.maxammo_cells + 40;
+
+	//If they bought weapons, remove their basic ammo allotment
+	if (self.maxammo_rockets > 10)
+		self.maxammo_rockets = self.maxammo_rockets - 10;
+	  if (self.maxammo_nails > 10)
+		self.maxammo_nails = self.maxammo_nails - 10;
+	  if (self.maxammo_shells > 10)
+		self.maxammo_shells = self.maxammo_shells - 10;
+	  if (self.maxammo_cells > 10)
+		self.maxammo_cells = self.maxammo_cells - 10;
+
+	//Increase their supply if they bought a backpack or bandolier
+	if (self.tf_items & 128) {
+		self.maxammo_rockets = self.maxammo_rockets + 30;
+		self.maxammo_nails	 = self.maxammo_nails	+ 100;
+		self.maxammo_shells  = self.maxammo_shells	+ 100;
+		if (self.weapons_carried & 8)
+			self.maxammo_cells	 = self.maxammo_cells	+ 170;
+		else
+			self.maxammo_cells	 = self.maxammo_cells	+ 50;
+		if (self.maxammo_medikit > 0) //Only increase their medical supplies when...
+			self.maxammo_medikit = self.maxammo_medikit + 70;
+		if (self.maxammo_detpack > 0)
+			self.maxammo_detpack = self.maxammo_detpack + 0.5;
+	}
+	if (self.tf_items & 256) {
+		self.maxammo_rockets = self.maxammo_rockets + 10;
+		self.maxammo_nails	 = self.maxammo_nails	+ 50;
+		self.maxammo_shells  = self.maxammo_shells	+ 50;
+		self.maxammo_cells	 = self.maxammo_cells	+ 30;
+		if (self.maxammo_medikit > 0)
+			self.maxammo_medikit = self.maxammo_medikit + 50;
+		if (self.maxammo_detpack > 1) //Only give extra det if they bought both
+			self.maxammo_detpack = 2;
+	}
+
+	//Clean up detpack fraction
+	if (self.maxammo_detpack > 1 && self.maxammo_detpack < 2) 
+		self.maxammo_detpack = 1;
+
+	if (self.cutf_items & 256) // SB
+		self.maxammo_cells = self.maxammo_cells + 70;
+	if (self.cutf_items & 1024) // SB
+		self.maxammo_cells = self.maxammo_cells + 100;
+	if (self.cutf_items & 524288) // SB
+		self.maxammo_cells = self.maxammo_cells + 140;
+
+	//- OfN
+	if (self.weapons_carried & 4194304) self.maxammo_cells = self.maxammo_cells + 70;
+	if (self.weapons_carried & 8388608) self.maxammo_nails = self.maxammo_nails + 70;
+	if (self.weapons_carried & 2097152) self.maxammo_cells = self.maxammo_cells + 60;
+
+	//Now cap the max ammo
+	if (self.maxammo_rockets > 100)
+		self.maxammo_rockets = 100;
+	  if (self.maxammo_nails > 350)
+		self.maxammo_nails = 350;
+	  if (self.maxammo_shells > 300)
+		self.maxammo_shells = 300;
+	  if (self.maxammo_cells > 300)
+		self.maxammo_cells = 300;
+
+/* WK 1/7/7 We don't need all this complication
+	  //- ofn
+	  if (self.tf_items & #NIT_AMMO_BANDOLIER && self.tf_items & #NIT_AMMO_BACKPACK)
+	  {
+		if (self.maxammo_cells > #MAXAMMO_CELLS + 100) 
+			self.maxammo_cells = #MAXAMMO_CELLS + 100;
+	  }
+	  else if (self.tf_items & #NIT_AMMO_BACKPACK)
+	  {
+		if (self.maxammo_cells > #MAXAMMO_CELLS + 50) // was 360
+			self.maxammo_cells = #MAXAMMO_CELLS + 50;
+	  } 	 
+	  else
+	  {
+		if (self.maxammo_cells > #MAXAMMO_CELLS) // was 320
+			self.maxammo_cells = #MAXAMMO_CELLS;
+	  }
+*/
+
+	//- OFN HERE FRONTLIN HELI BUG FIX ---//
+	local entity spot;
+	spot = SelectSpawnPoint ();
+
+	self.observer_list = spot;
+	self.origin = spot.origin + '0 0 1';
+	self.angles = spot.angles;
+	self.fixangle = 1;		// turn this way immediately
+
+	makevectors(self.angles);
+	spawn_tfog (self.origin + v_forward*20);
+	//------------------------------------//
+	
+	//Telefrag anyone sitting on top of us
+	spawn_tdeath(self.origin,self);
+	
+	//Remove observer-like mode
+	self.takedamage = 2;
+	//Prevent bad movetype errors, or something
+	if (self.classname != "player") {
+		RPrint("BUG BUG BUG BUG BUG BUG BUG BUG BUG\n");
+		RPrint("Non-player was in custom class generation!\n");
+		return;
+	}
+	self.movetype = 3;
+	self.flags = 8 | 512;
+	self.waterlevel = 0;
+	self.air_finished = time + 12;
+	self.solid = 3;
+	self.pausetime = 0;
+
+	//Remove invisibility
+	//setmodel (self, "progs/eyes.mdl");
+	//setmodel (self, "progs/player.mdl");
+	self.modelindex = modelindex_player;
+
+	// Stock him up
+	// Display the Player's Class
+	TeamFortress_PrintJobName(self,self.job);
+	// Set the weapons and ammo for the player based on class
+	TeamFortress_SetEquipment();
+	// Set the health for the player based on class
+	TeamFortress_SetHealth();
+	// Set the speed for the player based on class
+	TeamFortress_SetSpeed(self);
+	// Set the skin for the player based on class
+	TeamFortress_SetSkin(self);
+	stuffcmd(self, "v_idlescale 0\n");
+	stuffcmd(self, "v_cshift 0 0 0 0\n");
+	stuffcmd(self, "bf\n");
+
+	ResetMenu();		
+	self.impulse = 0;
+
+	//Make them invincible if they bought respawn protection
+	if (self.tf_items & 4096) {
+		self.items = self.items + 1048576;
+		self.invincible_time = 1;
+
+		if ( !deathmatch )
+			self.invincible_finished = time + 2;
+		else
+
+		self.invincible_finished = time + 5;
+		if (self.custom_speed > 300)
+			self.invincible_finished = self.invincible_finished - 1;			
+		if (self.custom_speed > 400)
+			self.invincible_finished = self.invincible_finished - 1;			
+	}
+
+	//Come again!
+	sprint(self,2,"Type ¢custom¢ at the console to build a new class.\n");
+	return;
+};
+
+void() PrintMoney =
+{
+	CuTFMenuSound(2);
+	
+	if (pay_msgs != 1)
+		return;
+
+	local string as;
+	sprint(self,2,"You have ");
+	as = ftos(self.money);
+	sprint(self,2,as);
+	sprint(self,2," dollars left.\n");
+	return;
+};
+
+
+void(float in) PrintRefund=
+{
+	CuTFMenuSound(3);
+
+	local string as;
+
+	if (pay_msgs == 1)
+	{
+		sprint(self,2,"You sell it back for ");
+		as = ftos(in);
+		sprint(self,2,as);
+		sprint(self,2," dollars.\n");
+	}
+
+	self.money = self.money + in; //Give em a refund
+
+	if (pay_msgs == 1)
+	{
+		sprint(self,2,"You now have ");
+		as = ftos(self.money);
+		sprint(self,2,as);
+		sprint(self,2," dollars available.\n");
+	}
+
+	return;
+};
+
+void(float in) PrintNotEnoughMoney =
+{
+	CuTFMenuSound(4);
+
+	self.tfstate = self.tfstate | 2097152;
+
+	if (pay_msgs != 1)
+	{
+		sprint(self,2,"Not enough money!\n");
+		return;
+	}
+
+	local string as;
+	
+	sprint(self,2,"Sorry, that costs ");
+	as = ftos(in);
+	sprint(self,2,as);
+	sprint(self,2," dollars.\n");
+
+	sprint(self,2,"You only have ");
+	as = ftos(self.money);
+	sprint(self,2,as);
+	sprint(self,2," dollars left.\n");
+	return;
+};
+
+//Functions for determining ammo carrying capacity
+float (float item) countshells =
+{
+/*	if (chris)
+	{
+		if (item == #WEAP_SHOTGUN) return 16;
+		if (item == #WEAP_SPANNER) return 20;
+		if (item == #WEAP_SUPER_SHOTGUN) return 32;
+		if (item == #WEAP_ASSAULT_CANNON) return 75;
+	}
+	else
+	{*/
+		if (item == 128) return 25;
+		if (item == 8) return 40;
+		if (item == 256) return 50;
+		if (item == 32768) return 100;
+	//}
+	return 0;
+};
+float (float item) countnails =
+{
+	/*if (chris)
+	{
+		if (item == #WEAP_MAUSER) return 10;
+		if (item == #WEAP_TRANQ) return 20;
+		if (item == #WEAP_LASER) return 10;
+		if (item == #WEAP_NAILGUN) return 75;
+		if (item == #WEAP_LIGHT_ASSAULT) return 100;
+	}
+	else
+	{*/
+		if (item == 1048576) return 30;
+		if (item == 262144) return 30;
+		if (item == 524288) return 50;
+		if (item == 512) return 100;
+		if (item == 1024) return 150;
+	//}
+	return 0;
+};
+float (float item) countrockets =
+{
+	/*if (chris)
+	{
+		if (item == #WEAP_SPANNER) return 2;
+		if (item == #WEAP_ROCKET_LAUNCHER) return 3;
+		if (item == #WEAP_GRENADE_LAUNCHER) return 7;
+	}
+	else
+	{*/
+		if (item == 8) return 30;
+		if (item == 8192) return 30;
+		if (item == 2048) return 50;
+	//}
+	return 0;
+};
+float (float item) countcells =
+{
+	/*if (chris)
+	{
+		if (item == #WEAP_ASSAULT_CANNON) return 16;
+		if (item == #WEAP_DAEDALUS) return 50;
+		if (item == #WEAP_LIGHTNING) return 75;
+		if (item == #WEAP_SPANNER) return 150;
+	}
+	else
+	{*/
+		if (item == 32768) return 50;
+		if (item == 131072) return 100;
+		if (item == 65536) return 100;
+		if (item == 8) return 150;
+	//}
+	return 0;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+==============
+BuyHealth
+
+Gizmo - so we don't have to duplicate code when buying
+health and armor.
+==============
+*/
+void( float type ) BuyHealth = {
+	local float	current;
+	local float	tosell, tobuy;
+
+	if ( !type )
+		return;
+
+	if (self.maxarmor == 50)
+	{
+		if (self.health == 75)
+			current = 1;
+		else
+			current = 2;		
+	}
+	else if (self.maxarmor == 100)
+		current = 3;
+	else if (self.maxarmor == 120)
+		current = 4;
+	else if (self.maxarmor == 150)
+		current = 5;
+	else if (self.maxarmor == 200)
+		current = 6;
+	else if (self.maxarmor == 300)
+		current = 7;
+	else
+		current = 0;	// Gizmo - only set to zero if all others fail
+
+	tosell = GetHPCost(current);
+	tobuy = GetHPCost(type);
+	if (self.money < tobuy - tosell)
+	{
+		PrintNotEnoughMoney(tobuy - tosell);
+		return;
+	}
+	
+	if ( current == type || current ) { // sell back?
+		self.max_health = 50;
+		self.health = self.max_health;
+		self.maxarmor = 0;
+		self.armorvalue = 0;
+		self.armortype = 0;
+		self.armor_allowed = 0;
+
+		PrintRefund(tosell);
+		UpdateArmorItem(self);
+
+		if (current == type)
+			return;
+	}
+
+	if (type == 1)
+	{
+		self.max_health = 75;
+		self.health = self.max_health;
+		self.maxarmor = 50;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.3;	// Green
+		self.armor_allowed = 0.3; //Green max
+		UpdateArmorItem(self);
+	}
+	else if (type == 2)
+	{
+		self.max_health = 90;
+		self.health = self.max_health;
+		self.maxarmor = 50;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.3;	// Green
+		self.armor_allowed = 0.3; //Green max
+		UpdateArmorItem(self);
+	}
+	else if (type == 3)
+	{
+		self.max_health = 80;
+		self.health = self.max_health;
+		self.maxarmor = 100;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.6;
+		self.armor_allowed = 0.6;
+		UpdateArmorItem(self);
+	}
+	else if (type == 4)
+	{
+		self.max_health = 90;
+		self.health = self.max_health;
+		self.maxarmor = 120;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.6;
+		self.armor_allowed = 0.6;
+		UpdateArmorItem(self);
+	}
+	else if (type == 5)
+	{
+		self.max_health = 100;
+		self.health = self.max_health;
+		self.maxarmor = 150;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.6;	
+		self.armor_allowed = 0.6;
+		UpdateArmorItem(self);
+	}
+	else if (type == 6)
+	{
+		self.max_health = 100;
+		self.health = self.max_health;
+		self.maxarmor = 200;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.8;	
+		self.armor_allowed = 0.8;
+		UpdateArmorItem(self);
+	}
+	else if (type == 7)
+	{
+		self.max_health = 100;
+		self.health = self.max_health;
+		self.maxarmor = 300;
+		self.armorvalue = self.maxarmor;
+		self.armortype = 0.8;	
+		self.armor_allowed = 0.8;
+		UpdateArmorItem(self);
+	}
+
+	self.money = self.money - tobuy;
+	PrintMoney();
+};
+
+void(float cost, float item) BuyWeapon =
+{
+	if (item == 0) //Make sure we don't buy a null weapon
+		return;
+	
+	if (self.weapons_carried & item) //We are selling
+	{
+		// Gizmo - changed this to just one rocket launcher check
+		if ( item == 8192 ) {
+			if ( self.tf_items & 1048576 ) {
+				self.money = self.money + 1000;
+				self.tf_items = self.tf_items - 1048576;
+			}
+			if ( self.tf_items & 2097152 ) {
+				self.money = self.money + 3250;
+				self.tf_items = self.tf_items - 2097152;
+			}
+			if ( self.cutf_moreitems & 1 ) {
+				self.money = self.money + 800;
+				self.cutf_moreitems = self.cutf_moreitems - 1;
+			}
+		}
+		self.maxammo_shells = self.maxammo_shells - countshells(item);
+		self.maxammo_nails = self.maxammo_nails - countnails(item);
+		self.maxammo_rockets = self.maxammo_rockets - countrockets(item);
+		self.maxammo_cells = self.maxammo_cells - countcells(item);
+		PrintRefund(cost);
+		self.weapons_carried = self.weapons_carried - item;
+		return;
+	}
+	if (cost > self.money)
+	{
+		PrintNotEnoughMoney(cost);
+		return;
+	}
+	//Add to max ammo
+	self.maxammo_shells = self.maxammo_shells + countshells(item);
+	self.maxammo_nails = self.maxammo_nails + countnails(item);
+	self.maxammo_rockets = self.maxammo_rockets + countrockets(item);
+	self.maxammo_cells = self.maxammo_cells + countcells(item);
+
+	self.weapons_carried = self.weapons_carried | item;
+	self.money = self.money - cost;
+	PrintMoney();
+};
+
+
+void(float cost, float item) BuyCuTF =
+{
+	if (item == 0) //Make sure we don't buy a null weapon
+		return;
+	
+	if (item == 131072 && !(self.cutf_items & 131072)) {
+		if (!(cost > self.money))
+			sprint(self,2,"Use the 'holo' command to activate/deactivate the holograph\n");
+	}
+
+	if (self.cutf_items & item) //We are selling
+	{
+		if (item & 16) {
+			self.maxammo_shells = self.maxammo_shells - 130;
+			self.maxammo_cells	= self.maxammo_cells  - 130;
+		}
+		PrintRefund(cost);
+		self.cutf_items = self.cutf_items - item;
+		return;
+	}
+	if (cost > self.money)
+	{
+		PrintNotEnoughMoney(cost);
+		return;
+	}
+	//Add to max ammo if sentrygun purchase
+	if (item & 16) {
+		self.maxammo_shells = self.maxammo_shells + 130;
+		self.maxammo_cells	= self.maxammo_cells  + 130;
+	}
+
+	self.cutf_items = self.cutf_items | item;
+	self.money = self.money - cost;
+	PrintMoney();
+};
+
+//CH gives ammo for items
+void(float item) Apply_Item_Ammo =
+{
+	local float cellsfoo,rocketsfoo;
+	cellsfoo = rocketsfoo = 0;
+
+	if (item == 32768)
+		cellsfoo = 150;
+	if (item == 65536)
+		cellsfoo = 60;
+	if (item == 131072)
+		cellsfoo = 100;
+
+	if (item == 1048576)
+		rocketsfoo = 10;
+	if (item == 2097152)
+		rocketsfoo = 20;
+
+	if (self.tf_items & item) { //we selling
+		self.maxammo_cells = self.maxammo_cells - cellsfoo;
+		self.maxammo_rockets = self.maxammo_rockets - rocketsfoo;
+	}
+	else {
+		self.maxammo_cells = self.maxammo_cells + cellsfoo;
+		self.maxammo_rockets = self.maxammo_rockets + rocketsfoo;
+	}
+};
+void(float cost, float item) BuyItem =
+{
+	if (item == 0) //Make sure we don't buy a null item
+		return;
+
+	Apply_Item_Ammo(item); //CH
+
+	if (self.tf_items & item) //We are selling
+	{
+		if (item == 16384 && self.tf_items & 524288) {
+			self.money = self.money + 350; //sync with buying of upgrade
+			item = item + 524288;
+		}
+
+		PrintRefund(cost);
+		self.tf_items = self.tf_items - item;
+		return;
+	}
+	//Special rules
+	if (item == 8192 && !(self.tf_items & 1)) {
+		sprint(self,2,"Sorry, you have to buy the scanner first!\n");
+		CuTFMenuSound(4);
+		return;
+	}
+	if ((item == 1048576 || item == 2097152) && !(self.weapons_carried & 8192)) {
+		sprint(self,2,"Sorry, you have to buy the rocket launcher first!\n");
+		CuTFMenuSound(4);
+		return;
+	}
+
+	if (item == 16384 && !(cost > self.money))
+		sprint(self,2,"Hold down jump to use the boots\n");
+
+	if (item == 524288 && !(self.tf_items & 16384)) {
+		sprint(self,2,"Sorry, you have to buy the hover boots first!\n");
+		CuTFMenuSound(4);
+		return;
+	}
+	if (cost > self.money)
+	{
+		PrintNotEnoughMoney(cost);
+		return;
+	}
+
+	self.tf_items = self.tf_items | item;
+	self.money = self.money - cost;
+	PrintMoney();
+};
+
+void(float cost, float type) BuyJob =
+{
+	if (type == 0) //Make sure we don't buy a null grenade
+		return;
+	
+	if (type == self.job) //We are selling
+	{
+		/*if (self.job & #JOB_WARLOCK)
+		{
+			if (!self.cutf_items & #CUTF_DEMONLORE)
+				cost = cost - #COST_DEMONLORE; // sync with demonlore cost
+			else
+				self.cutf_items = self.cutf_items - (self.cutf_items & #CUTF_DEMONLORE);
+		}
+		if (self.job & #JOB_RUNNER)
+		{
+			if (!self.cutf_items & #CUTF_HIGHJUMP)
+				cost = cost - #COST_HIGHJUMP; // sync with highjump cost
+			else
+				self.cutf_items = self.cutf_items - (self.cutf_items & #CUTF_HIGHJUMP);
+		}
+		if (self.job & #JOB_JUDOKA)
+		{
+			if (!self.cutf_items & #CUTF_STEALTH)
+				cost = cost - #COST_STEALTH; // sync with stealth cost
+			else
+				self.cutf_items = self.cutf_items - (self.cutf_items & #CUTF_STEALTH);
+		}*/
+		PrintRefund(cost);
+		self.job = 0;
+		return;
+	}
+	if (cost > self.money)
+	{
+		PrintNotEnoughMoney(cost);
+		return;
+	}
+	if (self.job) { //Make sure we haven't bought another kind already
+		sprint(self,2,"You already have a job. Leave your other one first.\n");
+		CuTFMenuSound(4);
+		return;
+	}
+	//Special rules for buying jobs
+	if (type == 4 && !(self.cutf_items & 2)) {
+		sprint(self,2,"Every Warlock needs a good bloody knife. Buy one.\n");
+		CuTFMenuSound(4);
+		return;
+	}
+	/*if (type == #JOB_WARLOCK)
+		if (self.cutf_items & #CUTF_DEMONLORE)
+			self.money = self.money + #COST_DEMONLORE; // sync this with demonlore cost
+		else
+			self.cutf_items = self.cutf_items | #CUTF_DEMONLORE; // warlocks see demon health
+	
+	if (type == #JOB_RUNNER)
+		if (self.cutf_items & #CUTF_HIGHJUMP)
+			self.money = self.money + #COST_HIGHJUMP; // sync with highjump cost
+		else
+			self.cutf_items = self.cutf_items | #CUTF_HIGHJUMP; // runner jumps high
+	
+	if (type == #JOB_JUDOKA)
+		if (self.cutf_items & #CUTF_STEALTH)
+			self.money = self.money + #COST_STEALTH; // sync with stealth price
+		else
+			self.cutf_items = self.cutf_items | #CUTF_STEALTH; // Judo is a master of stealth by default
+	*/
+	
+	//Ok we buy it
+	self.job = type;
+	self.money = self.money - cost;
+	PrintMoney();
+};
+
+void (float cost1, float cost2) BuyExtra =
+{
+	local float allcost;
+	allcost = 0;
+	
+	if (self.job & 65536) // we have extra1
+	{
+		if (self.money < cost2) // not enough money for extra2, sell back job and extra1 then..
+		{
+			if (self.job & 4)
+			{
+				allcost = 1150 + cost1;
+
+				/*if (!self.cutf_items & #CUTF_DEMONLORE)
+					allcost = allcost - #COST_DEMONLORE; // sync with demonlore cost
+				else
+					self.cutf_items = self.cutf_items - (self.cutf_items & #CUTF_DEMONLORE);*/
+			}
+			else if (self.job & 128)
+			{
+				allcost = 1250 + cost1;
+			}
+			else if (self.job & 32)
+			{
+				allcost = 1600 + cost1;
+			}
+
+			self.job = 0;
+		PrintNotEnoughMoney(cost1);
+			PrintRefund(allcost);
+			return;
+		}
+		else // ok, buy second extra
+		{
+			self.job = self.job - (self.job & 65536);
+			self.job = self.job | 131072;
+			
+			// decrease our money
+			self.money = self.money - cost2;	
+		}
+	}
+	else if (self.job & 131072) // we have extra2, so sell back everything..
+	{
+		if (self.job & 4)
+		{
+			allcost = (cost1+cost2)+1150;
+
+			/*if (!self.cutf_items & #CUTF_DEMONLORE)
+				allcost = allcost - #COST_DEMONLORE; // sync with demonlore cost
+			else
+				self.cutf_items = self.cutf_items - (self.cutf_items & #CUTF_DEMONLORE);*/
+		}
+		else if (self.job & 128)
+		{
+			allcost = (cost1+cost2)+1250;
+		}
+		else if (self.job & 32)
+		{
+			allcost = (cost1+cost2)+1600;
+		}
+			
+		self.job = 0;
+		PrintRefund(allcost);
+		return;
+	}
+	else // we dont have any extra
+	{
+		if (self.money < cost1) // not enough money for 1st extra, so sell back job
+		{
+			if (self.job & 4)
+			{
+				allcost = 1150;
+
+				/*if (!self.cutf_items & #CUTF_DEMONLORE)
+					allcost = allcost - #COST_DEMONLORE; // sync with demonlore cost
+				else
+					self.cutf_items = self.cutf_items - (self.cutf_items & #CUTF_DEMONLORE);*/
+			}
+			else if (self.job & 128)
+			{
+				allcost = 1250;
+			}
+			else if (self.job & 32)
+			{
+				allcost = 1600;
+			}
+
+			self.job = 0;
+			PrintNotEnoughMoney(cost1);
+			PrintRefund(allcost);
+			return;
+		}
+		else // ok, buy 1st extra
+		{
+			self.job = self.job | 65536;
+
+			// decrease our money
+			self.money = self.money - cost1;
+		}
+	}
+
+	// Print money
+	PrintMoney();
+};
+
+void (float cost, float type) BuyGren =
+{
+	//local string talk;
+	///local float level; // This is the level of legs we have.
+	
+	if (type == 0) // if type is 0 we are buying the NULL GRENADE(tm)
+	{
+		sprint(self, 2, "Congratulations. You have just attempted to buy a null grenade.\n");
+		RPrint("WARNING: Attempted purchase of NULL GRENADE. BUG BUG BUG BUG BUG BUG BUG\n");
+		return;
+	}
+	// Check whether we're allowing gren purchase.
+	/*level = ReturnLegLevel(self.custom_speed);
+	if (level == 1) // grens are a no-no
+	{
+		sprint(self, #PRINT_HIGH, "Sorry, you are not allowed any grenades at that speed. It is very dangerous.\n");
+		return;
+	}
+	else if (level == 2)
+	{
+		local float acc; // Acceptable.
+		
+		acc = #FALSE;
+		
+		if (type == #GR_TYPE_CALTROP)
+			acc = #TRUE;
+		else if (type == #GR_TYPE_CONCUSSION)
+			acc = #TRUE;
+		else if (type == GR_TYPE_STASIS)
+			acc = #TRUE;
+		else if (type == #GR_TYPE_ANTIGRAV)
+			acc = #TRUE;
+		else if (type == #GR_TYPE_FLARE)
+			acc = #TRUE;
+		if (!acc)
+		{
+			sprint(self, #PRINT_HIGH, "Sorry, using those grenades at your speed could be dangerous.\n");
+			return;
+		}
+	}
+	else if (level == 3)
+	{
+		if (type == #GR_TYPE_MIRV)
+		{
+			sprint(self, #PRINT_HIGH, "Sorry, you aren't allowed MIRVs at that speed.\n");
+			return;
+		}
+	}*/
+	// Grenade and speed is fine.
+	
+	if (!self.tp_grenades_1 && cost <= self.money) // if we don't have gren1s, make it a gren1
+	{
+/*		if (self.money_misc + cost > self.money_spent - self.money_misc)
+		{
+			PrintTooHighProportion();
+			return;
+		} */
+		self.tp_grenades_1 = type;
+		//sprint(self, #PRINT_HIGH, "You buy the grenades and add them to your first grenade slot for ");
+	}
+	else if (!self.tp_grenades_2 && cost <= self.money) // We already have gren1s, can we buy gren2s?
+	{
+		/*if (self.money_misc + cost > self.money_spent - self.money_misc)
+		{
+			PrintTooHighProportion();
+			return;
+		}*/
+		self.tp_grenades_2 = type;
+		//sprint(self, #PRINT_HIGH, "You buy the grenades and add them to your second grenade slot for ");
+	}
+	else	// We have both gren1s and gren2s so now we need to try to sell some
+	{		// If our type matches gren1 AND gren2s we want to sell both
+		if (self.tp_grenades_1 == type && self.tp_grenades_2 == type)
+		{
+			PrintRefund(cost * 2);
+			//self.money_misc = self.money_misc - cost * 2;
+			//self.money = self.money + cost * 2; //*2
+			self.tp_grenades_1 = 0;
+			self.tp_grenades_2 = 0;
+		}
+		else if (self.tp_grenades_1 == type) // otherwise if our gren1s are the type
+		{
+			PrintRefund(cost);
+			//self.money_misc = self.money_misc - cost;
+			//self.money = self.money + cost;
+			self.tp_grenades_1 = 0;
+		}
+		else if (self.tp_grenades_2 == type) // otherwise if we have gren2s as the type..
+		{
+			PrintRefund(cost);
+			//self.money_misc = self.money_misc - cost;
+			//self.money = self.money + cost;
+			self.tp_grenades_2 = 0;
+		}
+		else if (cost <= self.money)
+		{
+			CuTFMenuSound(4);
+			sprint(self,2,"You already have a full set of grenades. Sell some back first.\n");
+		}
+		else
+			PrintNotEnoughMoney(cost);
+		
+		return;
+	}
+	self.money = self.money - cost;
+	PrintMoney();
+	//self.money_misc = self.money_misc + cost;
+	//self.money_spent = self.money_spent + cost;
+	/*talk = ftos(cost);
+	sprint(self, #PRINT_HIGH, talk);
+	sprint(self, #PRINT_HIGH, " dollars. You have ");
+	talk = ftos(self.money);
+	sprint(self, #PRINT_HIGH, talk);
+	sprint(self, #PRINT_HIGH, " dollars left.\n");*/
+};
+/*
+
+void(float cost, float type) BuyGren1 =
+{
+	if (type == 0) //Make sure we don't buy a null grenade
+		return;
+	
+	if (type == self.tp_grenades_1) //We are selling
+	{
+		PrintRefund(cost);
+		self.tp_grenades_1 = 0;
+		return;
+	}
+	if (cost > self.money)
+	{
+		PrintNotEnoughMoney(cost);
+		return;
+	}
+	if (self.tp_grenades_1) { //Make sure we haven't bought another kind already
+		sprint(self,#PRINT_HIGH,"You already have grenades. Sell back the ones you bought first.\n");
+		return;
+	}
+	//Ok we buy it
+	self.tp_grenades_1 = type;
+	self.money = self.money - cost;
+	PrintMoney();
+};
+
+void(float cost, float type) BuyGren2 =
+{
+	if (type == 0) //Make sure we don't buy a null grenade
+		return;
+	
+	if (type == self.tp_grenades_2) //We are selling
+	{
+		PrintRefund(cost);
+		self.tp_grenades_2 = 0;
+		return;
+	}
+	if (cost > self.money)
+	{
+		PrintNotEnoughMoney(cost);
+		return;
+	}
+	if (self.tp_grenades_2) { //Make sure we haven't bought another kind already
+		sprint(self,#PRINT_HIGH,"You already have grenades. Sell back the ones you bought first.\n");
+		return;
+	}
+
+	//Ok we buy it
+	self.tp_grenades_2 = type;
+	self.money = self.money - cost;
+	PrintMoney();
+};
+*/
+
+//Functions for our new grenades
+void() fragspike_touch =
+{
+	//if (pointcontents(self.origin) == #CONTENT_SKY)
+	if (pointcontents(self.origin) != -1)
+	{
+		dremove(self);
+		return;
+	}
+	
+// hit something that bleeds
+	if (other.takedamage)
+	{
+		deathmsg = 38;
+
+		TF_T_Damage (other, self, self.real_owner, 150, 2, 2);
+		dremove(self);
+	}
+	else
+	{
+		//We bounce off world since we are fragments
+		if (self.heat > 0) {
+//			self.heat = self.heat - 1;
+//			if (self.velocity = '0 0 0') { //Skip around
+			if (1) { //Skip around
+				self.velocity_x = (random() - 0.5) * 200;
+				self.velocity_y = (random() - 0.5) * 200;
+				self.velocity_z = random() * 200;
+			}
+		}
+		else {
+			if (other.classname == "force_field") //- OfN - Makes field explosion b4 removing it
+			   //FieldExplosion(other,self.origin,self);
+			   FieldEvent(other,self.origin,self);
+			else
+			{
+				WriteByte (4, 23);
+				WriteByte (4, 1);
+				WriteCoord (4, self.origin_x);
+				WriteCoord (4, self.origin_y);
+				WriteCoord (4, self.origin_z);
+			
+				multicast (self.origin, 1);
+			
+			}
+
+			dremove(self);
+		}
+	}
+};
+void() FragSpikeThink =
+{
+	if (self.heat > 0) {
+		self.heat = self.heat - 1;
+
+		self.angles_y = random() * 360;
+		self.angles_x = 0;
+		self.angles_z = 0;
+		makevectors(self.angles);
+		if (self.velocity == '0 0 0')
+			self.origin_z = self.origin_z + 50;
+
+		self.velocity = v_forward * 1000;
+		self.velocity_z = (random() + 0.25) * 1000;
+
+		self.nextthink = time + 0.5 + random();
+	}
+	else {
+		WriteByte (4, 23);
+		WriteByte (4, 1);
+		WriteCoord (4, self.origin_x);
+		WriteCoord (4, self.origin_y);
+		WriteCoord (4, self.origin_z);
+	
+		multicast (self.origin, 1);
+							
+		dremove(self);
+	}
+};
+
+void() FragGrenadeTouch =
+{
+	if (other == self.owner)
+		return; 	// don't explode on owner
+
+	// Thrown grenades don't detonate when hitting an enemy
+
+	sound (self, 1, "weapons/bounce.wav", 1, 1);	// bounce sound
+	if (self.velocity == '0 0 0')
+		self.avelocity = '0 0 0';
+};
+void() FragGrenadeExplode =
+{
+	local float shraps;
+	//local string happy;
+	local entity newmis; // (???)
+
+//Small explosive radius
+	deathmsg = 8;
+	T_RadiusDamage (self, self.owner, 80, world);
+
+	WriteByte (4, 23);
+	WriteByte (4, 3);
+	WriteCoord (4, self.origin_x);
+	WriteCoord (4, self.origin_y);
+	WriteCoord (4, self.origin_z);
+
+	multicast (self.origin, 1);
+
+
+	shraps = rint(6 * random()) + 6; //Pieces of shrapmetal;
+	while (shraps > 0) {
+		self.angles_y = random() * 360;
+		self.angles_x = 0;
+		self.angles_z = 0;
+		makevectors(self.angles);
+
+		deathmsg = 9;
+		newmis = spawn ();
+		//WK Make shraps hit owner newmis.owner = self.owner;
+		newmis.real_owner = self.owner;
+		newmis.movetype = 10;
+		newmis.solid = 2;
+
+		newmis.angles = '0 0 0';
+		newmis.classname = "spike";
+		newmis.think = FragSpikeThink;
+//		newmis.think = SUB_Remove;
+		newmis.nextthink = time + 1;
+		setmodel (newmis, "progs/spike.mdl");
+		setsize (newmis, '0 0 0', '0 0 0'); 	
+		setorigin (newmis, self.origin);
+
+		//Start it over the ground
+		newmis.origin_z = newmis.origin_z + 10;
+
+		newmis.velocity = v_forward * 1000;
+		if (random() < 0.5) 
+			newmis.velocity_z = 20;
+		else
+			newmis.velocity_z = random() * 1000;
+		newmis.avelocity = '100 100 100';
+		newmis.touch = fragspike_touch;
+		newmis.weapon = 9;
+
+		//Make it bounce six times.
+		newmis.heat = 5;
+		shraps = shraps - 1;
+	}
+
+	WriteByte (4, 23);
+	WriteByte (4, 3);
+	WriteCoord (4, self.origin_x);
+	WriteCoord (4, self.origin_y);
+	WriteCoord (4, self.origin_z);
+	multicast (self.origin, 1);
+	dremove(self);
+
+
+
+
+};
+
+void() KracGrenadeTouch =
+{
+	//WK Have it detonate on impact
+	if (other == self.owner)
+		return; 	// don't explode on owner
+
+	sound (self, 1, "weapons/bounce.wav", 1, 1);	// bounce sound
+	
+	KracGrenadeExplode();
+};
+
+
+
+float (entity test) npcAi_IsCoopMonster;
+
+
+void() KracGrenadeExplode =
+{
+	local entity te;
+	local entity oldself;
+	local float damage;
+
+	te = findradius(self.origin, 150);
+	while (te)
+	{	
+		// Player?
+		if (te.classname == "player" && te.health > 0)
+		{
+			//WW: Kracs disable detpack
+			oldself = self;
+			self = te;
+			TeamFortress_DetpackStop(1);
+			self = oldself;
+
+			//WK 1/7/7 Krac nerf
+			//Deals 200, tapers off linearly with radius (min 75)
+			damage = 200 - vlen(te.origin - self.origin);
+			if (damage > 200 || damage < 0) {
+				bprint(1,"Logic error in krac occured.\n");
+				dremove(self);
+				return;
+			}
+			if (damage < 75) damage = 75;
+			if (te.armorclass & 2) damage = floor(damage / 2);
+			te.armorvalue = te.armorvalue - damage;
+			if (te.armorvalue < 10) te.armorvalue = 10;
+
+			//Damage is now dealt to cells instead of killing it all at once.
+			//Do this before we adjust for armor damage
+			te.ammo_cells = te.ammo_cells - damage; 
+			if (te.ammo_cells < 0) te.ammo_cells = 0;
+
+			//WK 1/7/7 Fix the "dead thunderbolt" bug when you get kraced.
+			//This should force a weapon switch on the next frame.
+			if (te.current_weapon == 65536 || te.current_weapon == 4194304 ||
+				te.current_weapon == 131072 || te.current_weapon == 2097152 ||
+				te.current_weapon == 4096)
+				te.currentammo = te.ammo_cells;
+
+			/* WK 1/7/7 Old damage code:
+			//Gel armor makes kracs do less damage
+			if (te.armorclass & #AT_SAVEMELEE) {
+				if (te.armorvalue > 75)
+					te.armorvalue = 75;
+			} else {
+				if (te.armorvalue > 10)
+					te.armorvalue = 10;
+			}
+			te.ammo_cells = 0; //Kill their metal supply too
+			*/
+		}
+		else if (te.classname == "pipebomb")
+			te.nextthink = time + 0.1 + random() / 4; //WK 1/7/7 Speed up kracs breaking pipebombs, since a 1.1 second delay is too long
+		else if (te.classname == "grenade" && te.netname == "land_mine")
+		{
+			te.think = GuerillaExplode;
+			te.nextthink = time + 0.1;
+		}
+		else if (te.classname == "building_sentrygun") {
+			// Gizmo - this was left out here...
+			damage = 200 - vlen(te.origin - self.origin);
+			if (damage > 200 || damage < 0) {
+				bprint(1,"Logic error in krac occured.\n");
+				dremove(self);
+				return;
+			}
+			if (damage < 75) damage = 75;
+
+			TF_T_Damage(te, self, self.owner, damage, 0, 0); //WK 1/7/7 Teslas and sentries take less now
+		} else if (te.classname == "building_tesla") {
+			// Gizmo - this was left out here...
+			damage = 200 - vlen(te.origin - self.origin);
+			if (damage > 200 || damage < 0) {
+				bprint(1,"Logic error in krac occured.\n");
+				dremove(self);
+				return;
+			}
+			if (damage < 75) damage = 75;
+
+			TF_T_Damage(te, self, self.owner, damage, 0, 0);
+		} else if (te.classname == "building_dispenser")
+			TF_T_Damage(te, self, self.owner, 500, 0, 0);
+		else if (te.classname == "building_camera")
+			TF_T_Damage(te, self, self.owner, 400, 0, 0);
+		else if (te.classname == "building_teleporter")
+			TF_T_Damage(te, self, self.owner, 200, 0, 0);
+		else if (te.classname == "building_sensor") //- Often - needed?
+			TF_T_Damage(te, self, self.owner, 200, 0, 0);
+		else if (te.classname == "building_fieldgen") //- Often - needed?
+			TF_T_Damage(te, self, self.owner, 200, 0, 0);
+		else if (te.classname == "item_armor1" || te.classname == "item_armor2" || te.classname == "item_armorInv") {
+			te.solid = 0;
+			te.model = string_null;
+			te.nextthink = time + 45; //WK 20
+			te.think = SUB_regen;
+			//SUB_UseTargets(); 
+		}
+		else if (te.classname == "detpack") {
+			if (te.owner.netname != self.owner.netname) {
+				bprint (1, te.owner.netname);
+				bprint (1, "'s detpack was Kraced by ");
+				bprint (1, self.owner.netname);
+				bprint (1, "\n");
+			} else {
+				sprint (te.owner, 1, "You Kraced your own detpack!\n");
+			}
+			// This code handles disarming a detpack
+			if (te.weaponmode == 1) // Detpack was being disarmed
+			{
+				te.enemy.tfstate = te.enemy.tfstate - (te.enemy.tfstate & 65536);
+		
+				TeamFortress_SetSpeed(te.enemy);
+		
+
+
+
+				dremove(te.oldenemy);	 // CountDown
+				dremove(te.observer_list); //	Disarm timer
+			}
+			else { //Not being disarmed
+				dremove(te.oldenemy);	 // CountDown
+			}
+			te.think = BecomeExplosion;
+			te.nextthink = time + 0.1;
+		}
+
+		// Gizmo - enable kracs to work on monsters
+		else if (npcAi_IsCoopMonster(te)) {
+			// code is just copied from above
+			damage = 200 - vlen(te.origin - self.origin);
+			if (damage > 200 || damage < 0) {
+				bprint(1,"Logic error in krac occured.\n");
+				dremove(self);
+				return;
+			}
+			if (damage < 75) damage = 75;
+			te.armorvalue = te.armorvalue - damage;
+			if (te.armorvalue < 10) te.armorvalue = 10;
+		}
+
+
+		te = te.chain;
+	}
+
+
+	WriteByte (4, 23);
+	WriteByte (4, 3);
+	WriteCoord (4, self.origin_x);
+	WriteCoord (4, self.origin_y);
+	WriteCoord (4, self.origin_z);
+	multicast (self.origin, 1);
+	dremove(self);
+
+
+
+};
+
+//Stops us from lowering the time immunity
+void(entity immuner,float timeimmune) makeImmune =
+{
+	if (immuner == world) return;
+	if (immuner.immune_to_chec > timeimmune) return;
+	immuner.immune_to_chec = timeimmune;
+};
+
+void() BastardTimer =
+{
+	local entity te;
+	local string st;
+	te = self.owner;
+
+	//makeImmune(te,time+5);
+
+	if (te.penance_time < time)
+	{
+		stuffcmd(te, "cl_yawspeed 140;-right;-left\n");
+		//stuffcmd(te, "name \"");
+		//stuffcmd(te, te.old_netname);
+		//stuffcmd(te, "\"\n");
+
+		//Reset their color
+		stuffcmd(te, "color ");
+		st = ftos(TeamFortress_TeamGetColor(te.team_no) - 1);
+		
+		//- OfN - Nice colors
+		if (nicecolors==1) st =TeamGetNiceColor(te.team_no);
+
+		stuffcmd(te, st);
+		stuffcmd(te, "\n");
+
+		bprint (1, te.netname);
+		bprint (1, " has his teamkill curse removed\n");
+
+		//Don't let up on them. Two more teamkills and its back into the tarpit for them
+		te.ff_count = self.frags - 1.9;
+		if (te.ff_count < 0) te.ff_count = 0;
+		
+		TF_T_Damage(te, world, world, te.health + 300, 1, 0);
+		
+		remove(self);
+		return;
+	}
+
+	if (random() > 0.5) 
+		stuffcmd(te, "cl_yawspeed 500;-left;+right;color 8 8\n");
+	else
+		stuffcmd(te, "cl_yawspeed 500;-right;+left;color 8 8\n"); // <-- was 9 9
+	//te.immune_to_check = time + 5;
+	te.ammo_rockets = 0;
+	te.ammo_cells = 0;
+	te.ammo_nails = 0;
+	te.ammo_shells = 0;
+	te.ammo_detpack = 0;
+	te.ammo_c4det = 0;
+	  te.no_grenades_1 = 0;
+	  te.no_grenades_2 = 0;
+	if (te.health > 50) te.health = 50;
+	if (te.armorvalue > 10) te.armorvalue = 10;
+
+	self.nextthink = time + 2;
+};
+
+void(entity bastard,float threshold) createBastard =
+{
+	//if (mapname == "border1" || mapname == "border1r") // dont curse ppl on these maps, thay use a bug
+	// done - TODO: Make triggers ignore cursed persons instead..
+	//	  return;
+	
+	local entity te;
+
+	if (bastard == world) return;
+
+	if (bastard.penance_time > time) {
+		bastard.ff_count = bastard.ff_count - 1; //Dont count it
+		bastard.penance_time = time + 60; //Just reset the clock
+		makeImmune(bastard,time+65);
+		return;
+	}
+
+	//---------------------------------------------------------------------------//
+	// Why do I not like MegaTF? ------------------------------------------------//
+	// Look at http://www.planetfortress.com/history/people/shaka.html ----------//
+	if (bastard.ff_count == threshold + 0.1 || bastard.ff_count == threshold + 0.6) {
+		//- OfN - lol
+		//bprint(#PRINT_HIGH,"ÔÉÍÅ ÔÏ ËÉÃË ÈÉM\n");
+		bprint(2,"ok, lets send ");
+		bprint(2,bastard.netname);
+		bprint(2," to a nice megaTF server...\n");
+		stuffcmd(bastard, "name \"CustomTF reject-wanna play Mega\"\n");		
+		//stuffcmd(bastard, "name \"im gay, wanna make new friends\"\n");  
+		
+		local string st;
+
+		st = infokey(world,"curseserver");
+
+		if (st == string_null) st = "amnesia.matrux.net:27502"; //WK 1/7/7 Updated ip
+			stuffcmd(bastard, "connect ");
+		stuffcmd(bastard, st);
+		stuffcmd(bastard, "\n");
+
+		return; //- OfN - (missing) OLD BUG?
+	} //---------------------------------------------------------------------------//
+
+
+	newmis = spawn();
+
+	newmis.classname = "timer";
+	newmis.netname = "bastardtimer";
+	newmis.owner = bastard;
+	newmis.think = BastardTimer;
+	newmis.nextthink = time + 1;
+	newmis.frags = threshold; //Let the timer know what the thresh is
+	makeImmune(bastard,time+65);
+	//bastard.immune_to_check = time + 65; //Make him immune while purple
+	//bastard.old_netname = bastard.netname;
+
+	bprint (1, bastard.netname);
+	bprint (1, " has been struck down by the wrath of the admin.\n");
+	bprint (1, "Feel free to frag him at will.\n");
+
+	bastard.penance_time = time + 60;
+	stuffcmd(bastard, "name \"ÔåáíËéììåò (");
+	stuffcmd(bastard, bastard.netname);
+	stuffcmd(bastard, ")\"\n");
+
+	// Drop any GoalItems
+	te = find (world, classname, "item_tfgoal");
+	while (te)
+	{
+		if (te.owner == bastard)
+		{
+			// Remove it from the player, if it is supposed to be
+			if (!(te.goal_activation & 256))
+			{
+				tfgoalitem_RemoveFromPlayer(te, bastard, 0);
+			}
+
+			// CTF support
+			if (CTF_Map == 1 && te.goal_no == 1)
+			{
+				bprint(2, bastard.netname);
+				bprint(2, " ÌÏÓÔ the ÂÌÕÅ flag!\n");
+			}
+			else if (CTF_Map == 1 && te.goal_no == 2)
+			{
+				bprint(2, bastard.netname);
+				bprint(2, " ÌÏÓÔ the ÒÅÄ flag!\n");
+			}
+
+		}
+		te = find(te, classname, "item_tfgoal");
+	}
+
+	// Drop any runes too!
+	PlayerDropRunes(bastard);
+
+	//return;
+};
+
+/*
+void() Autoitem_think =
+{
+	local entity oself;
+	local float happy;
+	if (self.heat == #TRUE)
+		self.heat = #FALSE;
+	else
+		self.heat = #TRUE;
+	happy = self.heat;
+
+	oself = self;
+	self = self.owner;
+	if (self.tf_items & #NIT_AUTOID) {
+		//Do an id
+		TeamFortress_ID(#TRUE); //TRUE means we are in autoitemthink
+	}
+	if (self.weapons_carried & #WEAP_MEDIKIT) {
+		//Do a heal, passing it #TRUE tells it not to "tink"
+		//Don't automedic whack while fully invisible
+		if (!(self.job & #JOB_THIEF && (self.job & #JOB_ACTIVE || self.job & #JOB_FULL_HIDE)))
+			W_FireMedikit(#TRUE);
+	}
+	if (happy) { //Only do this every two seconds
+	if (self.tf_items & #NIT_AUTOSCANNER) {
+		//Do a scan15
+		TeamFortress_Scan(15,#TRUE);
+	}
+	}
+
+	self = oself;
+	self.nextthink = time + 0.5;
+};
+*/
+void() Autoitem_think =
+{
+	local entity	oself;
+	local vector	src;
+	local float 	tmp;
+
+	oself = self;
+	self = self.owner;
+
+	// Gizmo - made extensive mods to this function, it's now a lot better
+	makevectors( self.v_angle );
+	src = self.origin + self.view_ofs;
+	traceline( src, src + v_forward*2048, 0, self );
+
+	// if trace_ent is world, everything should still work out fine
+	if ( trace_ent != oself.oldenemy ) {
+		if (self.tf_items & 1024) {
+			if ( trace_ent != world && trace_ent.solid != 4 )
+				//Do an id
+				TeamFortress_ID(1); //TRUE means we are in autoitemthink
+			else
+				centerprint( self, "" );
+		}
+		// TODO: set initial crosshair color when spawning
+		if ( self.cutf_moreitems & 4 ) {
+			if ( trace_ent != world && trace_ent.solid != 4 && trace_ent.takedamage ) {
+				// if teamplay is disabled, then always report as an enemy
+				if ( teamplay >= 1 ) {
+					tmp = GetTeam( trace_ent );
+
+					// team zero when teamplay is on should be neutral
+					if ( !tmp )
+						stuffcmd( self, "crosshaircolor 254\n" );
+					else if ( !Teammate( tmp, self.team_no ) ) {
+						// check for spies
+						if ( trace_ent.classname == "player" && trace_ent.cutf_items & 4 && trace_ent.undercover_team != 0 ) {
+							if ( Teammate( trace_ent.undercover_team, self.team_no ) )
+								stuffcmd( self, "crosshaircolor 210\n" );
+							else
+								stuffcmd( self, "crosshaircolor 79\n" );
+						} else
+							stuffcmd( self, "crosshaircolor 79\n" );
+					} else
+						stuffcmd( self, "crosshaircolor 210\n" );
+				} else
+					stuffcmd( self, "crosshaircolor 79\n" );
+			} else
+				stuffcmd( self, "crosshaircolor 254\n" );
+		}
+
+		oself.oldenemy = trace_ent;
+	}
+
+	if ( oself.attack_finished <= time ) {
+		if (self.weapons_carried & 4) {
+			//Do a heal, passing it #TRUE tells it not to "tink"
+			//Don't automedic whack while fully invisible
+			if (!(self.job & 1 && (self.job & 2048 || self.job & 4096)))
+				W_FireMedikit(1);
+		}
+		oself.attack_finished = time + 0.5;
+	}
+
+	// only do this every second
+	if ( oself.pain_finished <= time ) {
+		if (self.tf_items & 8192) {
+			//Do a scan15
+			TeamFortress_Scan(15,1);
+		}
+		oself.pain_finished = time + 1;
+	}
+
+	self = oself;
+	self.nextthink = time + 0.1;
+};
+
+void() custom_lay =
+{
+	if (intermission_running)
+		return;
+
+	//local string st;
+	if (self.last_saveme_sound < time) {
+		bprint(2,self.netname);
+		bprint(2,"'s legs were broken when he tried to 'lay'\n");
+		sound(self,2,"player/pain1.wav",1,0);
+		self.last_saveme_sound = time + 60;
+	}
+	self.suicide_time = time + 60;
+	self.leg_damage = 8; // Original was 9
+	TeamFortress_SetSpeed(self);
+	if (self.health > 50) self.health = 50;
+	if (self.armorvalue > 10) self.armorvalue = 10;
+};
+
+//Blow up all sentries, dispensers and teslas if we can no longer build them
+void() DetonateAllGuns =
+{
+	if (!(self.cutf_items & 1024))
+		Find_And_Dmg("building_dispenser", self, 1,0);
+	if (!(self.cutf_items & 16)) 
+		Find_And_Dmg("building_sentrygun", self, 1,0);
+	if (!(self.tf_items & 32768)) //WK
+		Find_And_Dmg("building_tesla", self, 1,0);
+	if (!(self.tf_items & 65536)) //CH
+		Find_And_Dmg("building_camera", self, 1,0);
+	if (!(self.tf_items & 131072)) //CH
+		Find_And_Dmg("building_teleporter", self, 1,0);
+	if (!(self.cutf_items & 256)) //SB
+		Find_And_Dmg("building_sensor", self, 1,0);
+	if (!(self.cutf_items & 524288)) //OfN
+		Find_And_Dmg("building_fieldgen", self, 1,0);
+};
+
+//Blow up all sentries, dispensers and teslas if we can no longer build them
+void() DetonateAllGunsForced =
+{
+	Find_And_Dmg("building_dispenser", self, 1,0);
+	Find_And_Dmg("building_sentrygun", self, 1,0);
+	Find_And_Dmg("building_tesla", self, 1,0);
+	Find_And_Dmg("building_camera", self, 1,0);
+	Find_And_Dmg("building_teleporter", self, 1,0);
+	Find_And_Dmg("building_sensor", self, 1,0);
+	Find_And_Dmg("building_fieldgen", self, 1,0);
+};
+
+//Returns true if the entity is a building -- UPDATE THIS WHEN A NEW ONE IS ADDED
+float(entity tester) IsBuilding =
+{
+	if (
+		tester.classname == "building_sentrygun" ||
+		tester.classname == "building_sentrygun_base" ||
+		tester.classname == "building_tesla" ||
+		tester.classname == "building_dispenser" ||
+		tester.classname == "building_camera" ||
+		tester.classname == "building_arawana" ||
+		tester.classname == "building_teleporter"||
+		tester.classname == "building_fieldgen"||
+		tester.classname == "building_sensor"
+	   )
+		return 1;
+	return 0;
+};
+
+void() UpdateWeaponItems =
+{
+	//#ifdef CUSTOM_PC_USES_ITEMS
+	if (self.weapons_carried & 128)
+		self.items = self.items | 1;
+	else
+		self.items = self.items - (self.items & 1);
+
+	if (self.weapons_carried & 256)
+		self.items = self.items | 2;
+	else
+		self.items = self.items - (self.items & 2);
+
+	if (self.weapons_carried & 512)
+		self.items = self.items | 4;
+	else
+		self.items = self.items - (self.items & 4);
+
+	if (self.weapons_carried & (1024 | 8388608))
+		self.items = self.items | 8;// #IT_SUPER_NAILGUN;
+	else
+		self.items = self.items - (self.items & 8);
+
+	if (self.weapons_carried & (2048 | 4096 | 131072))
+		self.items = self.items | 16;
+	else
+		self.items = self.items - (self.items & 16);
+
+	if (self.weapons_carried & (8192 | 16384))
+		self.items = self.items | 32;
+	else
+		self.items = self.items - (self.items & 32);
+
+	if (self.weapons_carried & 65536)
+		self.items = self.items | 64;
+	else
+		self.items = self.items - (self.items & 64);
+	//#endif
+};
+
+float(float inp) CanBuyItem =
+{
+	local float mnu_offset;
+	local float mnu_num;
+	local float itm_num;
+
+	mnu_offset = self.current_menu - 36;
+	mnu_num = mnu_offset - (floor(mnu_offset/3))*3;
+	itm_num = inp + (mnu_num * 7);
+
+	if (mnu_offset < 3)
+	{
+		if (disabledstuff1 & itob(itm_num))
+			return 0;
+	}
+	else if (mnu_offset < 6)
+	{
+		if (disabledstuff2 & itob(itm_num))
+			return 0;
+	}
+	else if (mnu_offset < 9)
+	{
+		if (disabledstuff3 & itob(itm_num))
+			return 0;
+	}
+	else if (mnu_offset < 12)
+	{
+		if (disabledstuff4 & itob(itm_num))
+			return 0;
+	}
+	else if (mnu_offset < 15)
+	{
+		if (disabledstuff5 & itob(itm_num))
+			return 0;
+	}
+	else
+		return 1; // bug, anyway
+
+	return 1;
+};
+
+float(float inp) ItemIsFree =
+{
+	local float mnu_offset;
+	local float mnu_num;
+	local float itm_num;
+
+	mnu_offset = self.current_menu - 36;
+	mnu_num = mnu_offset - (floor(mnu_offset/3))*3;
+	itm_num = inp + (mnu_num * 7);
+
+	if (mnu_offset < 3)
+	{
+		if (givenstuff1 & itob(itm_num))
+			return 1;
+	}
+	else if (mnu_offset < 6)
+	{
+		if (givenstuff2 & itob(itm_num))
+			return 1;
+	}
+	else if (mnu_offset < 9)
+	{
+		if (givenstuff3 & itob(itm_num))
+			return 1;
+	}
+	else if (mnu_offset < 12)
+	{
+		if (givenstuff4 & itob(itm_num))
+			return 1;
+	}
+	else if (mnu_offset < 15)
+	{
+		if (givenstuff5 & itob(itm_num))
+			return 1;
+	}
+	else
+		return 0; // bug, anyway
+
+	return 0;
+};
+
