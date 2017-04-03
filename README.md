@@ -33,3 +33,7 @@ sudo chmod -R 777 cutf_4tp
 cd cutf_4tp
 
 ./gmqcc -O3
+
+cd prozaccoop
+
+./gmqcc -O3
