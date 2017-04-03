@@ -1,0 +1,1974 @@
+/*=======================================================//
+// Vote.QC - CustomTF 3.2.OfN			  - 04/11/2002 - //
+// by Sergio FumaÒa Grunwaldt - OfteN [cp]				 //
+=========================================================//
+ Voting system functions and stuff...
+ (Requires PROZAC qwsv, uses special built-ins)
+=========================================================*/
+// modified vote system provided by randomer. -Pulseczar (1/15/07)
+//=======================================================
+
+// Flag defines
+
+// vote entity types
+// Gizmo - if voting for AGR in coop, TF will be enabled with AGR
+
+
+
+
+
+
+// punish types
+
+
+
+
+
+
+
+// Gizmo - map vote types, nextmap or switchmap is determined by the #VOTE_*** type itself, not this
+
+
+
+
+
+
+
+
+// player voting status
+
+
+
+
+// Settings defines
+
+
+
+
+
+
+// Fraction of votes required for each action
+
+
+
+
+
+
+
+
+
+//#define BAN_VOTED_TIME		0 // permanent ban
+
+
+
+
+
+
+
+
+
+
+
+/*===============================================================================================
+
+EXPLANATION OF HOW THE ENTITY FIELDS ARE USED (thnx? np.. :P)
+---------------------------------------------
+
+Global vars used:
+-----------------
+
+current_voteent   - Points to current vote entity, if any, if not it points to world
+
+For player entity:
+------------------
+
+.g_a			  - Contains the type of punishment selected on menu
+.goal_no		  - Controls delay between same client votes
+.group_no		  - Gizmo - first byte is #VOTE_NEXTMAP, etc.. second byte is one of the #VOTEMAP_ modes above
+.goal_state 	  - Determines what page of maps to be shown for voting
+.owned_by		  - Contains #VOTED_XXXX, yes, no or none
+
+For vote entity:
+----------------
+
+.has_sentry 		 - Type of vote
+.g_a				 - Type of punishment to vote
+.admin_kick 		 - Player to be punished
+.all_active 		 - Number of affirmative votes
+.has_holo			 - Number of negative votes
+.group_no			 - Gizmo - one of the #VOTEMAP_ modes above
+.has_tesla			 - Number of map beeing voted
+.dont_do_triggerwork - If TRUE, means the player to be banned has left
+	(when banning a user that left)
+.t_s_h				 - Permanent string containing IP to be banned
+.t_s_m				 - Permanent string with the name of user to be banned
+	(when map voting)
+.netname			 - Permanent string that is the name of map
+
+===============================================================================================*/
+
+void() PunishClientCycle;
+void() StartPunishmentVote;
+void() CleanClientVotes;
+void() ResetClientsMenu;
+float() ValidVoteEnt;
+float(float final) CheckVoting;
+void(float nummap, string themap) StartVoteMap;
+string(float themap) GetMapString;
+void() bprintVotesLeft;
+//float() GetRemainingVotes;
+void() CleanUpSleepVote;
+void() VoteSleep_think;
+void( float num_for, float num_against ) bprintVotesNeeded;
+
+// External
+void(string text) CmdMsg;
+
+//====================================================================================================
+
+/*
+============
+IsMapVote
+
+Determines if the current vote is a map related vote.
+============
+*/
+float() IsMapVote = {
+	if ( current_voteent.has_sentry == 2 )
+		return 1;
+	if ( current_voteent.has_sentry == 3 )
+		return 1;
+
+	return 0;
+};
+
+/*
+============
+PrintVoteMapType
+
+May print nothing at all.
+============
+*/
+void( string preString, float voteMapType, string postString ) PrintVoteMapType = {
+	if ( voteMapType == 1 ) {
+		bprint( 2, preString );
+		bprint( 2, "¡ÙÙ·„ÎÂÚÛ «Ô “Â‰" );
+		bprint( 2, postString );
+	}
+
+	else if ( voteMapType == 2 ) {
+		bprint( 2, preString );
+		bprint( 2, "‘Â·Ì ∆ÔÚÙÚÂÛÛ" );
+		bprint( 2, postString );
+	} else if ( voteMapType == 3 ) {
+		bprint( 2, preString );
+		bprint( 2, "√ÔÔ" );
+		bprint( 2, postString );
+	} else if ( voteMapType == 4 ) {
+		bprint( 2, preString );
+		bprint( 2, "…ÓÛ·ÓÂ √ÔÔ" );
+		bprint( 2, postString );
+	}
+
+};
+
+//====================================================================================================
+// both player and spectators share the same menu handlers for voting, so we need this
+
+void() AllResetMenu =
+{
+	if (self.classname == "spec")
+		SpecResetMenu();
+	else if (self.classname == "player")
+		ResetMenu();  
+};
+
+void() Player_Punish = 
+{
+	if (self.playerclass == 0 && self.classname == "player") // Observers
+		return;
+	
+	if (current_voteent != world)
+	{
+		sprint(self,2,"Already running a vote!\n");
+		return;
+	}
+	
+	if (self.goal_no > time)
+	{
+		sprint(self,2,"You just have ran a vote!\n");
+		return;
+	}
+
+	if (self.classname == "player")
+		self.current_menu = 32;
+	else if (self.classname == "spec")
+		self.current_menu = 2;
+	else
+		return;
+		//RPrint("BUG: Non-spec/player on Player_Punish()\n");
+
+	self.g_a = 1;		// Gizmo - fix this stupid bug
+
+	CuTFMenuSound(2);
+	Menu_Punish();
+	BackFlash(self,1);
+};
+
+void() Menu_Punish =
+{
+	local string st, st2, st3;
+		
+	// if we didn't disconnect and we are a valid class, player or spectator..
+	if (HasValidAdminTarget2(self))
+	{
+		st2 = self.admin_kick.netname;	  
+		
+		if (self.admin_kick.classname == "spec")
+			st="’ÛÂÚ: ®spectator© \n\n";
+		else
+			st="’ÛÂÚ:             \n\n";
+	}
+	else
+	{
+		st = "";
+		st2 = "’ÛÂÚ:             \n\nNo user selected! ";
+	}
+
+	if (self.g_a == 3)
+		st3 = ".. Ban°          ";
+	else if (self.g_a == 2)
+		st3 = ".. Kick°         ";
+	else if (self.g_a == 4)
+		st3 = ".. Mute°         ";
+	else if (self.g_a == 5)
+		st3 = ".. Cuff°         ";
+	else
+		st3 = ".. Curse°        "; 	   
+
+	CenterPrint5(self,st,st2,"\n\n.. Next UserÆÆÆ  \n\n.. √ËÔÔÛÂ ¡„ÙÈÔÓ:\n\n",st3,"\n\nÆÆ ≈¯ÈÙ          \n");
+														   
+};
+
+void(float input) Menu_Punish_Input =
+{
+	if (input == 1)
+	{
+		PunishClientCycle();
+		CuTFMenuSound(1);
+		Menu_Punish();
+		self.impulse = 0;
+		return;
+	}
+	else if (input == 2)
+	{
+		if (self.g_a == 1)
+			self.g_a = 2;
+		else if (self.g_a == 2)
+			self.g_a = 4;
+		else if (self.g_a == 4)
+			self.g_a = 3;
+		else if (self.g_a == 3)
+			self.g_a = 5;
+		else
+			self.g_a = 1;
+
+		CuTFMenuSound(2);
+		Menu_Punish();
+		self.impulse = 0;
+		return;
+	}
+	else if (input == 3)
+	{
+		self.impulse = 0;
+		
+		if (current_voteent != world)
+		{
+			sprint(self,2,"Already running a vote!\n");
+			AllResetMenu();
+			return;
+		}
+		else if (self.admin_kick == world)
+			sprint(self,2,"No user selected!\n");
+		else if (!self.admin_kick.is_connected)
+		{
+			sprint(self,2,"User has left the server!\n");
+			PunishClientCycle();
+		}
+		else if (self.admin_kick.classname=="spec" && self.g_a == 1)
+			sprint(self,2,"Can't curse spectators!\n");
+		else if (self.admin_kick.classname=="spec" && self.g_a == 5)
+			sprint(self,2,"Can't cuff spectators!\n");
+		else if (self.admin_kick.classname != "spec" && self.admin_kick.classname != "player")
+			sprint(self,2,"Invalid user selected!\n");
+		else
+		{
+			StartPunishmentVote();
+			AllResetMenu();
+			return;
+		}
+
+		CuTFMenuSound(4);
+	}
+	else if (input == 10)
+	{
+		AllResetMenu();
+		CuTFMenuSound(3);
+		BackFlash(self,1);
+		self.impulse = 0;
+		return;
+	}
+	
+	self.impulse = 0;
+};
+
+void() Player_VoteMap = 
+{
+	if (self.playerclass == 0 && self.classname == "player") // Observers
+		return;
+	
+	if (current_voteent != world)
+	{
+		sprint(self,2,"Already running a vote!\n");
+		return;
+	}
+
+	if (time < 10)
+
+	if ( deathmatch || mapname != "start" )
+
+	{
+		sprint(self,2,"Too early for a map vote!\n");
+		return;
+	}
+
+	if (self.goal_no > time)
+	{
+		sprint(self,2,"You just have ran a vote!\n");
+		return;
+	}
+
+	if (ServerUpdating())
+	{
+		sprint(self,2,"Server update is taking place, no map changes are allowed!\n");
+		return;
+	}
+
+	if (self.classname == "player")
+		self.current_menu = 33;
+	else if (self.classname == "spec")
+		self.current_menu = 3;
+	else 
+		return;
+	//RPrint("BUG: Non-spec/player on Player_VoteMap()\n");
+
+	// Gizmo
+	self.group_no = 2;
+
+	CuTFMenuSound(2);
+	Menu_VoteMap();
+	BackFlash(self,1);
+};	
+
+void() Menu_VoteMap =
+{
+	local string paddedstr,st1,st2,st3,st4,st5,st6,st7,keyst,color;
+	local float	voteMapType;
+	
+	keyst = GetMapString(self.goal_state*6+1);
+	if (mapname == keyst)
+	{
+		color = colstr(keyst,2);
+		if (self.endtime & 1)
+			keyst = strcat(color," [Ï·˘ÈÓÁ]");
+		else
+			keyst = strcat(color," €playing›");
+		color = keyst;
+	}
+	else
+		color = keyst;
+	paddedstr = padstr(color,18);
+	if (self.goal_state == 0)
+		st1 = strcat("¡ˆ·ÏÈ·‚ÏÂ Ì·Û: ®page 1Ø6©\n\n.. ",paddedstr);
+	else if (self.goal_state == 1)
+		st1 = strcat("¡ˆ·ÏÈ·‚ÏÂ Ì·Û: ®page 2Ø6©\n\n.. ",paddedstr);
+	else if (self.goal_state == 2)
+		st1 = strcat("¡ˆ·ÏÈ·‚ÏÂ Ì·Û: ®page 3Ø6©\n\n.. ",paddedstr);
+	else if (self.goal_state == 3)
+		st1 = strcat("¡ˆ·ÏÈ·‚ÏÂ Ì·Û: ®page 4Ø6©\n\n.. ",paddedstr);
+	else if (self.goal_state == 4)
+		st1 = strcat("¡ˆ·ÏÈ·‚ÏÂ Ì·Û: ®page 5Ø6©\n\n.. ",paddedstr);
+	else
+		st1 = strcat("¡ˆ·ÏÈ·‚ÏÂ Ì·Û: ®page 6Ø6©\n\n.. ",paddedstr);
+		
+	keyst = GetMapString(self.goal_state*6+2);
+	if (mapname == keyst)
+	{
+		color = colstr(keyst,2);
+		if (self.endtime & 1)
+			keyst = strcat(color," [Ï·˘ÈÓÁ]");
+		else
+			keyst = strcat(color," €playing›");
+		color = keyst;
+	}
+	else
+		color = keyst;
+	paddedstr = padstr(color,18);
+	st2 = strcat("\n.. ",paddedstr);
+		
+	keyst = GetMapString(self.goal_state*6+3);
+	if (mapname == keyst)
+	{
+		color = colstr(keyst,2);
+		if (self.endtime & 1)
+			keyst = strcat(color," [Ï·˘ÈÓÁ]");
+		else
+			keyst = strcat(color," €playing›");
+		color = keyst;
+	}
+	else
+		color = keyst;
+	paddedstr = padstr(color,18);
+	st3 = strcat("\n.. ",paddedstr);
+	
+	keyst = GetMapString(self.goal_state*6+4);
+	if (mapname == keyst)
+	{
+		color = colstr(keyst,2);
+		if (self.endtime & 1)
+			keyst = strcat(color," [Ï·˘ÈÓÁ]");
+		else
+			keyst = strcat(color," €playing›");
+		color = keyst;
+	}
+	else
+		color = keyst;
+	paddedstr = padstr(color,18);
+	st4 = strcat("\n.. ",paddedstr);
+
+	keyst = GetMapString(self.goal_state*6+5);
+	if (mapname == keyst)
+	{
+		color = colstr(keyst,2);
+		if (self.endtime & 1)
+			keyst = strcat(color," [Ï·˘ÈÓÁ]");
+		else
+			keyst = strcat(color," €playing›");
+		color = keyst;
+	}
+	else
+		color = keyst;
+	paddedstr = padstr(color,18);
+	st5 = strcat("\n.. ",paddedstr);
+
+	keyst = GetMapString(self.goal_state*6+6);
+	if (mapname == keyst)
+	{
+		color = colstr(keyst,2);
+		if (self.endtime & 1)
+			keyst = strcat(color," [Ï·˘ÈÓÁ]");
+		else
+			keyst = strcat(color," €playing›");
+		color = keyst;
+	}
+	else
+		color = keyst;
+	paddedstr = padstr(color,18);
+	st6 = strcat("\n.. ",paddedstr);
+
+	// Gizmo
+	voteMapType = GetByte2( self.group_no );
+
+	// Gizmo - modified AGR vote code
+	if ( GetByte1( self.group_no ) == 2 ) {
+		if ( voteMapType == 1 )
+			st7 ="\n\n.. ÕÔ‰Â: as next map \n              ¡ÙÙ·„ÎÂÚÛ «Ô “Â‰\n\n.. –ÚÂˆ –·ÁÂ         \n.. ŒÂ¯Ù –·ÁÂ         \n\nÆÆ ≈¯ÈÙ              \n";
+
+		else if ( voteMapType == 2 )
+			st7 ="\n\n.. ÕÔ‰Â: as next map \n              ‘Â·Ì ∆ÔÚÙÚÂÛÛ   \n\n.. –ÚÂˆ –·ÁÂ         \n.. ŒÂ¯Ù –·ÁÂ         \n\nÆÆ ≈¯ÈÙ              \n";
+		else if ( voteMapType == 3 )
+			st7 ="\n\n.. ÕÔ‰Â: as next map \n              √ÔÔ            \n\n.. –ÚÂˆ –·ÁÂ         \n.. ŒÂ¯Ù –·ÁÂ         \n\nÆÆ ≈¯ÈÙ              \n";
+		else if ( voteMapType == 4 )
+			st7 ="\n\n.. ÕÔ‰Â: as next map \n              …ÓÛ·ÓÂ √ÔÔ     \n\n.. –ÚÂˆ –·ÁÂ         \n.. ŒÂ¯Ù –·ÁÂ         \n\nÆÆ ≈¯ÈÙ              \n";
+
+		else
+			st7 ="\n\n.. ÕÔ‰Â: as next map \n\n.. –ÚÂˆ –·ÁÂ         \n.. ŒÂ¯Ù –·ÁÂ         \n\nÆÆ ≈¯ÈÙ              \n";
+	} else { //if ( self.group_no == #VOTE_SWITCHMAP )
+		if ( voteMapType == 1 )
+			st7 ="\n\n.. ÕÔ‰Â: play now°   \n              ¡ÙÙ·„ÎÂÚÛ «Ô “Â‰\n\n.. –ÚÂˆ –·ÁÂ         \n.. ŒÂ¯Ù –·ÁÂ         \n\nÆÆ ≈¯ÈÙ              \n";
+
+		else if ( voteMapType == 2 )
+			st7 ="\n\n.. ÕÔ‰Â: play now°   \n              ‘Â·Ì ∆ÔÚÙÚÂÛÛ   \n\n.. –ÚÂˆ –·ÁÂ         \n.. ŒÂ¯Ù –·ÁÂ         \n\nÆÆ ≈¯ÈÙ              \n";
+		else if ( voteMapType == 3 )
+			st7 ="\n\n.. ÕÔ‰Â: play now°   \n              √ÔÔ            \n\n.. –ÚÂˆ –·ÁÂ         \n.. ŒÂ¯Ù –·ÁÂ         \n\nÆÆ ≈¯ÈÙ              \n";
+		else if ( voteMapType == 4 )
+			st7 ="\n\n.. ÕÔ‰Â: play now°   \n              …ÓÛ·ÓÂ √ÔÔ     \n\n.. –ÚÂˆ –·ÁÂ         \n.. ŒÂ¯Ù –·ÁÂ         \n\nÆÆ ≈¯ÈÙ              \n";
+
+		else
+			st7 ="\n\n.. ÕÔ‰Â: play now°   \n\n.. –ÚÂˆ –·ÁÂ         \n.. ŒÂ¯Ù –·ÁÂ         \n\nÆÆ ≈¯ÈÙ              \n";
+	}
+
+	CenterPrint7(self,st1,st2,st3,st4,st5,st6,st7);
+
+	self.endtime = self.endtime + 1;
+};
+
+void(float input) Menu_VoteMap_Input =
+{
+	local float	voteType, voteMapType;
+
+	if (input >= 1 && input <= 6)
+	{
+		if (current_voteent != world)
+		{
+			sprint(self,2,"Already running a vote!\n");
+			AllResetMenu();
+			self.impulse = 0;
+			return;
+		}
+
+		local float nummap;
+		
+		nummap = input + (self.goal_state*6);
+
+		StartVoteMap(nummap,"");
+		AllResetMenu();
+	}	
+	else if (input == 7)
+	{
+		voteType = GetByte1( self.group_no );
+		voteMapType = GetByte2( self.group_no );
+
+		if ( voteMapType == 0 )
+			voteMapType = 1;
+
+		else if ( voteMapType == 1 )
+			voteMapType = 2;
+		else if ( voteMapType == 2 )
+			voteMapType = 3;
+		else if ( voteMapType == 3 )
+			voteMapType = 4;
+
+		else {
+			voteMapType = 0;
+
+			if ( voteType == 2 )
+				voteType = 3;
+			else
+				voteType = 2;
+		}
+
+		self.group_no = voteType;
+		self.group_no = AssignByte2( self.group_no, voteMapType );
+
+		CuTFMenuSound(2);
+
+		NoCprintFX();
+		Menu_VoteMap();
+	}	 
+	else if (input == 8)
+	{
+		self.goal_state = self.goal_state - 1;
+		if (self.goal_state < 0)
+			self.goal_state = 5;
+				
+		CuTFMenuSound(1);
+
+		NoCprintFX();
+		Menu_VoteMap();
+	}	 
+	else if (input == 9)
+	{
+		self.goal_state = self.goal_state + 1;
+		if (self.goal_state > 5)
+			self.goal_state = 0;
+							
+		CuTFMenuSound(1);
+		
+		NoCprintFX();
+		Menu_VoteMap();
+	}	 
+	else if (input == 10)
+	{
+		AllResetMenu();
+		CuTFMenuSound(3);
+		BackFlash(self,1);
+	}	 
+
+	self.impulse = 0;
+};
+
+//===============================================================
+// bprints the current voting issue
+
+void() bprintVoteIssue =
+{
+	if (current_voteent.has_sentry == 1)
+	{
+		if (current_voteent.dont_do_triggerwork) // Special ban (client has left)
+		{
+			bprint(2," ®ban ");
+			bprint(2,current_voteent.t_s_m);
+			bprint(2,"©");
+		}
+		else
+		{
+			if (current_voteent.g_a == 1)
+				bprint(2," ®curse ");
+			else if (current_voteent.g_a == 2)
+				bprint(2," ®kick ");
+			else if (current_voteent.g_a == 3)
+				bprint(2," ®ban ");
+			else if (current_voteent.g_a == 4)
+				bprint(2," ®mute ");
+			else if (current_voteent.g_a == 5)
+				bprint(2," ®cuff ");
+
+			bprint(2,current_voteent.admin_kick.netname);
+			bprint(2,"©");
+		}
+	}
+	else if (current_voteent.has_sentry == 2) // as next map
+	{
+		bprint(2," ®"); // FIXME: CPQCCX compiler says 'Not a name' if only "(" is used ???
+		bprint(2, current_voteent.netname);
+		bprint(2," as next map");
+
+		PrintVoteMapType( ", in ", current_voteent.group_no, " mode" );
+
+		bprint( 2, "©" );
+	} 
+	else if (current_voteent.has_sentry == 3)
+	{
+		bprint(2," ®switch to ");
+		bprint(2,current_voteent.netname);
+
+		PrintVoteMapType( ", in ", current_voteent.group_no, " mode" );
+
+		bprint( 2, "©" );
+	} else if ( current_voteent.has_sentry == 4 ) {
+		local string objectName;
+
+		objectName = GetUseObjectName( current_voteent.enemy );
+		bprint( 2, " ®use object " );
+		bprint( 2, objectName );
+		bprint( 2, "©" );
+	}
+};
+
+//==============================================================
+// user has used the VoteYes impulse command
+
+void() Player_VoteYes =
+{
+	if (self.playerclass == 0 && self.classname == "player") // Observers
+		return;
+
+	if (current_voteent == world)
+	{
+		sprint(self,2,"Not voting currently!\n");
+		return;
+	}
+
+	
+	if (current_voteent.admin_kick == self)
+	{
+		sprint(self,2,"You are not allowed to vote!\n");
+		return;
+	}
+	else if (self.owned_by == 2 || self.owned_by == 1)
+	{
+		// FIXME: Allow the person to change their vote. -randomer 2006-02-24
+		sprint(self,2,"You already voted!\n");
+	}
+	else
+	{
+			  
+		BackFlash(self,1);
+		
+		bprint(2,"Votingç ");
+		bprint(2,self.netname);
+		bprint(2," agrees");
+
+		self.owned_by = 1;
+
+		bprintVoteIssue();
+				
+		BroadcastSound("misc/basekey");
+		
+		current_voteent.all_active = current_voteent.all_active + 1;
+
+		if (current_voteent.nextthink < time + 25)
+			current_voteent.nextthink = time + 25;
+				
+		bprintVotesLeft();
+		CheckVoting(0);
+	
+	}
+	
+};
+
+//==============================================================
+// user has used the VoteNo impulse command
+
+void() Player_VoteNo =
+{
+	if (self.playerclass == 0 && self.classname == "player") // Observers
+		return;
+	
+	if (current_voteent == world)
+	{
+		sprint(self,2,"Not voting currently!\n");
+		return;
+	}
+	
+	
+	if (current_voteent.admin_kick == self)
+	{
+		sprint(self,2,"You are not allowed to vote!\n");
+		return;
+	}
+	else if (self.owned_by == 2 || self.owned_by == 1)
+	{
+		sprint(self,2,"You already voted!\n");
+	}
+	else
+	{
+	
+		BackFlash(self,1);
+
+		bprint(2,"Votingç ");
+		bprint(2,self.netname);
+		bprint(2," disagrees");
+
+		self.owned_by = 2;
+
+		bprintVoteIssue();
+		
+		BroadcastSound("doors/basetry.wav"); // PZ - was misc/basekey just like voteyes
+		// changed to differentiate vote sounds from affirmative to negative
+		
+		current_voteent.has_holo = current_voteent.has_holo +1;
+		
+		if (current_voteent.nextthink < time + 25)
+			current_voteent.nextthink = time + 25;
+				
+		bprintVotesLeft();
+		CheckVoting(0);
+
+	
+	}
+	
+};
+
+//========================================================================
+// cycles through all clients as target for punishment
+
+void() PunishClientCycle =
+{
+	local entity te;
+	local float num;
+	num = 0;
+
+	te = world; // none 
+	
+	te = find(self.admin_kick, classname, "player");
+	while (te != world && num == 0)
+	{
+		num = 1;
+
+		if (!te.is_connected)
+			num = 0;
+		
+		if (self.admin_kick==te)
+			num = 0;
+
+		
+		if (te == self)
+			num = 0;
+		
+		
+		if (num == 0) te = find(te, classname, "player");
+	}	 
+	
+	if (te == world) // if out of players on our search lets scan for spectators
+	{
+		te = find(self.admin_kick, classname, "spec");
+		while (te != world && num == 0)
+		{
+			num = 1;
+	
+			if (!te.is_connected)
+				num = 0;
+			
+			if (self.admin_kick==te)
+				num = 0;
+
+			
+			if (te == self)
+				num = 0;
+			
+
+			if (num == 0) te = find(te, classname, "spec");
+		}
+	}
+
+	if (te == world) 
+		self.admin_kick=world; // No clients found!
+	else
+		self.admin_kick = te;
+};
+
+//========================================================================
+// deletes current vote entity, if it exists, and performs clean up
+
+void() ResetVoteEnt =
+{
+	if (current_voteent.classname == "voteent")
+	{
+		if ( IsMapVote() )
+			delstr( current_voteent.netname );
+
+		if (current_voteent.dont_do_triggerwork)
+		{
+			delstr(current_voteent.t_s_h);
+			delstr(current_voteent.t_s_m);
+		}
+		
+		dremove(current_voteent);
+		current_voteent = world;
+	}
+	else current_voteent = world;
+};
+
+//==========================================================================
+// gets number of clients currently on server, including spectators
+
+float() GetNoClients =
+{
+	return num_players + num_specs;
+
+	/*local entity te;
+	local float clients;
+	clients = 0;
+
+	te = find(world, classname, "player");
+	while (te != world)
+	{
+		if (!te.has_disconnected)
+			clients = clients + 1;
+		
+		te = find(te, classname, "player");
+	}	 
+
+	te = find(world, classname, "spec");
+	while (te != world)
+	{
+		if (!te.has_disconnected)
+			clients = clients + 1;
+		
+		te = find(te, classname, "spec");
+	}	 
+
+	return clients;*/
+};
+
+void() PunishVote_Think;
+
+//=================================================================
+// Start punishment voting, self = player issuer of vote
+
+void() StartPunishmentVote =
+{
+	if (no_punish)
+	{
+		CmdMsg("Punishment votes are disabled, sorry!\n");
+		return;
+	}
+
+	if (self.classname != "player" && self.classname != "spec")
+	{
+		sprint(self,2,"You can't vote still, join the game first!\n");
+		return;
+	}
+	
+	if (mutedtime(self))
+	{
+		sprint(self,2,"You can't start a vote while muted!\n");
+		return;
+	}
+	
+	BackFlash(self,1);
+
+	CleanClientVotes();
+	
+	local entity voteent;
+
+	voteent = spawn();
+	voteent.g_a = self.g_a;
+	voteent.think = PunishVote_Think;
+	voteent.nextthink = time + 60;
+	voteent.classname = "voteent";
+	voteent.owner = world; // ADDED
+
+	voteent.all_active = 1;
+	voteent.has_holo = 0;
+
+	voteent.demon_one = self;
+
+	voteent.admin_kick = self.admin_kick;
+
+	voteent.has_sentry = 1;
+
+	self.goal_no = time + 240;
+
+	self.owned_by = 1; // we already voted yes
+
+	BroadcastSound("misc/medkey");
+
+	bprint(2,"Votingç ");
+
+	bprint(2,self.netname);
+	last_vote_starter = self.netname; // for AGR -PZ
+	bprint(2," proposes to ");
+
+	if (self.g_a == 1)
+		bprint(2,"curse ");
+	else if (self.g_a == 2)
+		bprint(2,"kick ");
+	else if (self.g_a == 4)
+		bprint(2,"mute ");
+	else if (self.g_a == 3)
+		bprint(2,"ban ");
+	else if (self.g_a == 5)
+		bprint(2,"cuff ");
+
+	bprint(2,self.admin_kick.netname);
+
+	bprint(2,", type ¢VoteYes¢ or ¢VoteNo¢ to vote");
+	// Gizmo
+	bprintVotesNeeded( 1, 0 );
+	bprint( 2, "\n" );
+
+	current_voteent = voteent;
+
+	current_voteent.dont_do_triggerwork = 0;
+		
+	ResetClientsMenu(); // reset menus on players/specs which r on MENU_PUNISH or MENU_VOTEMAP
+
+	CheckVoting(0); // If we are the only player on server, checks
+};
+
+void() PunishVote_Think =
+{
+	CheckVoting(1);
+	
+
+
+
+
+
+
+
+
+
+};
+
+void() VoteMap_Think;
+
+//=================================================================
+// Start map voting, self = player issuer of vote
+
+void(float nummap, string themap) StartVoteMap =
+{
+	local string	temp;
+	local float		voteType, voteMapType;
+
+	if (no_votemap)
+	{
+		CmdMsg("Map voting within the mod is disabled, sorry!\n");
+		return;
+	}
+
+	if (self.classname != "player" && self.classname != "spec")
+	{
+		sprint(self,2,"You can't vote still, join the game first!\n");
+		return;
+	}
+
+	if (time < 10)
+
+	if ( deathmatch || mapname != "start" )
+
+	{
+		sprint(self,2,"Too early for a map change!\n");
+		return;
+	}
+	
+	if (mutedtime(self))
+	{
+		sprint(self,2,"You can't start a vote while muted!\n");
+		return;
+	}
+
+	if (ServerUpdating())
+	{
+		sprint(self,2,"Server update is taking place, no map changes are allowed!\n");
+		return;
+	}
+
+	voteType = GetByte1( self.group_no );
+	voteMapType = GetByte2( self.group_no );
+
+	// PZ - AGR begin
+	if ( voteMapType == 1 )
+	if ( voteType == 2 || voteType == 3 )
+	{
+		local float x;
+		x = GetNoPlayers(1, 1);
+		if (agr_vote_max != 0 && x > agr_vote_max)
+		{
+			sprint(self, 2, "Votingç Max number of players allowed for an ¡«“ vote is ");
+			temp = ftos(agr_vote_max);
+			temp = colstr(temp, 4);
+			sprint(self, 2, temp);
+			sprint(self, 2, " players.\n");
+			return;
+		}
+	}
+	// AGR end
+
+	BackFlash(self,1);
+		
+	local entity voteent;
+
+	voteent = spawn();
+	voteent.g_a = self.g_a;
+	voteent.think = VoteMap_Think;
+	voteent.nextthink = time + 60;
+	voteent.classname = "voteent";
+	voteent.owner = world; // ADDED
+
+	if (!nummap)
+	{
+		voteent.netname = themap;
+
+		
+		// Don't let votes to switch to current map
+		// PZ ..unless they are changing to/from AGR
+		if ( voteent.netname == mapname )
+		if ( voteType == 3 )
+		if ( ( ( voteMapType != 1 && !agr) || ( voteMapType == 1 && agr ) ) )
+		{
+			sprint(self,2,"You can't start voting for a map that is currently being played!\n");
+			CuTFMenuSound(4);
+			dremove(voteent);
+			voteent = world;
+			return;
+		}
+		
+
+		voteent.netname = makestr(voteent.netname);
+		voteent.has_tesla = 0;
+	}
+	else
+	{
+		voteent.netname = GetMapString(nummap);
+
+		// Abort if empty map name on localinfo
+		if (voteent.netname == "")
+		{
+			sprint(self,2,"You can't choose an empty map slot!\n");
+			CuTFMenuSound(4);
+			dremove(voteent);
+			voteent = world;
+			return;
+		}
+
+		
+		// Don't let votes to switch to current map
+		// PZ ..unless they are changing to/from AGR
+		if ( voteent.netname == mapname )
+		if ( voteType == 3 )
+		if ( ( ( voteMapType != 1 && !agr ) || ( voteMapType == 1 && agr ) ) )
+		{
+			sprint(self,2,"You can't start voting for a map that is currently being played!\n");
+			CuTFMenuSound(4);
+			dremove(voteent);
+			voteent = world;
+			return;
+		}
+		
+
+		voteent.netname = makestr(voteent.netname);
+		voteent.has_tesla = nummap;
+	}
+
+	CleanClientVotes();
+
+	voteent.all_active = 1;
+	voteent.has_holo = 0;
+
+	// Gizmo - check for vote nextmap switchmap
+	voteent.has_sentry = voteType;		// has_sentry is the generic vote type field
+
+	current_voteent = voteent;
+
+	self.goal_no = time + 240;
+
+	self.owned_by = 1; // we already voted yes
+	
+	voteent.group_no = voteMapType;		// group_no on the vote entity is the map vote type
+
+	current_voteent.dont_do_triggerwork = 0;
+
+	BroadcastSound("misc/medkey");
+
+	themap = colstr(current_voteent.netname,2);
+
+	bprint(2,"Votingç ",self.netname);
+	last_vote_starter = self.netname; // for AGR -PZ
+
+	if ( voteType == 2 ) {
+		bprint(2," suggests ",themap," as next map");
+
+		PrintVoteMapType( ", in ", voteMapType, " mode" );
+	} else /*if ( voteType == #VOTE_SWITCHMAP )*/ {
+		bprint(2," wants to play ",themap," right now");
+
+		PrintVoteMapType( ", in ", voteMapType, " mode" );
+	}
+
+	bprint(2,", type ¢VoteYes¢ or ¢VoteNo¢ to vote");
+	// Gizmo
+	bprintVotesNeeded( 1, 0 );
+	bprint( 2, "\n" );
+
+	ResetClientsMenu(); // reset menus on players/specs which are on MENU_PUNISH or MENU_VOTEMAP
+
+	CheckVoting(0); // If we are the only player on server must check
+};
+
+void() VoteMap_Think =
+{
+	CheckVoting(1);
+	
+
+
+
+
+
+
+
+
+
+
+
+};
+
+//=================================================================
+
+void() StartUseObjectVote = {
+	local string objectName, objectAction;
+
+	makevectors( self.v_angle );
+	traceline( self.origin + '0 0 16', ( self.origin + '0 0 16' ) + v_forward * 4096, 0, self );
+
+	if ( !IsValidUseObject( trace_ent ) ) {
+		sprint( self, 2, "Not a valid object to use!\n" );
+		return;
+	}
+
+	BroadcastSound( "misc/medkey" );
+
+	objectName = GetUseObjectName( trace_ent );
+	objectAction = GetUseObjectAction( trace_ent );
+	bprint( 2, "Votingç ", self.netname, " wants to force a ", objectName, " to ", objectAction );
+	bprint( 2, ", type ¢VoteYes¢ or ¢VoteNo¢ to vote" );
+	// Gizmo
+	bprintVotesNeeded( 1, 0 );
+	bprint( 2, "\n" );
+
+	BackFlash( self, 1 );
+	CleanClientVotes ();
+
+	self.goal_no = time + 240;
+	self.owned_by = 1;		// we already voted yes
+
+	local entity voteent;
+
+	voteent = spawn ();
+	voteent.think = PunishVote_Think;
+	voteent.nextthink = time + 60;
+	voteent.classname = "voteent";
+	voteent.owner = world; // ADDED
+	voteent.all_active = 1;
+	voteent.has_holo = 0;
+	voteent.enemy = trace_ent;
+	voteent.has_sentry = 4;
+
+	current_voteent = voteent;
+
+	ResetClientsMenu ();			// reset menus on players/specs which r on MENU_PUNISH or MENU_VOTEMAP
+	CheckVoting( 0 );			// if we are the only player on server checks
+};
+
+
+//==================================================================
+// resets all clients to ready-to-vote state
+
+void() CleanClientVotes =
+{
+	local entity te;
+
+	te = find(world, classname, "player");
+	while (te != world)
+	{
+		if (te.is_connected)
+			te.owned_by = 0;
+		
+		te = find(te, classname, "player");
+	}	 
+
+	te = find(world, classname, "spec");
+	while (te != world)
+	{
+		if (te.is_connected)
+			te.owned_by = 0;
+		
+		te = find(te, classname, "spec");
+	}	 
+};
+
+//=============================================================================
+// clear menus of clients that have vote menus on - WATCHOUT - Using self
+
+void() ResetClientsMenu =
+{
+	local entity te;
+
+	te = find(world, classname, "player");
+	while (te != world)
+	{
+		if (te.is_connected)
+		if (te != self)
+		if (te.current_menu == 32 || te.current_menu == 33)
+		{
+			sprint(te,2,"Already running a vote!\n"); 
+			CenterPrint(te,"\n");
+			te.current_menu = 1;
+		}
+
+		te = find(te, classname, "player");
+	}	 
+
+	te = find(world, classname, "spec");
+	while (te != world)
+	{
+		if (te.is_connected)
+		if (te != self)
+		if (te.current_menu == 2 || te.current_menu == 3)
+		{
+			sprint(te,2,"Already running a vote!\n"); 
+			CenterPrint(te,"\n");
+			te.current_menu = 0;
+		}
+
+		te = find(te, classname, "spec");
+	}	 
+};
+
+//==========================================================================
+// called after each vote (yes or no) to see if its a succesfull vote
+
+
+/*
+=============
+VotePassed
+=============
+*/
+float( float numFor, float numAgainst, float fraction ) VotePassed = {
+//	bprint (#PRINT_HIGH, ftos(numAgainst));
+//	bprint (#PRINT_HIGH, "<against> + ((", ftos(num_players - (numFor + numAgainst)), ") / 2) == ");
+
+	// get the number of players that didn't vote, and count them as half a voteno
+	// don't count spectators if they didn't vote
+	if ( num_players - ( numFor + numAgainst ) > 0 )
+		numAgainst = numAgainst + ( ( num_players - ( numFor + numAgainst ) ) * fraction );
+
+//	bprint (#PRINT_HIGH, ftos(numAgainst), "\n");
+
+	if ( numFor > numAgainst )
+		return 1;
+
+	return 0;
+};
+
+float(float final) CheckVoting =
+{
+	// this shouldn't be needed
+	if (current_voteent == world || current_voteent.classname!="voteent")
+	{
+		bprint(2,"Votingç Error in voting system!\n");
+		ResetVoteEnt();
+		return 1;
+	}	 
+
+	local float num_for, num_against, num_total;
+	local entity te;
+
+	num_for = 0;
+	num_against = 0;
+	num_total = 0;
+	
+	// Count the number of votes for, against and total clients.
+	te = nextent(world);
+	while (te != world) {
+		if (te.classname == "player" || te.classname == "spec") {
+			num_total = num_total + 1;
+			if (te.owned_by == 1) {
+				num_for = num_for + 1;
+			} else if (te.owned_by == 2) {
+				num_against = num_against + 1;
+			}
+		}
+		te = nextent(te);
+	}
+
+// GIZMO BEGIN
+/*
+	// If this is the final check then only count the people who actually voted.
+	if (final)
+		num_total = num_for + num_against;
+*/
+	// if this isn't the final check then only do anything if over 50% of the population has voted
+//	if (!final && num_for + num_against <= num_total / 2)
+	if (!final && num_for <= num_total / 2 && num_against <= num_total / 2)
+		return 0;
+// GIZMO END
+
+	// If an update is taking place, dont allow map voting
+	if ( IsMapVote() )
+	if (ServerUpdating())
+	{
+		bprint(2,"Votingç Server update is taking place, no map changes are allowed\n");
+		ResetVoteEnt();
+		return 1;
+	}
+
+	local float numclients;
+	local string st;
+	local float uid;
+	
+	numclients = GetNoClients();
+	
+	if (current_voteent.has_sentry == 1) // Punishment voting
+	{
+		// Check for a valid client as target
+		if (!current_voteent.dont_do_triggerwork) // only if not a special ban (user left)
+		if ((current_voteent.admin_kick.classname != "player" && current_voteent.admin_kick.classname != "spec") || !current_voteent.admin_kick.is_connected)
+		{
+			bprint(2,"Votingç Invalid client as target for vote!\n");
+			ResetVoteEnt();
+			return 1;
+		}
+		
+		if (current_voteent.g_a == 1) // Curse
+		{
+//			if (num_for > num_total * #VOTESNEEDED_CURSE) // success?
+			if ( VotePassed( num_for, num_against, 0.5 ) )
+			{
+				local float tf;
+				
+				tf = 0;
+				st = infokey(world, "curse");
+				
+				if (st == string_null) 
+					tf = stof(st);
+				
+				bprint(2,"Votingç Democracy says ");
+				bprint(2,current_voteent.admin_kick.netname);
+				bprint(2," must be cursed\n");
+
+				BroadcastSound("doors/runeuse");
+				
+				createBastard(current_voteent.admin_kick,tf);
+
+				ResetVoteEnt(); // removes current vote entity
+
+				return 1;
+			}
+//			else if (num_against >= num_total * (1 - #VOTESNEEDED_CURSE))
+			else
+			{
+				bprint(2,"Votingç Punishment vote has failed");
+				bprintVoteIssue();
+				bprint(2,"\n");
+				
+				BroadcastSound("misc/runekey");
+				
+				ResetVoteEnt();
+			}
+		}
+		else if (current_voteent.g_a == 2) // Kick
+		{
+//			if (num_for > num_total * #VOTESNEEDED_KICK) // success?
+			if ( VotePassed( num_for, num_against, 0.5 ) )
+			{
+				bprint(2,"Votingç Democracy says ");
+				bprint(2,current_voteent.admin_kick.netname);
+				bprint(2," must be kicked\n");
+
+				bprint(2, current_voteent.admin_kick.netname);
+				bprint(2, " is À…√À≈ƒ from the server\n");
+
+				sprint(current_voteent.admin_kick,2,"\nYou have been À…√À≈ƒ from the server!\n");
+
+				stuffcmd(current_voteent.admin_kick, "disconnect\n"); //Kick them!
+
+				BroadcastSound("player/teledth1");
+
+				ResetVoteEnt(); // removes current vote entity
+
+				return 1;
+			}
+//			else if (num_against >= num_total * (1 - #VOTESNEEDED_KICK))
+			else
+			{
+				bprint(2,"Votingç Punishment vote has failed");
+				bprintVoteIssue();
+				bprint(2,"\n");
+				
+				BroadcastSound("misc/runekey");
+				
+				ResetVoteEnt();
+			}
+		}
+		else if (current_voteent.g_a == 3) // Ban!
+		{
+//			if (num_for > num_total * #VOTESNEEDED_BAN) // success?
+			if ( VotePassed( num_for, num_against, 0.5 ) )
+			{
+				bprint(2,"Votingç Democracy says ");
+
+				if (current_voteent.dont_do_triggerwork) // Special ban (user has left)
+				{					 
+					bprint(2,current_voteent.t_s_m);
+					bprint(2," must be banned\n");
+
+					bprint(2, current_voteent.t_s_m);
+					bprint(2, " is ¬¡ŒŒ≈ƒ from the server\n");
+
+					localcmd("addip ");
+					localcmd(current_voteent.t_s_h);
+					localcmd(" 60");
+					localcmd("\n");
+
+					BroadcastSound("doors/runeuse");
+				}
+				else
+				{					 
+					bprint(2,current_voteent.admin_kick.netname);
+					bprint(2," must be banned\n");
+
+					bprint(2, current_voteent.admin_kick.netname);
+					bprint(2, " is ¬¡ŒŒ≈ƒ from the server\n");
+
+					sprint(current_voteent.admin_kick,2,"\nYou have been ¬¡ŒŒ≈ƒ from the server!\n");
+					
+					stuffcmd(current_voteent.admin_kick, "disconnect\n"); //Kick them!
+					
+					st = infokey(current_voteent.admin_kick,"ip");
+					localcmd("addip ");
+					localcmd(st);
+					localcmd(" 60");
+					localcmd("\n");   
+					
+					BroadcastSound("player/teledth1");
+				}				
+
+				ResetVoteEnt(); // removes current vote entity
+
+				return 1;
+			}
+//			else if (num_against >= num_total * (1 - #VOTESNEEDED_BAN))
+			else
+			{
+				bprint(2,"Votingç Punishment vote has failed");
+				bprintVoteIssue();
+				bprint(2,"\n");
+				
+				BroadcastSound("misc/runekey");
+				
+				ResetVoteEnt();
+			}
+		}
+		else if (current_voteent.g_a == 4) // Mute
+		{
+//			if (num_for > num_total * #VOTESNEEDED_MUTE) // success?
+			if ( VotePassed( num_for, num_against, 0.5 ) )
+			{
+				bprint(2,"Votingç Democracy says ");
+				bprint(2,current_voteent.admin_kick.netname);
+				bprint(2," must be muted =)\n");
+
+				bprint(2, current_voteent.admin_kick.netname);
+				bprint(2, " is muted.\n");
+
+				BroadcastSound("doors/runeuse");
+
+				sprint(current_voteent.admin_kick,2,"\nYou have been muted!\n");
+				
+				uid = getuid(current_voteent.admin_kick);
+				st = ftos(uid);
+
+				localcmd("mute 00");
+				localcmd(st);
+				localcmd(" 30");
+				localcmd("\n");
+
+				ResetVoteEnt(); // removes current vote entity
+
+				return 1;
+			}
+//			else if (num_against >= num_total * (1 - #VOTESNEEDED_MUTE))
+			else
+			{
+				bprint(2,"Votingç Punishment vote has failed");
+				bprintVoteIssue();
+				bprint(2,"\n");
+				
+				BroadcastSound("misc/runekey");
+				
+				ResetVoteEnt();
+			}
+		}		 
+		else if (current_voteent.g_a == 5) // Cuff
+		{
+//			if (num_for > num_total * #VOTESNEEDED_CUFF) // success?  
+			if ( VotePassed( num_for, num_against, 0.5 ) )
+			{
+				bprint(2,"Votingç Democracy says ");
+				bprint(2,current_voteent.admin_kick.netname);
+				bprint(2," is annoying\n");
+
+				bprint(2, current_voteent.admin_kick.netname);
+				bprint(2, " is cuffed.\n");
+
+				BroadcastSound("doors/runeuse");
+
+				sprint(current_voteent.admin_kick,2,"\nYou have been cuffed!\n");
+				
+				uid = getuid(current_voteent.admin_kick);
+				st = ftos(uid);
+
+				localcmd("cuff 00");
+				localcmd(st);
+				localcmd(" 15");
+				localcmd("\n");
+
+				ResetVoteEnt(); // removes current vote entity
+
+				return 1;
+			}
+//			else if (num_against >= num_total * (1 - #VOTESNEEDED_CUFF))
+			else
+			{
+				bprint(2,"Votingç Punishment vote has failed");
+				bprintVoteIssue();
+				bprint(2,"\n");
+				
+				BroadcastSound("misc/runekey");
+				
+				ResetVoteEnt();
+			}
+		}
+	}
+	else if (current_voteent.has_sentry == 2)
+	{
+//		if (num_for > num_total * #VOTESNEEDED_NEXTMAP) // success?
+		if ( VotePassed( num_for, num_against, 0.5 ) )
+		{
+			st = colstr(current_voteent.netname,2);
+
+			bprint(2,"Votingç Success° Setting ",st," as next map");
+			// Gizmo - print the map vote type
+			PrintVoteMapType( ", in ", current_voteent.group_no, " mode" );
+			bprint( 2, "\n" );
+
+			// Gizmo
+			if ( current_voteent.group_no == 1 ) {
+				localcmd( "localinfo agr 1\n" );
+				if ( coop )
+					localcmd( "localinfo _voted_coop 0\n" );
+				if ( !deathmatch )
+					localcmd( "localinfo _voted_deathmatch 3\n" );
+			}
+
+
+			else if ( current_voteent.group_no == 2 ) {
+				localcmd("localinfo agr \"\"\n"); // PZ - make sure AGR is going to be off
+				if ( coop )
+					localcmd( "localinfo _voted_coop 0\n" );
+				if ( !deathmatch )
+					localcmd( "localinfo _voted_deathmatch 3\n" );
+			} else if ( current_voteent.group_no == 3 ) {
+				localcmd("localinfo agr \"\"\n"); // PZ - make sure AGR is going to be off
+				if ( !coop || coop == 3 )
+					localcmd( "localinfo _voted_coop 1\n" );
+				if ( deathmatch )
+					localcmd( "localinfo _voted_deathmatch 0\n" );
+			} else if ( current_voteent.group_no == 4 ) {
+				localcmd("localinfo agr \"\"\n"); // PZ - make sure AGR is going to be off
+				if ( coop != 3 )
+					localcmd( "localinfo _voted_coop 3\n" );
+				if ( deathmatch )
+					localcmd( "localinfo _voted_deathmatch 0\n" );
+			}
+
+			else {
+				localcmd("localinfo agr \"\"\n"); // PZ - make sure AGR is going to be off
+				localcmd( "localinfo _voted_coop \"\"\n" );
+				localcmd( "localinfo _voted_deathmatch \"\"\n" );
+			}
+
+			localcmd("localinfo nmap \"");
+			localcmd(current_voteent.netname);
+			localcmd("\"\n");
+			
+			BroadcastSound("misc/runekey");
+
+			ResetVoteEnt(); // removes current vote entity
+
+			return 1;
+		}
+//		else if (num_against >= num_total * (1 - #VOTESNEEDED_NEXTMAP))
+		else
+		{
+			bprint(2,"Votingç Map voting failed");
+			bprintVoteIssue();
+			bprint(2,"\n");
+			
+			BroadcastSound("misc/runekey");
+			
+			ResetVoteEnt();
+		}
+	}
+	else if (current_voteent.has_sentry == 3)
+	{
+//		if (num_for > num_total * #VOTESNEEDED_MAP) // success?
+		if ( VotePassed( num_for, num_against, 0.5 ) )
+		{
+			st = colstr(current_voteent.netname,2);
+
+			bprint(2,"Votingç Success° Switching map to ",st);
+			// Gizmo - print the map vote type
+			PrintVoteMapType( ", with ", current_voteent.group_no, " mode" );
+			bprint( 2, "\n" );
+
+			// Gizmo
+			if ( current_voteent.group_no == 1 ) {
+				localcmd( "localinfo agr 1\n" );
+				if ( coop )
+					localcmd( "localinfo _voted_coop 0\n" );
+				if ( !deathmatch )
+					localcmd( "localinfo _voted_deathmatch 3\n" );
+			}
+
+
+			else if ( current_voteent.group_no == 2 ) {
+				localcmd("localinfo agr \"\"\n"); // PZ - make sure AGR is going to be off
+				if ( coop )
+					localcmd( "localinfo _voted_coop 0\n" );
+				if ( !deathmatch )
+					localcmd( "localinfo _voted_deathmatch 3\n" );
+			} else if ( current_voteent.group_no == 3 ) {
+				localcmd("localinfo agr \"\"\n"); // PZ - make sure AGR is going to be off
+				if ( !coop || coop == 3 )
+					localcmd( "localinfo _voted_coop 1\n" );
+				if ( deathmatch )
+					localcmd( "localinfo _voted_deathmatch 0\n" );
+			} else if ( current_voteent.group_no == 4 ) {
+				localcmd("localinfo agr \"\"\n"); // PZ - make sure AGR is going to be off
+				if ( coop != 3 )
+					localcmd( "localinfo _voted_coop 3\n" );
+				if ( deathmatch )
+					localcmd( "localinfo _voted_deathmatch 0\n" );
+			}
+
+			else {
+				localcmd("localinfo agr \"\"\n"); // PZ - make sure AGR is going to be off
+				localcmd( "localinfo _voted_coop \"\"\n" );
+				localcmd( "localinfo _voted_deathmatch \"\"\n" );
+			}
+
+			BroadcastSound("misc/runekey");
+
+			LaunchMap(current_voteent.netname);
+
+			ResetVoteEnt(); // removes current vote entity
+
+			return 1;
+		}
+//		else if (num_against >= num_total * (1 - #VOTESNEEDED_MAP))
+		else
+		{
+			bprint(2,"Votingç Map voting failed");
+			bprintVoteIssue();
+			bprint(2,"\n");
+			
+			BroadcastSound("misc/runekey");
+			
+			ResetVoteEnt();
+		}
+	}
+	// Gizmo - use object voting
+	else if ( current_voteent.has_sentry == 4 ) {
+		local string objectAction;
+
+		if ( VotePassed( num_for, num_against, 0.5 ) ) {
+			st = GetUseObjectName( current_voteent.enemy );
+			objectAction = GetUseObjectAction( current_voteent.enemy );
+			bprint( 2, "Votingç Success° ", st, " will now ", objectAction, "\n" );
+
+			UseObject( current_voteent.enemy );
+
+			BroadcastSound( "misc/runekey" );
+			ResetVoteEnt(); // removes current vote entity
+
+			return 1;
+		} else {
+			bprint( 2, "Votingç Use voting failed" );
+			bprintVoteIssue ();
+			bprint( 2, "\n" );
+			
+			BroadcastSound( "misc/runekey" );
+			
+			ResetVoteEnt ();
+		}
+	}
+
+	return 0;
+};
+
+//==========================================================================
+// Checks if valid vote entity
+
+float() ValidVoteEnt =
+{
+	if (current_voteent == world)
+		return 0;
+
+	if (current_voteent.classname != "voteent")
+		return 0;
+	
+	return 1;
+};
+
+
+//============================================================
+// gets the map localinfo string for the number passed in
+
+string(float themap) GetMapString =
+{
+	local string st, mapnum, temp;
+	
+	mapnum = ftos(themap);
+
+	temp = strcat("m",mapnum);
+	st = infokey(world,temp);
+	
+	return st;
+};
+
+//===============================================================
+// Prints remaining votes for success
+
+/*
+=============
+bprintVotesNeeded
+
+Prints the number of votes needed to
+make the vote not fail when the timer's up.
+Note that this may not print anything at all.
+=============
+*/
+void( float num_for, float num_against ) bprintVotesNeeded = {
+	local string	st;
+	local float		forTemp, againstTemp;
+	local float		fraction;
+
+	// only bother if people didn't vote yet
+	if ( num_players - ( num_for + num_against ) > 0 ) {
+		fraction = 0.5;
+
+		if ( current_voteent.has_sentry == 1 ) {
+			if (current_voteent.g_a == 1)
+				fraction = 0.5;
+			else if ( current_voteent.g_a == 2 )
+				fraction = 0.5;
+			else if ( current_voteent.g_a == 3 )
+				fraction = 0.5;
+			else if ( current_voteent.g_a == 4 )
+				fraction = 0.5;
+			else if ( current_voteent.g_a == 5 )
+				fraction = 0.5;
+		} else if ( current_voteent.has_sentry == 2 )
+			fraction = 0.5;
+		else if ( current_voteent.has_sentry == 3 )
+			fraction = 0.5;
+		// Gizmo - use object voting
+		else if ( current_voteent.has_sentry == 4 )
+			fraction = 0.5;
+
+		num_against = num_against + ( num_players - ( num_for + num_against ) ) * fraction;
+
+		// if the vote won't pass at the end, then print the number of votes needed to make it pass
+		if ( num_for <= num_against ) {
+			forTemp = num_for;
+			againstTemp = num_against;
+			do {
+				forTemp = forTemp + 1;
+				againstTemp = againstTemp - fraction;
+			} while ( forTemp <= againstTemp );
+
+			st = colstr( ftos( forTemp - num_for ), 4 );
+			bprint( 2, " (", st, " needed to not fail)" );
+		}
+	}
+};
+
+void() bprintVotesLeft =
+{
+	local string st;
+	local float num_for, num_against;
+	local entity te;
+
+	num_for = 0;
+	num_against = 0;
+	
+	// Count the number of votes for and against.
+	te = nextent(world);
+	while (te != world) {
+		if (te.classname == "player" || te.classname == "spec") {
+			if (te.owned_by == 1) {
+				num_for = num_for + 1;
+			} else if (te.owned_by == 2) {
+				num_against = num_against + 1;
+			}
+		}
+		te = nextent(te);
+	}
+
+	st = colstr(ftos(num_for), 4);
+	bprint(2, " €", st, " for Ø ");
+
+	st = colstr(ftos(num_against), 4);
+	bprint(2, st, " against");
+
+	// Gizmo - print the number of votes needed for the vote to pass
+	bprintVotesNeeded( num_for, num_against );
+
+	bprint( 2, "›\n" );
+	//›\n
+};
+
+//======================================================================================
+// The current punishment vote goes to sleep (player to be muted/cuffed hides away)
+
+// Warning: here we assume self is the player leaving server to be punished
+void() VoteToSleep =
+{
+	local string st;
+	
+	// First clean up any sleeping vote
+	CleanUpSleepVote();
+
+	current_voteent.think = VoteSleep_think;
+	current_voteent.nextthink = time + 5;
+	current_voteent.classname = "sleepvote";
+
+	st = infokey(self,"ip");
+
+	current_voteent.message = makestr(st);
+	current_voteent.admin_kick = world;
+	current_voteent.ltime = time;
+
+	current_voteent = world;
+
+	votesleeping = 1;
+};
+
+void() VoteSleep_think =
+{
+	self.nextthink = time + 5;
+
+	if (!ValidVoteEnt())
+	{
+		if (self.admin_kick != world)
+		{
+			if (!self.admin_kick.is_connected) // He tries to hide again? lol
+				self.admin_kick = world; // reset
+			else
+				SleepVoteResume(self, self.admin_kick);
+		}
+	}
+
+	// Check if we should discard this sleeping vote
+	if (floor((time - self.ltime) / 60) > 10)
+	{
+		delstr(self.message);
+		dremove(self);
+		votesleeping = 0;
+	}
+};
+
+void() CleanUpSleepVote =
+{
+	local entity te;
+
+	te = find(world,classname,"sleepvote");
+
+	while (te)
+	{
+		delstr(te.message);
+		dremove(te);
+
+		te = find(te,classname,"sleepvote");
+	}
+
+	votesleeping = 0;
+};
+
+entity() GetSleepVote =
+{
+	local entity te;
+
+	te = find(world,classname,"sleepvote");
+
+	return te;
+};
+
+void(entity sleepent, entity targetclient) SleepVoteResume =
+{
+	delstr(sleepent.message);
+	
+	current_voteent = sleepent;
+	current_voteent.think = PunishVote_Think;
+	current_voteent.nextthink = time + 60;
+	current_voteent.classname = "voteent";
+	current_voteent.admin_kick = targetclient;
+
+	votesleeping = 0;
+
+	BroadcastSound("misc/medkey");
+
+	bprint(2,"Votingç Resuming vote to ");
+	if (current_voteent.g_a == 4)
+		bprint(2,"mute ");
+	else if (current_voteent.g_a == 5)
+		bprint(2,"cuff ");
+	bprint(2,current_voteent.admin_kick.netname);
+	bprintVotesLeft();
+};
+

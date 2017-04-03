@@ -1,0 +1,4533 @@
+
+/*
+===========
+ClientObituary
+
+called when a player dies
+============
+*/
+void(entity targ, entity attacker) ClientObituary =
+{
+	local float rnum;
+	local string deathstring, deathstring2;
+	local string tst;
+	//local float attackerteam, targteam;
+	//local entity te;
+	//local entity oself;
+
+
+	// Gizmo - don't bother in single player
+	if ( !deathmatch && !coop )
+	if ( npcAi_IsCoopMonster( targ ) )
+		return;
+
+
+	// FIXME:
+
+	//- OfN - Unidentified kill ---------//
+	deathstring=" is killed by ";
+	deathstring2="\n";
+	// I still have no idea when this is used - OfN martyr does
+	//-----------------------------------//
+
+	if (prematch >= time)
+		return;
+
+	rnum = random();
+
+
+	if ( targ.classname == "player" || npcAi_IsCoopMonster( targ ) ) {
+
+
+
+		//WK No Obituary for the cursed!
+		if (targ.penance_time > time - 1)
+		{
+			Give_Frags_Out(targ, targ, -1, 0, 1, 1, 0);
+/*			targ.real_frags = targ.real_frags - 1;
+			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+				targ.frags = targ.real_frags;
+*/			return;
+		}
+
+
+		// Gizmo - if we were teamkilled by a friendly engy using his teleporter
+		if ( targ.trigger_field ) {
+			if ( ( attacker == world && targ.watertype == -5 ) || ( attacker == targ && deathmsg == 68 ) ) {
+				deathmsg = 0;		// prevent any possible incorrect teamkill messages
+				attacker = targ.trigger_field;
+			}
+
+			// we've died for other reasons or the above teamkill was successful so make sure we reset it
+			targ.trigger_field = world;
+		}
+
+
+		// Gizmo - added world, easier that way since all entities are init'd to it
+
+		if (targ.martyr_enemy != targ && targ.martyr_enemy != world)
+
+
+
+			deathmsg = targ.stored_deathmsg;
+
+		if (deathmsg==55)
+		{
+			tst=GetBuildingName(attacker);
+
+			if (rnum < 0.4)
+			{
+				bprint (1, targ.netname);
+				bprint (1, " will abort the hack next time\n");
+			}
+			else if (rnum < 0.7)
+			{
+				bprint (1, targ.netname);
+				bprint (1, " has been lost in the cybernet!\n");
+			}
+			else
+			{
+				bprint (1, targ.netname);
+				bprint (1, " wastes his life hacking a ");
+				bprint (1, tst);
+				bprint (1, "\n");
+			}
+
+			Give_Frags_Out(targ, targ, -1, 0, 1, 1, 0);
+
+			return;
+		}
+		
+		if (deathmsg==53)
+		{
+			tst=GetBuildingName(attacker);
+			
+			if (rnum < 0.5)
+			{
+				bprint (1, targ.netname);
+				bprint (1, " is electrocuted trying to hack ");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, "'s ");
+				bprint (1, tst);
+				bprint (1, "\n");
+			}
+			else
+			{
+				bprint (1, targ.netname);
+				bprint (1, " should of never tried to hack ");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, "'s ");
+				bprint (1, tst);
+				bprint (1, "\n");
+			}
+
+			Give_Frags_Out(targ, targ, -1, 0, 1, 1, 0);
+
+			return;
+		}
+
+		if (deathmsg==54)
+		{
+			tst=GetBuildingName(attacker);
+
+			if (rnum < 0.5)
+			{
+				bprint (1, targ.netname);
+				bprint (1, " tries to dismantle ");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, "'s ");
+				bprint (1, tst);
+				bprint (1, " with the wrong tool\n");
+			}
+			else
+			{
+				bprint (1, targ.netname);
+				bprint (1, " is electrocuted trying to dismantle ");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, "'s ");
+				bprint (1, tst);
+				bprint (1, "\n");
+			}
+
+			Give_Frags_Out(targ, targ, -1, 0, 1, 1, 0);
+
+			return;
+		}
+		
+		//- OfN - fish death stuff
+		if (attacker.classname == "monster_fish")
+		{
+			//custom_demon_name(attacker); //CH
+			//If our own demon killed us, kill demon and cost 2 frags
+			if (attacker.real_owner == targ) {
+				Give_Frags_Out(attacker.real_owner, attacker.real_owner, -1, 0, 1, 1, 0);
+																		//-2
+				bprint (1, "The piranha ");
+				bprint (1, attacker.netname);
+				bprint (1, " eats his owner, "); //lol
+				bprint (1, targ.netname);
+				bprint (1, "\n");
+
+				//kill_my_demons(); //Demon dies too
+				return;
+
+			} 
+			else if ((!Teammate(targ.team_no,attacker.real_owner.team_no)) || attacker.real_owner.team_no < 1)
+			{
+				if ( rnum > 0.6)
+				{
+					bprint (1, targ.netname);
+					bprint (1, " was eaten by the piranha ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")\n");
+				}
+				else if (rnum > 0.3)
+				{
+					bprint (1, targ.netname);
+					bprint (1, " didn't survive ");
+					bprint (1, attacker.netname);
+					bprint (1, "'s (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ") bites\n");
+
+				}
+				else
+				{
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s piranha, ");
+					bprint (1, attacker.netname);
+					bprint (1, ", eats ");
+					bprint (1, targ.netname);
+					bprint (1, "\n");					
+				}				 
+
+				Give_Frags_Out(attacker.real_owner, attacker.real_owner, 1, 0, 1, 1, 0);
+
+				return;
+			}
+			else if (Teammate(targ.team_no,attacker.real_owner.team_no))
+			{
+				if (rnum < 0.5)
+				{
+					bprint (1, "The supposed friendly piranha ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")");
+					bprint (1, " eats ");
+					bprint (1, targ.netname);
+					bprint (1, "\n");
+				}
+				else
+				{
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ") proves that piranhas are able to teamkill with ");
+					bprint (1, targ.netname);
+					bprint (1, "'s help\n");
+				}
+				//Give_Frags_Out(attacker.real_owner, attacker.real_owner, -1, 0, 1, 1, 0);
+
+				return;
+			}
+		}	  
+
+		
+		//- OfN - Wizard death stuff
+		if (attacker.classname == "monster_wizard")
+		{
+			//custom_demon_name(attacker); //CH
+			//If our own demon killed us, kill demon and cost 2 frags
+			if (attacker.real_owner == targ) {
+				Give_Frags_Out(attacker.real_owner, attacker.real_owner, -1, 0, 1, 1, 0);
+																		//-2
+				bprint (1, "The scrag ");
+				bprint (1, attacker.netname);
+				bprint (1, " kills his owner, ");
+				bprint (1, targ.netname);
+				bprint (1, "\n");
+
+				//kill_my_demon(); //Demon dies too
+				return;
+
+			} 
+			else if ((!Teammate(targ.team_no,attacker.real_owner.team_no)) || attacker.real_owner.team_no < 1)
+			{
+				if ( rnum > 0.6)
+				{
+					bprint (1, targ.netname);
+					bprint (1, " was nullified by the scrag ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")\n");
+				}
+				else if (rnum > 0.3)
+				{
+					bprint (1, targ.netname);
+					bprint (1, " didn't survive ");
+					bprint (1, attacker.netname);
+					bprint (1, "'s (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ") acid\n");
+
+				}
+				else
+				{
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s scrag, ");
+					bprint (1, attacker.netname);
+					bprint (1, ", removes ");
+					bprint (1, targ.netname);
+					bprint (1, "\n");					
+				}
+
+				Give_Frags_Out(attacker.real_owner, attacker.real_owner, 1, 0, 1, 1, 0);
+
+				return;
+			}
+			else if (Teammate(targ.team_no,attacker.real_owner.team_no))
+			{
+				if (rnum < 0.5)
+				{
+					bprint (1, "The supposed friendly scrag ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")");
+					bprint (1, " killed ");
+					bprint (1, targ.netname);
+					bprint (1, "\n");
+				}
+				else
+				{
+					//bprint (#PRINT_MEDIUM, "");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ") proves that scrags are able to teamkill with ");
+					bprint (1, targ.netname);
+					bprint (1, "'s help\n");
+				}
+				//Give_Frags_Out(attacker.real_owner, attacker.real_owner, -1, 0, 1, 1, 0);
+
+				return;
+			}
+		}	  
+
+		//WK
+		if (attacker.classname == "monster_demon1")
+		{
+			//custom_demon_name(attacker); //CH
+			//If our own demon killed us, kill demon and cost 2 frags
+			if (attacker.real_owner == targ) {
+				Give_Frags_Out(attacker.real_owner, attacker.real_owner, -1, 0, 1, 1, 0);
+																	   //-2
+/*				attacker.real_owner.real_frags = attacker.real_owner.real_frags - 2;
+				if (!(toggleflags & #TFLAG_TEAMFRAGS))
+					attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+				if (deathmsg == 44)
+				{
+					bprint (1, attacker.netname);
+					bprint (1, " threw his rage to his owner ");
+					bprint (1, targ.netname);
+					bprint (1, "\n");
+				}
+				else
+				{
+					if (rnum < 0.5) {
+						bprint (1, attacker.netname);
+						bprint (1, " exacts revenge on its summoner, ");
+						bprint (1, targ.netname);
+						bprint (1, "\n");
+					}
+					else {
+						bprint (1, targ.netname);
+						bprint (1, " is dragged into the pit by his own demon, ");
+						bprint (1, attacker.netname);
+						bprint (1, "\n");
+					}
+				}
+
+				//kill_my_demon(); //Demon dies too
+				return;
+			}
+			if (deathmsg == 44)
+			{
+				if (rnum < 0.2) {
+					bprint (1, targ.netname);
+					bprint (1, " was burned alive by ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")\n");
+				}
+				else if (rnum < 0.5) {
+					bprint (1, targ.netname);
+					bprint (1, " thought he was safe from ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")\n");
+				}
+				else if (rnum < 0.75) {
+					bprint (1, targ.netname);
+					bprint (1, " died from ");
+					bprint (1, attacker.netname);
+					bprint (1, "'s (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ") fire balls\n");
+				}
+				else {
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s demon, ");
+					bprint (1, attacker.netname);
+					bprint (1, ", burned ");
+					bprint (1, targ.netname);
+					bprint (1, " to a crisp\n");
+				}
+			}
+			else
+			{
+				if (rnum < 0.1) {
+					bprint (1, targ.netname);
+					bprint (1, " was eviscerated by ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")\n");
+				}
+				else if (rnum < 0.50) {
+					bprint (1, targ.netname);
+					bprint (1, " was ripped limb from limb by ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")\n");
+				}
+				else {
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s demon, ");
+					bprint (1, attacker.netname);
+					if (rnum < 0.75)
+						bprint (1, ", claws apart ");
+					else
+						bprint (1, ", rends apart ");
+					bprint (1, targ.netname);
+					bprint (1, "\n");
+				}
+			}
+
+			if (!Teammate(targ.team_no,attacker.real_owner.team_no) || attacker.real_owner.team_no < 1)
+				Give_Frags_Out(attacker.real_owner, attacker.real_owner, 1, 0, 1, 1, 0);
+
+/*				attacker.real_owner.real_frags = attacker.real_owner.real_frags + 1;
+			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+				attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+			return;
+		}
+
+		// Gremlin death stuff
+		if (attacker.classname == "monster_gremlin")
+		{
+			if (attacker.real_owner == targ)
+			{
+				Give_Frags_Out(attacker.real_owner, attacker.real_owner, -1, 0, 1, 1, 0);
+																	   //-2
+/*				attacker.real_owner.real_frags = attacker.real_owner.real_frags - 2;
+				if (!(toggleflags & #TFLAG_TEAMFRAGS))
+					attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+				bprint (1, targ.netname);
+				bprint (1, " is killed by his own gremlin ");
+				bprint (1, attacker.netname);
+				bprint (1, "\n");
+				return;
+			}
+				   
+			if (Teammate(targ.team_no, attacker.real_owner.team_no))
+			{
+				bprint (1, "The gremlin ");
+				bprint (1, attacker.netname);
+
+				if (rnum < 0.25)
+					bprint (1, " mows down a teammate by killing ");
+				else if (rnum < 0.50)
+					bprint (1, " just made a strange noise after killing ");
+				else if (rnum < 0.75)
+					bprint (1, " gets a frag for the other team by killing ");
+				else
+					bprint (1, " decreases teammate count by killing");
+
+				bprint (1, targ.netname);
+				bprint (1, "\n");
+				
+				return;
+			}
+			
+			if (deathmsg == 1)
+			{
+				bprint (1, targ.netname);
+				bprint (1, " is bumped off by the shotgun of the gremlin ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else if (deathmsg == 3)
+			{
+				bprint (1, targ.netname);
+				bprint (1, " is nailed by the gremlin ");
+				bprint (1, attacker.netname);
+				bprint (1, "'s (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else if (deathmsg == 6)
+			{
+				bprint (1, "The gremlin ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") puts ");
+				bprint (1, targ.netname);
+				bprint (1, " away with a rocket\n");
+			}
+			else if (deathmsg == 2)
+			{
+				bprint (1, targ.netname);
+				bprint (1, " takes 2 loads of ");
+				bprint (1, attacker.netname);
+				bprint (1, "'s (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") buckshot\n");
+			}
+			else if (deathmsg == 7)
+			{
+				bprint (1, targ.netname);
+				bprint (1, " is deadly shocked by the gremlin "); //electrified
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}			 
+			else // default death and meele
+			{
+				bprint (1,targ.netname);
+				bprint (1," is outsmarted by ");
+				bprint (1,attacker.real_owner.netname);
+				bprint (1,"'s gremlin, ");
+				bprint (1,attacker.netname);
+				bprint (1,"\n");
+			}
+
+			if (!Teammate(targ.team_no,attacker.real_owner.team_no) || attacker.real_owner.team_no < 1)
+			{
+				Give_Frags_Out(attacker.real_owner, attacker.real_owner, 1, 0, 1, 1, 0);
+				Give_Frags_Out(attacker, attacker, 1, 0, 1, 1, 0);
+			}
+/*				attacker.real_owner.real_frags = attacker.real_owner.real_frags + 1;
+			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+				attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+			return;
+		}
+
+		// Grunt demon death stuff
+
+		if (attacker.classname == "monster_army") //SB-1 Tech - Share and Enjoy!
+		{
+		//custom_demon_name(attacker); //CH
+		GetRank(attacker); // Sponsored by SB-1 Tech
+			//If our own demon killed us, kill demon and cost 2 frags
+			if (attacker.real_owner == targ)
+			{
+				Give_Frags_Out(attacker.real_owner, attacker.real_owner, -1, 0, 1, 1, 0);
+																	   //-2
+/*				attacker.real_owner.real_frags = attacker.real_owner.real_frags - 2;
+				if (!(toggleflags & #TFLAG_TEAMFRAGS))
+					attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+				/*if (rnum < 0.5)
+				{
+					bprint (#PRINT_MEDIUM, attacker.undercover_name);
+					bprint (#PRINT_MEDIUM, attacker.netname);
+					bprint (#PRINT_MEDIUM, " greets his client ");
+					bprint (#PRINT_MEDIUM, targ.netname);
+					bprint (#PRINT_MEDIUM, " with a bullet in the back of the head\n");
+				}
+				else
+				{*/
+					bprint (1, targ.netname);
+					bprint (1, " is killed by his own mercenary ");
+					bprint (1, attacker.undercover_name);
+					bprint (1, attacker.netname);
+					bprint (1, "\n");
+				//}
+				return;
+			}
+				   
+			if (Teammate(targ.team_no, attacker.real_owner.team_no))
+			{
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				
+				if (rnum < 0.25)
+					bprint (1, " mows down a teammate by killing ");
+				else if (rnum < 0.50)
+					bprint (1, " checks his glasses after killing ");
+				else if (rnum < 0.75)
+					bprint (1, " gets a frag for the other team by killing ");
+				else
+					bprint (1, " loses another friend by killing ");
+
+				bprint (1, targ.netname);
+				bprint (1, "\n");
+
+				return;
+			}
+			if (deathmsg == 17)
+			{
+				if (attacker.cutf_items & 2)
+				{
+					bprint (1, targ.netname);
+					bprint (1, " is sliced and diced by ");
+					bprint (1, attacker.undercover_name);
+					bprint (1, attacker.netname);
+					bprint (1, "'s (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ") blade\n");
+				}
+				else
+				{
+					bprint (1, targ.netname);
+					bprint (1, " is split in two by a powerful axe blow from ");
+					bprint (1, attacker.undercover_name);
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")\n");
+				}
+			}
+			else if (deathmsg == 22)
+			{
+				bprint (1, targ.netname);
+				bprint (1, " is filleted by ");
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else if (deathmsg == 1)
+			{
+				bprint (1, targ.netname);
+				bprint (1, " practices being ");
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, "'s (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") clay pigeon\n");
+			}
+			else if (deathmsg == 3)
+			{
+				bprint (1, targ.netname);
+				bprint (1, " is turned into ");
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, "'s (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") pincushion\n");
+			}
+			else if (deathmsg == 6)
+			{
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " declares that ");
+				bprint (1, targ.netname);
+				bprint (1, " IS the rocket man\n");
+			}
+			else if (deathmsg == 2)
+			{
+				bprint (1, targ.netname);
+				bprint (1, " is turned into swiss cheese by ");
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, "'s (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") buckshot\n");
+			}
+			
+			if (!Teammate(targ.team_no,attacker.real_owner.team_no) || attacker.real_owner.team_no < 1)
+			{
+				Give_Frags_Out(attacker.real_owner, attacker.real_owner, 1, 0, 1, 1, 0);
+				Give_Frags_Out(attacker, attacker, 1, 0, 1, 1, 0);
+			}
+/*				attacker.real_owner.real_frags = attacker.real_owner.real_frags + 1;
+			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+				attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+			return;
+		}
+
+		if (attacker.classname == "monster_shambler")
+		{
+		//custom_demon_name(attacker); //CH
+			//If our own demon killed us, kill demon and cost 2 frags
+			if (attacker.real_owner == targ) {
+				Give_Frags_Out(attacker.real_owner, attacker.real_owner, -1, 0, 1, 1, 0);
+																	   //-2
+/*				attacker.real_owner.real_frags = attacker.real_owner.real_frags - 2;
+				if (!(toggleflags & #TFLAG_TEAMFRAGS))
+					attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/				  
+				if (deathmsg == 7)
+				{
+					bprint (1, attacker.netname);
+					bprint (1, " annihilates its owner ");
+					bprint (1, targ.netname);
+					bprint (1, " with a bolt of lightning\n");
+				}
+				else if (deathmsg == 44)
+				{
+					bprint (1, attacker.netname);
+					bprint (1, " detonates its owner ");
+					bprint (1, targ.netname);
+					bprint (1, " with a fireball\n");
+				}
+				else
+				{
+					if (rnum < 0.5) {
+						bprint (1, attacker.netname);
+						bprint (1, " gets sick of its owner ");
+						bprint (1, targ.netname);
+						bprint (1, "\n");
+					}
+					else {
+						bprint (1, targ.netname);
+						bprint (1, " screams as ");
+						bprint (1, attacker.netname);
+						bprint (1, " turns on his owner\n");
+					}
+				}
+
+				//kill_my_demon(); //Demon dies too - OfN nope!
+				return;
+			}
+			
+			
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+			if (deathmsg == 7)
+			{
+				if (rnum < 0.2) {
+					bprint (1, targ.netname);
+					bprint (1, "'s body crackles with electricity as ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ") claims another victim\n");
+				}
+				else if (rnum < 0.5) {
+					bprint (1, targ.netname);
+					bprint (1, " meets a bolt of lightning directed by ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")\n");
+				}
+				else if (rnum < 0.75) {
+					bprint (1, targ.netname);
+					bprint (1, "'s goose is cooked by ");
+					bprint (1, attacker.netname);
+					bprint (1, "'s (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ") lightning\n");
+				}
+				else {
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s shambler, ");
+					bprint (1, attacker.netname);
+					bprint (1, ", teaches ");
+					bprint (1, targ.netname);
+					bprint (1, " to cook without gas\n");
+				}
+			}
+			else if (deathmsg == 44)
+			{
+				if (rnum < 0.5)
+				{
+					bprint (1, targ.netname);
+					bprint (1, " is obliterated by ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")'s fireball\n");
+				}
+				else
+				{
+					bprint (1, targ.netname);
+					bprint (1, " is turned into little ");
+					bprint (1, targ.netname);
+					bprint (1, "s by ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")'s fireball\n");
+				}
+			}
+			else
+			{
+				if (rnum < 0.05)
+				{
+					bprint (1, targ.netname);
+					bprint (1, " screams as ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")'s claws slash down\n");
+				}
+				else if (rnum < 0.1) {
+					bprint (1, targ.netname);
+					bprint (1, " was torn asunder by ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")\n");
+				}
+				else if (rnum < 0.50) {
+					bprint (1, targ.netname);
+					bprint (1, " is smashed into next week by ");
+					bprint (1, attacker.netname);
+					bprint (1, " (");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, ")\n");
+				}
+				else {
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s shambler, ");
+					bprint (1, attacker.netname);
+					if (rnum < 0.75)
+						bprint (1, ", tears ");
+					else
+						bprint (1, ", rips ");
+					bprint (1, targ.netname);
+					bprint (1, " to shreds\n");
+				}
+			}
+
+			if (!Teammate(targ.team_no,attacker.real_owner.team_no) || attacker.real_owner.team_no < 1)
+				Give_Frags_Out(attacker.real_owner, attacker.real_owner, 1, 0, 1, 1, 0);
+
+/*				attacker.real_owner.real_frags = attacker.real_owner.real_frags + 1;
+			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+				attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+			return;
+		}
+		
+		if (attacker.classname == "teledeath")
+		{
+			bprint (1, targ.netname);
+			bprint (1, " was telefragged by ");
+			bprint (1, attacker.owner.netname);
+			bprint (1, "\n");
+
+			if (!Teammate(targ.team_no,attacker.owner.team_no) || attacker.owner.team_no < 1)
+				Give_Frags_Out(attacker.owner, attacker.owner, 1, 0, 1, 1, 0);
+
+/*				attacker.owner.real_frags = attacker.owner.real_frags + 1;
+			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+				attacker.owner.frags = attacker.owner.real_frags;
+*/
+			return;
+		}
+
+		if (attacker.classname == "teledeath2")
+		{
+			bprint (1, "Satan's power deflects ");
+			bprint (1, targ.netname);
+			bprint (1, "'s telefrag\n");
+
+			Give_Frags_Out(targ, targ, -1, 1, 1, 1, 0);
+
+/*			targ.real_frags = targ.real_frags - 1;
+			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+				targ.frags = targ.real_frags;
+
+#ifdef QUAKE_WORLD
+			logfrag (targ, targ);
+#endif
+*/
+			return;
+		}
+
+		// Gizmo - added idsoftware qw deathmatch code for double 666 telefrag, see tdeath_touch also
+		// double 666 telefrag (can happen often in deathmatch 4)
+		if (attacker.classname == "teledeath3") 
+		{
+			bprint (1, targ.netname);
+			bprint (1, " was telefragged by ");
+			bprint (1, attacker.owner.netname);
+			bprint (1, "'s Satan's power\n");
+
+			Give_Frags_Out (targ, targ, -1, 1, 1, 1, 0);
+/*
+			targ.frags = targ.frags - 1;
+			logfrag (targ, targ);
+*/
+			return;
+		}
+
+		// Killed by a goal
+		if (attacker.classname == "info_tfgoal")
+		{
+			if (attacker.deathtype != "")
+			{
+				bprint (1, targ.netname);
+				bprint (1, attacker.deathtype);
+			}
+
+			logfrag (targ, targ);
+
+			return;
+		}
+
+		if (attacker.classname == "player")
+		{
+			if (targ == attacker)
+			{
+/*				attacker.real_frags = attacker.real_frags - 1;
+				if (teamplay & #TEAMPLAY_VAMPIRE) //WK
+					attacker.real_frags = attacker.real_frags - 1;
+
+				if (!(toggleflags & #TFLAG_TEAMFRAGS))
+					attacker.frags = attacker.real_frags;
+*/
+				bprint (1, targ.netname);
+				
+				deathstring = " kills himself!\n";
+
+				if (deathmsg == 8)
+					deathstring = " grenades himself\n";
+				else if (deathmsg == 40) 
+				{
+					
+					//if (rnum <= 0.5)
+						deathstring = " dies for the cause\n";
+					//else
+					//	deathstring = " is persecuted to death\n";
+					
+					/*
+					//if (!(targ.job & #JOB_MARTYR_ENEMY)) {
+						if (rnum <= 0.5)
+							deathstring = " dies for the heck of it\n";
+						else
+							deathstring = " dies with style\n";
+					
+					else {
+						//Give last person who attacked him a frag
+						if (targ.martyr_enemy.classname == "player" && targ.martyr_enemy.has_disconnected == #FALSE) {
+							Give_Frags_Out(targ.martyr_enemy, targ, 1, 1, 1, 1, 0);
+						}
+						if (rnum <= 0.5)
+							deathstring = " dies for the cause\n";
+						else
+							deathstring = " is persecuted to death\n";
+					} */
+				}
+				/*else if (deathmsg == #DMSG_EXPBODY) - OfN - No need!
+				{
+					deathstring = "'s body explodes!\n";
+				}*/
+				else if (deathmsg == 45)
+				{
+					if (rnum < 0.5)
+						deathstring = " collapses from exhaustion\n";
+					else
+						deathstring = " goes down fighting\n";
+				}
+				else if (deathmsg == 9)
+					deathstring = " hammers himself\n";
+				else if (deathmsg == 38)
+					deathstring = " fragments himself\n";
+				else if (deathmsg == 42)
+				{
+					if (rnum < 0.5)
+						deathstring = " forgot where he put his minefield\n";
+					else
+					{
+						if (rnum < 0.75)
+							deathstring = " blows up along with his mines\n";
+						else
+							deathstring = " explodes with his own mine\n";
+					}
+				}
+				else if (deathmsg == 10)
+					deathstring = " goes to pieces\n";
+				else if (deathmsg == 11)
+					deathstring = " ambushes himself with his own pipebombs\n";
+				else if (deathmsg == 24)
+					deathstring = " chokes on his own gas\n";
+				else if (deathmsg == 30)
+					deathstring = " explodes his ammo and body\n";
+				else if (deathmsg == 35)
+					deathstring = " is charred by his own flash grenade\n";
+				else if (deathmsg == 31)
+					deathstring = " detonates an ammo box too close to him\n";
+				else if (deathmsg == 12)
+					deathstring = " set the detpack and forgot to run\n";
+				else if (deathmsg == 13)
+					deathstring = " died by his own infection!\n";
+				else if (deathmsg == 64)
+					deathstring = " is fried in his own force field\n";
+				else if (deathmsg == 65)
+					deathstring = " is caught and shocked to death in his own force field\n";
+				else if (deathmsg == 66)
+				{
+					if (rnum < 0.5)
+						deathstring = " dies learning something about spanners and force fields\n";
+					else
+						deathstring = " learns something about spanners and force fields..\n";
+				}
+				else if (deathmsg == 70)
+					deathstring = " burns with his own napalm\n";
+				else if (deathmsg == 68)
+					deathstring = " is teleported outside the world!\n";
+				else if (deathmsg == 50)
+					deathstring = " assassinated himself!\n";
+				else if (deathmsg == 51)
+					deathstring = " flew too close to the sun!\n";
+				else if (deathmsg == 56 || deathmsg == 57)
+					deathstring = " airfists his own ass!\n";
+				else if (deathmsg == 39)
+					deathstring = " broke his own arms!\n";
+				else if (deathmsg == 17)
+					deathstring = " drove an axe through his own head!\n";
+				else if (deathmsg == 22)
+					deathstring = " drove a knife into his own heart!\n";	 
+				else if (deathmsg == 67)
+					deathstring = " is electrified tweaking a field generator\n";
+				else if (deathmsg == 60)
+					deathstring = " stepped on too many of his own caltrops\n";
+				else if (deathmsg == 62)
+					deathstring = " was spiked by his own catlrop\n";
+				else if (deathmsg == 6)
+				{
+					if (rnum < 0.5)
+						deathstring = " becomes bored with life\n";
+					else
+						deathstring = " checks if his weapon is loaded\n";
+				}
+				else if (deathmsg == 61)
+					deathstring = " eats his clusters\n";
+				else if (deathmsg == 58)
+					deathstring = " blasts himself\n";
+				else if (deathmsg == 69)
+					deathstring = " killed himself with a biological grenade\n";
+				else if (deathmsg == 33)
+					deathstring = " chars himself with an incendiary rocket\n";
+				else if (deathmsg == 5)
+					deathstring = " tries to put the pin back in\n";
+				else if (deathmsg == 15)
+					deathstring = " torches himself\n";
+				else if (deathmsg == 41) //WK
+					deathstring = " dies from uncomfortable boots\n";
+				else if (deathmsg == 7)
+					deathstring = " electrocutes himself\n";
+				else if (deathmsg == 73)
+				{
+					bprint(1," is killed by the storm lightning!\n");
+					return;
+				}
+				else if (deathmsg == 7 && targ.waterlevel > 1)
+				{
+					Give_Frags_Out(attacker, attacker, -1, 0, 1, 1, 1);
+					bprint (1, " discharges into the water.\n");
+					return;
+				}
+				
+				// killed self
+				Give_Frags_Out(attacker, attacker, -1, 0, 1, 1, 1);
+
+				bprint(1, deathstring);
+				return;
+			}
+			else if (teamplay && Teammate(targ.team_no,attacker.team_no))
+			{
+				// killed a team member
+				if (Teammate(targ.team_no,attacker.team_no) )
+					Give_Frags_Out(attacker, attacker, -1, 0, 1, 1, 0);
+//					attacker.real_frags = attacker.real_frags - 1; // killed a team member
+				else
+					Give_Frags_Out(attacker, attacker, 1, 0, 1, 1, 0);
+//					attacker.real_frags = attacker.real_frags + 1;
+
+//				if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//					attacker.frags = attacker.real_frags;
+				if (deathmsg == 23)
+				{
+					bprint (1, targ.netname);
+					bprint (1, " didn't survive the operation.\n");
+					return;
+				}
+
+				if (deathmsg == 52) //- OfN
+				{
+					bprint (1, targ.netname);
+					bprint (1, " has been killed as a side effect of ");
+					bprint (1, attacker.netname);
+					bprint (1, "'s body explosion\n");
+					return;
+				}
+
+				if (deathmsg == 64) //- OfN
+				{
+					bprint (1, targ.netname);
+					bprint (1, " is fried trying to pass thru ");
+					bprint (1, attacker.netname);
+					bprint (1, "'s force field\n");
+					return;
+				}
+
+				if (deathmsg == 65) //- OfN
+				{
+					bprint (1, targ.netname);
+					bprint (1, " died stuck inside of ");
+					bprint (1, attacker.netname);
+					bprint (1, "'s force field\n");
+					return;
+				}				 
+
+				if (deathmsg == 58) //- OfN
+				{
+					bprint (1, attacker.netname);
+					bprint (1, " laser-bolt bounces on ");
+					bprint (1, targ.netname);						
+					bprint (1, "\n");
+					return;
+				}
+
+				if (deathmsg == 59) //- OfN
+				{
+					bprint (1, attacker.netname);
+					bprint (1, " dispels a teammate. (");
+					bprint (1, targ.netname);						
+					bprint (1, ")\n");
+					return;
+				}
+
+				/*if (deathmsg == #DMSG_BIOEXPLOSION)
+				{
+					bprint(#PRINT_MEDIUM,targ.netname);
+					bprint(#PRINT_MEDIUM," dies due to ");
+					bprint(#PRINT_MEDIUM,attacker.netname);
+					bprint(#PRINT_MEDIUM,"'s infection grenade exploding near\n");
+					return;
+				}*/
+
+				// OfN - As you can see i was tired of the same 4 teamkill deathmessages
+				// so i added lots, some are great IMHO :P
+				if (rnum < 0.1)
+				{
+					if (random() > 0.5)
+					{
+						if (random() > 0.25)
+						{
+							if (random() > 0.5)
+							{
+								if (random() < 0.4)
+								{
+									bprint (1, attacker.netname);
+									bprint (1, " considers ");
+									bprint (1, targ.netname);
+									bprint (1, " completely expendable");
+								}
+								else
+								{
+									bprint (1, attacker.netname);
+									bprint (1, " doesn't consider ");
+									bprint (1, targ.netname);
+									bprint (1, " essential anymore");
+								}
+							}
+							else
+							{
+								bprint (1, attacker.netname);
+								if (random() > 0.2)
+									bprint (1, " thinks ");
+								else
+									bprint (1, " notes ");
+								bprint (1, targ.netname);
+								bprint (1, " isn't needed anymore");
+							}
+						}
+						else
+						{
+							bprint (1, attacker.netname);
+							bprint (1, " sacrifices ");
+							bprint (1, targ.netname);
+							bprint (1, " for the team");
+						}
+					}
+					else
+					{
+						if (random() > 0.5)
+						{
+							if (random() > 0.5)
+							{
+								bprint (1, targ.netname);
+								bprint (1, " doesn't fit in ");
+								bprint (1, attacker.netname);
+								bprint (1, "'s new philosophy");
+							}
+							else
+							{
+								bprint (1, "From ");
+								bprint (1, attacker.netname);
+								bprint (1, "'s point of view ");
+								bprint (1, targ.netname);								 
+								bprint (1, " isn't really needed");
+							}
+						}
+						else
+						{
+							if (random() > 0.5)
+							{
+								bprint (1, attacker.netname);
+								bprint (1, " sees ");
+								bprint (1, targ.netname);								 
+								bprint (1, "'s death as an unavoidable collateral damage");
+							}
+							else
+							{
+								bprint (1, attacker.netname);
+								bprint (1, " last decision takes ");
+								bprint (1, targ.netname);									 
+								bprint (1, "'s death into account");
+							}
+						}
+					}
+				}
+				else if (rnum < 0.2)
+				{
+					if (random() > 0.5)
+					{
+						bprint (1, attacker.netname);
+						bprint (1, " doesn't tolerate ");
+						bprint (1, targ.netname);
+						bprint (1, " in his way anymore");
+					}
+					else
+					{
+						bprint (1, attacker.netname);
+						bprint (1, " didn't accept ");
+						bprint (1, targ.netname);
+						bprint (1, " in his way");						  
+					}
+				}
+				else if (rnum < 0.3)
+				{
+					if (random() > 0.5)
+					{
+						bprint (1,targ.netname);
+						bprint (1, " describes ");
+						bprint (1,attacker.netname);
+						bprint (1, "'s mother with his last words");
+					}
+					else
+					{
+						bprint (1,targ.netname);
+						bprint (1, " mentions the family of ");
+						bprint (1,attacker.netname);
+						bprint (1, " in his last sentence");
+					}					 
+				}
+				else if (rnum < 0.4)
+				{
+					if (random() > 0.75)
+					{
+						bprint (1, attacker.netname);
+						bprint (1, " destroys the love between ");
+						bprint (1, targ.netname);
+						bprint (1, " and him");
+					}
+					else
+					{
+						bprint (1, "Things aren't like before between ");
+						bprint (1, targ.netname);				
+						bprint (1, " and ");
+						bprint (1, attacker.netname);					 
+					}
+				}
+				else if (rnum < 0.5)
+				{
+					bprint (1, targ.netname);
+					bprint (1, " dies and ");
+					bprint (1, attacker.netname);
+					bprint (1, " loses another friend");
+				}
+				else if (rnum < 0.6)
+				{
+					if (random() > 0.5)
+					{
+						bprint (1, attacker.netname);
+						bprint (1, " kills ");
+						bprint (1, targ.netname);
+						bprint (1, " and the baby Jesus cries");
+					}
+					else
+					{						 
+						bprint (1, attacker.netname);
+						bprint (1, " made the baby Jesus cry by killing ");
+						bprint (1, targ.netname);
+					}
+				}
+				else if (rnum < 0.7)
+				{
+					if (random() > 0.5)
+					{
+						bprint (1, attacker.netname);
+						bprint (1, " mows down teammate ");
+						bprint (1, targ.netname);
+					}
+					else
+					{
+						bprint (1, attacker.netname);
+						bprint (1, " decreases teammate count by killing ");
+						bprint (1, targ.netname);
+					}
+				}
+				else if (rnum < 0.8)
+				{
+					bprint (1, attacker.netname);
+					bprint (1, " checks his glasses after killing ");
+					bprint (1, targ.netname);
+				}
+				else if (rnum < 0.9)
+				{
+					bprint (1, attacker.netname);
+					bprint (1, " gets a frag for the other team with ");
+					bprint (1, targ.netname);
+					bprint (1, "'s death");
+				}
+				else
+				{
+					bprint (1, targ.netname);
+					bprint (1, " doesn't wuv ");
+					bprint (1, attacker.netname);
+					bprint (1, " any more! Wah!");
+				}
+
+				bprint (1, "\n");						
+				return;
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 1, 1, 1, 1);
+//CH
+//				attacker.real_frags = attacker.real_frags + 1;
+				if (attacker.tfstate & 131072) 
+				if (attacker.inspirator != world && attacker.inspirator.is_connected)
+				{
+					attacker.inspirator.real_frags =
+					attacker.inspirator.real_frags + 0.5;
+					if (!(toggleflags & 128))
+						attacker.inspirator.frags =
+						attacker.inspirator.real_frags;
+				}
+
+				if (attacker.aura && attacker.crusader_inspirator != world && attacker.crusader_inspirator.is_connected)
+				{
+					if (Teammate(attacker.team_no,attacker.crusader_inspirator.team_no)) // cause he could be a spy..
+					{
+						attacker.crusader_inspirator.real_frags = attacker.crusader_inspirator.real_frags + 0.5;
+						if (!(toggleflags & 128))
+							attacker.crusader_inspirator.frags = attacker.crusader_inspirator.real_frags;
+					}
+					else // Punishment for idiot crusaders.. :)
+					{
+						attacker.crusader_inspirator.real_frags = attacker.crusader_inspirator.real_frags - 0.5;
+						if (!(toggleflags & 128))
+							attacker.crusader_inspirator.frags = attacker.crusader_inspirator.real_frags;
+					}
+				}
+
+				//WK
+/*				if (teamplay & #TEAMPLAY_VAMPIRE) //Frag vamp
+					targ.real_frags = targ.real_frags - 1;
+
+				#ifdef QUAKE_WORLD
+					logfrag (attacker, targ);
+				#endif
+
+				if (!(toggleflags & #TFLAG_TEAMFRAGS)) {
+					attacker.frags = attacker.real_frags;
+					targ.frags = targ.real_frags; //In case of vampire
+				}
+				
+*/
+				if (deathmsg == 61)
+				{
+					if (rnum < 0.5)
+					{
+						deathstring = " is put away by ";
+						deathstring2 = "'s cluster rockets\n";
+					}
+					else
+					{
+						deathstring = " is destroyed by ";
+						deathstring2 = "'s cluster rockets\n";
+					}
+				}
+				else if (deathmsg == 52)
+				{
+					deathstring = " is killed by ";
+					deathstring2 = "'s body explosion\n";
+				}	 
+				else if (deathmsg == 8)
+				{
+					deathstring = " surfs on a grenade from ";
+					deathstring2 = "\n";
+				}
+				else if (deathmsg == 9)
+				{
+					deathstring = " gets flayed by ";
+					deathstring2 = "'s nail grenade\n";
+				}
+				else if (deathmsg == 38) //WK
+				{
+					if (rnum < 0.5) {
+						deathstring = " is slashed apart by ";
+						deathstring2 = "'s frag grenade\n";
+					}
+					else if (rnum < 0.75) {
+						deathstring = "'s jugular artery is severed by ";
+						deathstring2 = "'s frag grenade.\n";
+					}
+					else {
+						deathstring = "'s carotid artery is severed by ";
+						deathstring2 = "'s frag grenade.\n";
+					}
+				}
+				else if (deathmsg == 10)
+				{
+					deathstring = " gets spammed by ";
+					deathstring2 = "'s Mirv grenade\n";
+				}
+				else if (deathmsg == 60)
+				{
+					deathstring = " collects one too many of ";
+					deathstring2 = "'s caltrops\n";
+				}
+				else if (deathmsg == 62)
+				{
+					deathstring = " was spiked by ";
+					deathstring2 = "'s caltrops\n";
+				}
+				else if (deathmsg == 11)
+				{
+					deathstring = " is caught by ";
+					deathstring2 = "'s pipebomb trap\n";
+				}
+				else if (deathmsg == 24)
+				{
+					deathstring = " gags on ";
+					deathstring2 = "'s noxious gasses\n";
+				}
+				else if (deathmsg == 30)
+				{
+					deathstring = "'s ammo detonates him as ";
+					deathstring2 = "'s EMP fries it.\n";
+				}
+				else if (deathmsg == 35)
+				{
+					deathstring = " is charred by ";
+					deathstring2 = "'s flash grenade.\n";
+				}
+				else if (deathmsg == 31)
+				{
+					deathstring = " stands near some ammo as ";
+					deathstring2 = "'s EMP nukes it\n";
+				}
+				else if (deathmsg == 12)
+				{
+					deathstring = " reaches orbit via ";
+					deathstring2 = "'s detpack\n";
+				}
+				else if (deathmsg == 16)
+				{
+					deathstring = " cut the red wire of ";
+					deathstring2 = "'s detpack\n";
+				}
+				else if (deathmsg == 13)
+				{
+					deathstring = " dies from ";
+					deathstring2 = "'s mysterious tropical disease\n";			
+				}
+				else if (deathmsg == 50)
+				{
+				/*	deathstring = " is assassinated by ";
+					deathstring2 = "'s Mauser WK-77\n"; */
+					sprint(attacker, 2, "You mercilessly slaughter ");
+					sprint(attacker, 2, targ.netname);
+					sprint(attacker, 2, "!\n");					
+					return;
+				}
+				else if (deathmsg == 51)
+				{
+					deathstring = " is melted by ";
+					deathstring2 = "'s Daedalus impulse rifle\n";			
+				}
+				else if (deathmsg == 14)
+				{
+					deathstring = " escapes infection from ";
+					deathstring2 = " by dying first\n";
+				}
+				else if (deathmsg == 5)
+				{
+					deathstring = " eats ";
+					deathstring2 = "'s pineapple\n";
+					if (targ.health < -40)
+					{
+						deathstring = " was gibbed by ";
+						deathstring2 = "'s grenade\n";
+					}
+				}
+				else if (deathmsg == 65)
+				{
+					deathstring = " is fried in ";
+					deathstring2 = "'s force field\n";
+				}
+				else if (deathmsg == 64)
+				{
+					deathstring = " had a shocking experience on ";
+					deathstring2 = "'s force field\n";
+				}
+				else if (deathmsg == 67)
+				{
+					deathstring = " explodes with ";
+					deathstring2 = "'s trapped field generator\n";
+				}
+				else if (deathmsg == 6)
+				{
+					deathstring = " rides ";
+					deathstring2 = "'s rocket\n";
+					if (targ.health < -40)
+					{
+						deathstring = " was gibbed by ";
+						deathstring2 = "'s rocket\n" ;
+					}
+				}
+				else if (deathmsg == 41) //WK
+				{
+					deathstring = " choked on ";
+					deathstring2 = "'s hover exhaust\n";
+				}
+				else if (deathmsg == 42) //WK
+				{
+					deathstring2 = "'s land mine\n";
+
+					if (rnum < 0.8)
+						deathstring = " walked over ";
+					else
+						deathstring = " was launched 40 ft into the air by ";
+
+					if (targ.health < -40)
+					{
+						if (rnum < 0.8) 
+							deathstring = " was turned into a shower of gibs by ";
+						else 
+							deathstring = " was launched 80 ft into the air by ";
+					}
+					
+					// We killed one poor guy with our mines:
+					MineKill(attacker);
+				}
+				else if (deathmsg == 15)
+				{
+					if (rnum < 0.2)
+					{
+						deathstring =  " is burnt up by ";
+						deathstring2 = "'s flame\n";
+					}
+					else if (rnum < 0.4)
+					{
+						deathstring =  " is fried by ";
+						deathstring2 = "'s fire\n";
+					}
+					else if (rnum < 0.6)
+					{
+						deathstring =  " feels ";
+						deathstring2 = "'s fire of wrath\n";
+					}
+					else if (rnum < 0.8)
+					{
+						deathstring =  " is reduced to ashes by ";
+						deathstring2 = "\n";
+					}
+					else
+					{
+						deathstring = " is grilled by ";
+						deathstring2 = "'s flame\n";
+					}
+				}
+				else if (deathmsg == 17)
+				{
+					deathstring2 = "\n";
+
+					if (attacker.cutf_items & 2)
+					{
+						if (attacker.job & 4)
+						{
+
+							if ( npcAi_IsCoopMonster( targ ) && targ.monsterflags & 16 )
+								deathstring = " was knife-murdered by ";
+							else
+
+							if (rnum < 0.33)
+								deathstring = " is forced to donate his blood by ";
+							else if (rnum < 0.66)
+							{
+								bprint(1,attacker.netname);
+								bprint(1," grabs ");
+								bprint(1,targ.netname);
+								bprint(1,"'s heart for his collection\n");
+								WarlockKnifeKill(attacker);
+								return;
+							}
+							else
+								deathstring = "'s heart is now a prized possession of ";
+						}
+						else
+						{
+							deathstring = " was knife-murdered by ";
+						}
+					}
+					else
+						deathstring = " was axe-murdered by ";
+
+					//if (attacker.demon_blood < 0) //WK Sanity Check
+					//	attacker.demon_blood = 0;
+					// if the above ever happens you've got a serious bug that needs fixing
+					// don't get around it by cheap hacks - SB
+
+					/*if (attacker.demon_blood < #MAX_KNIFE_BLOOD) //SB - OfN defined max now
+						attacker.demon_blood = attacker.demon_blood + 1;*/
+
+
+					if ( ( npcAi_IsCoopMonster( targ ) && !( targ.monsterflags & 16 ) ) || !npcAi_IsCoopMonster( targ ) )
+
+						WarlockKnifeKill(attacker);
+				}
+				else if (deathmsg == 32)
+				{
+					deathstring = " was spanner-murdered by ";
+					deathstring2 = "\n";
+				}
+				else if (deathmsg == 1)
+				{
+					deathstring = " chewed on ";
+					deathstring2 = "'s boomstick\n";
+				}
+				else if (deathmsg == 2)
+				{
+					deathstring = " ate 2 loads of ";
+					deathstring2 = "'s buckshot\n";
+				}
+				else if (deathmsg == 3)
+				{
+					deathstring = " was nailed by ";
+					deathstring2 = "\n";
+				}
+				else if (deathmsg == 63)
+				{
+					deathstring = " was spiked by ";
+					deathstring2 = "'s super nailgun\n";
+				}
+				else if (deathmsg == 4)
+				{
+					if (rnum <= 0.1) {
+						deathstring = " wishes ";
+						deathstring2 = "'s gun was still an SNG\n";
+					}
+					else if (rnum <= 0.5) {
+						deathstring = " gets felled by ";
+						deathstring2 = "'s light assault cannon\n";
+					}
+					else {
+						deathstring = " gets sawn almost in half by ";
+						deathstring2 = "\n";
+					}
+				}	 
+				else if (deathmsg == 7)
+				{
+					if (rnum <= 0.1) {
+						deathstring = " has never seen a lightning gun in TF before. (";
+						deathstring2 = " has.)\n";
+					}
+					else if (rnum <= 0.2) {
+						deathstring = " is thunderstruck by ";
+						deathstring2 = "'s gun\n";
+					}
+					else if (rnum <= 0.4) {
+						deathstring = " is electrocuted by ";
+						deathstring2 = "'s thunderbolt\n";
+					}
+					else if (rnum <= 0.7) {
+						deathstring = " is shocked to death by ";
+						deathstring2 = "'s lightning gun\n";
+					}
+					else {
+						deathstring = " accepts ";
+						if (attacker.waterlevel > 1)
+							deathstring2 = "'s discharge\n";
+						else
+							deathstring2 = "'s shaft\n";
+					}
+				}
+				else if (deathmsg == 21)
+				{
+					deathstring = " grappled with ";
+					deathstring2 = "\n";
+				}
+				else if (deathmsg == 70)
+				{					 
+					deathstring = " is fried with ";
+					deathstring2 = "'s napalm fireworks\n";
+				}
+				else if (deathmsg == 39)
+				{
+					deathstring = " had his arms broken by ";
+					deathstring2 = "\n";
+				}
+				else if (deathmsg == 56)
+				{
+					if (rnum < 0.5)
+						deathstring = " is ventilated by ";
+					else
+						deathstring = " receives fresh air from ";
+
+					deathstring2 = "\n";
+				}
+				else if (deathmsg == 58)
+				{
+					deathstring = " was blasted by ";
+					deathstring2 = "'s laser cannon\n";
+				}  
+				else if (deathmsg == 69)
+				{
+					deathstring = " dies by the toxic explosion of ";
+					deathstring2 = "'s infection grenade\n";
+				}
+				else if (deathmsg == 59)
+				{
+					deathstring = " is banished to the netherworld by ";
+					deathstring2 = "\n";
+				}
+				else if (deathmsg == 57)
+				{
+					if (rnum < 0.5)
+					{
+						deathstring = " learns to swim backwards with ";
+						deathstring2 = "'s help\n";
+					}
+					else
+					{
+						deathstring = " is underwater-airfisted by ";
+						deathstring2 = "\n";
+					}
+				}
+				else if (deathmsg == 18)
+				{
+					if (attacker.cutf_items & 2097152 && random() > 0.25)
+					{						 
+						if (targ.health < -40 && random() > 0.75)
+						{
+							deathstring = " becomes some pieces of meat with ";
+							deathstring2 = "'s OTR shot\n";
+						}
+						else
+						{
+							if (rnum < 0.3)
+							{
+								deathstring = " will never be the same after ";
+								deathstring2 = "'s OTR shot\n";
+							}
+							else if (rnum < 0.6)
+							{
+								deathstring = " learns from ";
+								deathstring2 = " what an OTR bullet is\n";							  
+							}
+							else
+							{
+								deathstring = " gets a new OTR implant from ";
+								deathstring2 = "\n";
+							}
+						}
+					}
+					else if (rnum < 0.5)
+					{
+						deathstring = " takes a bullet in the chest from ";
+						deathstring2 = "\n";
+					}
+					else
+					{
+						deathstring = " succumbs to sniperfire from ";
+						deathstring2 = "\n";
+					}					 
+				}
+				else if (deathmsg == 29)
+				{
+					if (attacker.cutf_items & 2097152 && random() > 0.25)
+					{
+						deathstring = "'s head flies away due to ";
+						deathstring2 = " and his OTR bullets\n";
+					}
+					else if (rnum < 0.5)
+					{
+						deathstring = " gets a third eye from ";
+						deathstring2 = "\n";
+					}
+					else
+					{
+						deathstring = " gets his head blown off by ";
+						deathstring2 = "\n";
+					}
+				}
+				else if (deathmsg == 28)
+				{
+					if (attacker.cutf_items & 2097152 && random() > 0.25)
+					{
+						deathstring = " owns a metallic replacement for his legs from ";
+						deathstring2 = "\n";
+					}
+					else if (rnum < 0.5)
+					{
+						deathstring = " is made legless by ";
+						deathstring2 = "\n";
+					}
+					else
+					{
+						deathstring = " gets his legs blown off by ";
+						deathstring2 = "\n";
+					}
+				}
+				else if (deathmsg == 19)
+				{
+					deathstring = " collects ";
+					deathstring2 = "'s bullet spray.\n";
+				}
+				else if (deathmsg == 20)
+				{
+					deathstring = " gets sawn in half by ";
+					deathstring2 = "\n";
+				}
+				else if (deathmsg == 22)
+				{
+
+					if (attacker.job & 4 && random() < 0.33 && ((npcAi_IsCoopMonster( targ ) && !(targ.monsterflags & 16)) || !npcAi_IsCoopMonster( targ )))
+
+
+
+					{
+						bprint(1,attacker.netname);
+						bprint(1," extirpates ");
+						bprint(1,targ.netname);
+						bprint(1,"'s heart\n");
+						WarlockKnifeKill(attacker);
+						return;
+					}
+
+					if (rnum < 0.5)
+					{
+						deathstring = " gets assassinated by ";
+						deathstring2 = "\n";
+					}
+					else
+					{
+						deathstring = " is knifed from behind by ";
+						deathstring2 = "\n";
+					}
+
+					//if (attacker.demon_blood < 0) //WK Sanity Check
+					//	attacker.demon_blood = 0;
+					// See previous comment - SB
+					/*if (attacker.demon_blood < #MAX_KNIFE_BLOOD) //SB
+						attacker.demon_blood = attacker.demon_blood + 1;*/
+
+
+					if ((npcAi_IsCoopMonster( targ ) && !(targ.monsterflags & 16)) || !npcAi_IsCoopMonster( targ ))
+
+						WarlockKnifeKill(attacker);
+				}
+				else if (deathmsg == 25)
+				{
+					deathstring = " is put to sleep by ";
+					deathstring2 = "\n";
+				}
+				else if (deathmsg == 26)
+				{
+					deathstring = " gets a hole in his heart from ";
+					deathstring2 = "'s railgun\n";
+				}
+				else if (deathmsg == 33)
+				{
+					deathstring = " gets well done by ";
+					deathstring2 = "'s incendiary rocket\n";
+				}
+				else if ( deathmsg == 74 )
+				{
+					deathstring = " was struck down by the admin ";
+					deathstring2 = "\n";
+				}
+
+				bprint (1, targ.netname);
+				bprint (1, deathstring);
+				bprint (1, attacker.netname);
+				bprint (1, deathstring2);
+			}
+			return;
+		}
+		else if (attacker.classname == "building_dispenser")
+		{
+			if (!(attacker.is_malfunctioning & 2) && !(attacker.is_malfunctioning & 8))
+			{
+				if (targ == attacker.real_owner)
+				{
+					bprint (1, targ.netname);
+					bprint (1, " dispenses with himself\n");
+					Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+				}
+				else
+				{
+					bprint (1, targ.netname);
+					bprint (1, " didn't insert the correct change into ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s dispenser\n");
+					if (Teammate(targ.team_no,attacker.team_no))
+						Give_Frags_Out(attacker, attacker, -1, 0, 1, 1, 0);
+					else
+						Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+				}
+			}
+			else
+			{
+				if (targ == attacker.real_owner)
+				{
+					bprint (1, targ.netname);
+					bprint (1, " is blown apart by his trapped dispenser\n");
+					Give_Frags_Out(attacker.real_owner, attacker, -1, 0, 1, 1, 0);
+				}
+				else if (targ == attacker.martyr_enemy)
+				{
+					bprint (1, targ.netname);
+					bprint (1, " should've stayed away from ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s dispenser\n");
+					Give_Frags_Out(attacker.martyr_enemy, attacker, -1, 0, 1, 1, 0);
+				}
+				else
+				{
+					bprint (1, attacker.martyr_enemy.netname);
+					bprint (1, " laughs as ");
+					bprint (1, targ.netname);
+					bprint (1, " is blown to pieces by ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s trapped dispenser\n");
+					Give_Frags_Out(attacker.martyr_enemy, targ, 1, 0, 1, 1, 0);
+				}
+			}
+			return;
+		}
+		else if (attacker.classname == "building_sentrygun" || attacker.classname == "building_tesla")
+		{
+			if (targ == attacker.real_owner)
+			{
+				if (deathmsg == 34)
+					deathstring = " intercepts his sentry gun's rocket\n";
+				else if (deathmsg == 27)
+					deathstring = " crossed his sentry gun's line of fire\n";
+				else if (deathmsg == 37)
+					deathstring = " was electrocuted by his own sentry\n";
+				else
+					deathstring = " let his sentry turn against him\n"; //CH
+				
+				bprint(1, targ.netname);
+				bprint(1, deathstring);
+			}
+			else
+			{
+				if (Teammate(targ.team_no, attacker.team_no)) {//remove frags if team member
+				//CH its not the sentry/tesla's fault so only take from owner
+				//	Give_Frags_Out(attacker, targ, -1, 0, 2, 0, 0); //gun
+					Give_Frags_Out(attacker.real_owner, targ, -1, 1, 1, 1, 0);
+				} else {
+					Give_Frags_Out(attacker, targ, 1, 0, 2, 0, 0); //gun
+					Give_Frags_Out(attacker.real_owner, targ, 1, 1, 1, 1, 0);
+				} 
+
+				if (deathmsg == 34)
+				{
+					deathstring = " hates ";
+					deathstring2 = "'s sentry gun\n";
+				}
+				else if (deathmsg == 27)
+				{
+					deathstring = " is mown down by ";
+					deathstring2 = "'s sentry gun\n";
+				}
+				else if (deathmsg == 43)
+				{
+					if (rnum < 0.5) {
+						deathstring = " was electrocuted by ";
+						deathstring2 = "'s tesla coil\n";
+					}
+					else if (rnum < 0.75) {
+						deathstring = " was shocked to pieces by ";
+						deathstring2 = "'s tesla sentry\n";
+					}
+					else {
+						deathstring = " was annihilated by ";
+						deathstring2 = "'s tesla gun\n";
+					}
+				}
+				else if (deathmsg == 37)
+				{
+					if (rnum < 0.25) {
+						deathstring = " made a frying sound after running into ";
+						deathstring2 = "'s Sentry Point Defense System\n";
+					}
+					else if (rnum < 0.5) {
+						deathstring = " is cooked at 400 degrees by ";
+						deathstring2 = "'s sentry gun\n";
+					}
+					else if (rnum < 0.75) {
+						deathstring = " is disintegrated by ";
+						deathstring2 = "'s Sentry Point Defense System\n";
+					}
+					else {
+						deathstring = " is obliterated by ";
+						deathstring2 = "'s sentry gun\n";
+					}
+				}
+				bprint(1, targ.netname);
+				bprint(1, deathstring);
+				bprint(1, attacker.real_owner.netname);
+				bprint(1, deathstring2);
+			}
+		}
+		else if (attacker.classname == "building_teleporter")
+		{
+			sprint(attacker.martyr_enemy, 2, targ.netname);
+			sprint(attacker.martyr_enemy, 2, " disappears into the void.\n");
+			return;
+		}
+		else
+		{
+			Give_Frags_Out(targ, targ, -1, 1, 1, 1, 0);
+/*
+			#ifdef QUAKE_WORLD
+				logfrag (targ, targ);
+			#endif
+
+			targ.real_frags = targ.real_frags - 1;	 // killed self
+			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+				targ.frags = targ.real_frags;
+*/
+			rnum = targ.watertype;
+
+			bprint (2, targ.netname);
+
+/*
+			if ( npcAi_IsCoopMonster( targ ) ) {
+				bprint (#PRINT_MEDIUM, " (");
+				bprint (#PRINT_MEDIUM, ftos(targ.frags));
+				bprint (#PRINT_MEDIUM, " frags)");
+			}
+*/
+
+
+
+			// Gizmo - moved this first for obvious reasons
+			if ( npcAi_IsCoopMonster( attacker ) ) {
+				if (attacker == targ)
+					deathstring = " killed itself\n";
+				else if (attacker.classname == "idmonster_army")
+					deathstring = " was shot by a Grunt\n";
+				else if (attacker.classname == "idmonster_demon1")
+					deathstring = " was eviscerated by a Fiend\n";
+				else if (attacker.classname == "idmonster_dog")
+					deathstring = " was mauled by a Rottweiler\n";
+				else if (attacker.classname == "idmonster_dragon")
+					deathstring = " was fried by a Dragon\n";
+				else if (attacker.classname == "idmonster_enforcer")
+					deathstring = " was blasted by an Enforcer\n";
+				else if (attacker.classname == "idmonster_fish")
+					deathstring = " was fed to the Rotfish\n";
+				else if (attacker.classname == "idmonster_hell_knight")
+					deathstring = " was slain by a Death Knight\n";
+				else if (attacker.classname == "idmonster_knight")
+					deathstring = " was slashed by a Knight\n";
+				else if (attacker.classname == "idmonster_ogre")
+					deathstring = " was destroyed by an Ogre\n";
+				else if (attacker.classname == "idmonster_oldone")
+					deathstring = " became one with Shub-Niggurath\n";
+				else if (attacker.classname == "idmonster_shalrath")
+					deathstring = " was exploded by a Vore\n";
+				else if (attacker.classname == "idmonster_shambler")
+					deathstring = " was smashed by a Shambler\n";
+				else if (attacker.classname == "idmonster_tarbaby")
+					deathstring = " was slimed by a Spawn\n";
+				else if (attacker.classname == "idmonster_vomit")
+					deathstring = " was vomited on by a Vomitus\n";
+				else if (attacker.classname == "idmonster_wizard")
+					deathstring = " was scragged by a Scrag\n";
+				else if (attacker.classname == "idmonster_zombie")
+					deathstring = " joins the Zombies\n";
+			}
+
+			else if (rnum == -3)
+
+
+
+			{
+				if (random() < 0.5)
+					deathstring = " sleeps with the fishes\n";
+				else
+					deathstring = " ate before swimming\n"; //CH
+			}
+			else if (rnum == -4)
+			{
+				if (random() < 0.5)
+					deathstring = " gulped a load of slime\n";
+				else
+					deathstring = " can't exist on slime alone\n";
+			}
+			else if (rnum == -5)
+			{
+				if (targ.health < -15)
+				{
+					deathstring = " burst into flames\n";
+				}
+				else if (random() < 0.5)
+					deathstring = " turned into hot slag\n";
+				else
+					deathstring = " visits the Volcano God\n";
+			}
+			else if (attacker.classname == "explo_box")
+			{
+				deathstring = " blew up\n";
+			}
+			else if (attacker.solid == 4 && attacker != world)
+			{	
+				deathstring = " was squished\n";
+			}			
+			else if (attacker.classname == "trap_shooter" || attacker.classname == "trap_spikeshooter" || attacker.classname == "trap_tf_spikeshooter" || attacker.classname == "trap_tf_shooter")
+			{
+				if (attacker.deathtype != string_null)
+					deathstring = attacker.deathtype;
+				else if (attacker.spawnflags == 2)
+					deathstring = " had surgery from a laser\n";
+				else if (attacker.spawnflags == 4)
+				{
+					//if (rnum < 0.9)
+						deathstring = " took a ride on a rocket\n";
+					//else
+					//	deathstring = " proves for once and for all that he IS the rocket man\n";
+				}
+				else if (attacker.spawnflags == 8)
+					deathstring = " tried to eat a wild pineapple\n";
+				else if (attacker.spawnflags == 16)
+					deathstring = " was burned alive\n";
+				else if (attacker.spawnflags == 1)
+					deathstring = " was nailed to the ground\n";
+				else
+					deathstring = " was spiked\n";
+			}
+			else if (attacker.classname == "fireball")
+			{
+				deathstring = " ate a lavaball\n";
+			}
+			else if (attacker.classname == "trigger_changelevel")
+			{
+				if (random() < 0.5)
+					deathstring = " tried to leave\n";
+				else
+					deathstring = " thought he could SLIP through unnoticed\n";
+			}
+			else if (targ.deathtype == "falling" && attacker == world)
+			{
+				targ.deathtype = "";
+				deathstring = " fell to his death\n";
+			}
+
+			else if (targ.deathtype == "monster_respawn" && attacker == world) {
+				targ.deathtype = "";
+				deathstring = " died in a transporter accident\n";
+			}
+
+			else //- OfN - unknown death by himself
+			{
+				rnum = random();
+				
+				if (rnum < 0.25)
+					deathstring = " died happily\n";
+				else if (rnum < 0.5)
+					deathstring = " knows how to die with style\n";
+				else if (rnum < 0.75) 
+					deathstring = " simply dies\n";
+				else deathstring = " had an original death\n";
+			}
+
+			bprint(1, deathstring);
+			return; //- ofn
+		}
+	}	 
+	else if (IsOwnedMonster(targ) && attacker.classname == "building_sentrygun")
+	{
+		//custom_demon_name(targ); //CH
+
+		if ((teamplay) && (attacker.real_owner.team_no > 0) && (targ.real_owner.team_no > 0))
+		{
+			if (!Teammate(targ.real_owner.team_no, attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 2, 0, 0); //Tesla
+				Give_Frags_Out(attacker.real_owner, targ, 1, 0, 1, 1, 0);
+
+				//bprint (#PRINT_MEDIUM, targ.real_owner.netname);
+				//bprint (#PRINT_MEDIUM, "'s demon, ");
+				deathstring = GetMonsterName(targ);
+
+				bprint (1, "The ");
+				bprint (1,deathstring);
+				bprint (1, " ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ") was killed by ");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, "'s sentry gun\n");
+				return;
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 2, 0, 0); //Tesla
+				Give_Frags_Out(attacker.real_owner, targ, -1, 0, 1, 1, 0);
+
+				//bprint (#PRINT_MEDIUM, targ.real_owner.netname);
+				//bprint (#PRINT_MEDIUM, " friendly demon, ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ") was killed by ");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, "'s friendly sentry gun\n");
+				return;
+			}
+		}
+	}
+	else if (targ.classname == "monster_wizard") // OfN
+	{
+		//custom_demon_name(targ);
+		if (attacker.classname == "building_tesla")
+		{
+			if ((teamplay) && (attacker.real_owner.team_no > 0) && (targ.real_owner.team_no > 0))
+			{
+				if (!Teammate(targ.real_owner.team_no, attacker.real_owner.team_no))
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 2, 0, 0); //Tesla
+					Give_Frags_Out(attacker.real_owner, targ, 1, 0, 1, 1, 0);
+
+/*					attacker.frags = attacker.frags + 1; //Tesla
+					attacker.real_owner.real_frags = attacker.real_owner.real_frags + 1; //Player
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s scrag, ");
+					bprint (1, targ.netname);
+					bprint (1, ", was shocked to death by ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s tesla sentry\n");
+					return;
+				}
+				else
+				{
+					Give_Frags_Out(attacker, targ, -1, 0, 2, 0, 0); //Tesla
+					Give_Frags_Out(attacker.real_owner, targ, -1, 0, 1, 1, 0);
+/*
+					attacker.frags = attacker.frags - 1; //Tesla
+					attacker.real_owner.real_frags = attacker.real_owner.real_frags - 1; //Player
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s friendly scrag, ");
+					bprint (1, targ.netname);
+					bprint (1, ", was shocked to death by ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s tesla sentry\n");
+					return;
+				}
+			}
+		}
+
+		else if (attacker.classname == "player" || npcAi_IsCoopMonster( attacker ))
+
+
+
+		{
+			if ((teamplay) && (attacker.team_no > 0) && (targ.real_owner.team_no > 0))
+			{
+				if (Teammate(targ.real_owner.team_no,attacker.team_no))
+				{
+					if (attacker == targ.real_owner)
+					{
+						Give_Frags_Out(attacker, targ, -2, 0, 1, 1, 0);
+//						attacker.real_frags = attacker.real_frags - 2; //Owner -2
+						bprint (1, attacker.netname);
+
+						if (deathmsg == 58)
+							bprint (1, " cuts his own scrag in half!\n");						
+						else
+							bprint (1, " kills his own scrag!\n");						
+					}
+					else
+					{
+						Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//						attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+
+						bprint (1, attacker.netname);
+						
+						if (deathmsg == 58)
+							bprint (1, " blasts the friendly scrag ");						
+						else
+							bprint (1, " mows down the friendly scrag ");
+
+						bprint (1, targ.netname);
+						bprint (1, " (");
+						bprint (1, targ.real_owner.netname);
+						bprint (1, ")\n");
+					}
+				}
+				else
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//					attacker.real_frags = attacker.real_frags + 1;
+
+					if (deathmsg == 58)
+					{
+						bprint (1, attacker.netname);
+						bprint (1, " cuts ");						
+						bprint (1, targ.real_owner.netname);
+						bprint (1, "'s scrag in several parts\n");
+					}
+					else					 
+					{
+						bprint (1, targ.real_owner.netname);
+						bprint (1, "'s scrag, ");
+						bprint (1, targ.netname);
+						bprint (1, ", was killed by ");
+						bprint (1, attacker.netname);
+						bprint (1, "\n");
+					}
+
+					MonsterKill(attacker); // adds knife kill to warlock if needed
+				}
+//				if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//					attacker.frags = attacker.real_frags;
+				return;
+			}
+		}
+		else if (attacker.classname == "monster_army")
+		{
+			//custom_demon_name(attacker);
+			GetRank(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") mows down the friendly scrag ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s scrag, ");
+				bprint (1, targ.netname);
+				bprint (1, ", is killed by ");
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_demon1")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") eviscerates the friendly scrag ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s scrag, ");
+				bprint (1, targ.netname);
+				bprint (1, ", is returned to hell by ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_shambler")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, "The shambler ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") annihilates the friendly scrag ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s scrag, ");
+				bprint (1, targ.netname);
+				bprint (1, ", learns a lesson from the shambler ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_wizard")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") annihilates the colleague ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, "'s scrag, ");
+				bprint (1, attacker.netname);
+				bprint (1, ", shows to ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ") who is the best\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+		else if (attacker.classname == "monster_fish")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, "The piranha ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") enjoys eating the friendly scrag ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, "'s piranha, ");
+				bprint (1, attacker.netname);
+				bprint (1, ", eats ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ") and enjoys doing it\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+		else if (attacker.classname == "monster_gremlin")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, "The gremlin ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") mows down the friendly scrag ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, "'s gremlin, ");
+				bprint (1, attacker.netname);
+				bprint (1, ", kills the scrag ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+	}//- End scrag death stuff
+	else if (targ.classname == "monster_gremlin") // OfN
+	{
+		//custom_demon_name(targ);
+		if (attacker.classname == "building_tesla")
+		{
+			if ((teamplay) && (attacker.real_owner.team_no > 0) && (targ.real_owner.team_no > 0))
+			{
+				if (!Teammate(targ.real_owner.team_no, attacker.real_owner.team_no))
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 2, 0, 0); //Tesla
+					Give_Frags_Out(attacker.real_owner, targ, 1, 0, 1, 1, 0);
+
+/*					attacker.frags = attacker.frags + 1; //Tesla
+					attacker.real_owner.real_frags = attacker.real_owner.real_frags + 1; //Player
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s gremlin, ");
+					bprint (1, targ.netname);
+					bprint (1, ", was shocked to death by ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s tesla sentry\n");
+					return;
+				}
+				else
+				{
+					Give_Frags_Out(attacker, targ, -1, 0, 2, 0, 0); //Tesla
+					Give_Frags_Out(attacker.real_owner, targ, -1, 0, 1, 1, 0);
+/*
+					attacker.frags = attacker.frags - 1; //Tesla
+					attacker.real_owner.real_frags = attacker.real_owner.real_frags - 1; //Player
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s gremlin, ");
+					bprint (1, targ.netname);
+					bprint (1, ", was shocked to death by ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s friendly tesla sentry\n");
+					return;
+				}
+			}
+		}
+
+		else if (attacker.classname == "player" || npcAi_IsCoopMonster( attacker ))
+
+
+
+		{
+			if ((teamplay) && (attacker.team_no > 0) && (targ.real_owner.team_no > 0))
+			{
+				if (Teammate(targ.real_owner.team_no,attacker.team_no))
+				{
+					if (attacker == targ.real_owner)
+					{
+						Give_Frags_Out(attacker, targ, -2, 0, 1, 1, 0);
+//						attacker.real_frags = attacker.real_frags - 2; //Owner -2
+						bprint (1, attacker.netname);
+
+						if (deathmsg == 58)
+							bprint (1, " cuts his own gremlin in half!\n"); 					
+						else
+							bprint (1, " kills his own gremlin!\n");						
+					}
+					else
+					{
+						Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//						attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+
+						bprint (1, attacker.netname);
+						
+						if (deathmsg == 58)
+							bprint (1, " blasts the friendly gremlin ");						
+						else
+							bprint (1, " mows down the friendly gremlin ");
+
+						bprint (1, targ.netname);
+						bprint (1, " (");
+						bprint (1, targ.real_owner.netname);
+						bprint (1, ")\n");
+					}
+				}
+				else
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//					attacker.real_frags = attacker.real_frags + 1;
+
+					if (deathmsg == 58)
+					{
+						bprint (1, attacker.netname);
+						bprint (1, " cuts ");						
+						bprint (1, targ.real_owner.netname);
+						bprint (1, "'s gremlin in several parts\n");
+					}
+					else					 
+					{
+						bprint (1, targ.real_owner.netname);
+						bprint (1, "'s gremlin, ");
+						bprint (1, targ.netname);
+						bprint (1, ", was killed by ");
+						bprint (1, attacker.netname);
+						bprint (1, "\n");
+					}
+
+					MonsterKill(attacker); // adds knife kill to warlock if needed
+				}
+//				if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//					attacker.frags = attacker.real_frags;
+				return;
+			}
+		}
+		else if (attacker.classname == "monster_army")
+		{
+			//custom_demon_name(attacker);
+			GetRank(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") mows down the friendly gremlin ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s gremlin, ");
+				bprint (1, targ.netname);
+				bprint (1, ", is killed by ");
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_demon1")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") eviscerates the friendly gremlin ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s gremlin, ");
+				bprint (1, targ.netname);
+				bprint (1, ", is returned to hell by ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_shambler")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, "The shambler ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") annihilates the friendly gremlin ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s gremlin, ");
+				bprint (1, targ.netname);
+				bprint (1, ", learns a lesson from the shambler ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_wizard")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills the friendly gremlin ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, "'s scrag, ");
+				bprint (1, attacker.netname);
+				bprint (1, ", gives death to the gremlin ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+		else if (attacker.classname == "monster_fish")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, "The piranha ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") enjoys eating the friendly gremlin ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, "'s piranha, ");
+				bprint (1, attacker.netname);
+				bprint (1, ", eats the gremlin");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ") and enjoys doing it\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_gremlin")
+		{
+			if (attacker == targ)
+			{
+				bprint(1,"The gremlin ");
+				bprint(1,targ.netname);
+				bprint(1," explodes with his own ammo\n");
+				return;
+			}
+			
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, "The gremlin ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") mows down his companion ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, "'s gremlin, ");
+				bprint (1, attacker.netname);
+				bprint (1, ", beats the opposite soul ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+	}//- End gremlin death stuff
+	else if (targ.classname == "monster_demon1") //CH
+	{
+		//custom_demon_name(targ); //CH
+		if (attacker.classname == "building_tesla")
+		{
+			if ((teamplay) && (attacker.real_owner.team_no > 0) && (targ.real_owner.team_no > 0))
+			{
+				if (!Teammate(targ.real_owner.team_no, attacker.real_owner.team_no))
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 2, 0, 0); //Tesla
+					Give_Frags_Out(attacker.real_owner, targ, 1, 0, 1, 1, 0);
+
+/*					attacker.frags = attacker.frags + 1; //Tesla
+					attacker.real_owner.real_frags = attacker.real_owner.real_frags + 1; //Player
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s demon, ");
+					bprint (1, targ.netname);
+					bprint (1, ", was shocked to death by ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s tesla sentry\n");
+					return;
+				}
+				else
+				{
+					Give_Frags_Out(attacker, targ, -1, 0, 2, 0, 0); //Tesla
+					Give_Frags_Out(attacker.real_owner, targ, -1, 0, 1, 1, 0);
+/*
+					attacker.frags = attacker.frags - 1; //Tesla
+					attacker.real_owner.real_frags = attacker.real_owner.real_frags - 1; //Player
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s friendly demon, ");
+					bprint (1, targ.netname);
+					bprint (1, ", was shocked to death by ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s tesla sentry\n");
+					return;
+				}
+			}
+		}
+
+		else if (attacker.classname == "player" || npcAi_IsCoopMonster( attacker ))
+
+
+
+		{
+			if ((teamplay) && (attacker.team_no > 0) && (targ.real_owner.team_no > 0))
+			{
+				if (Teammate(targ.real_owner.team_no,attacker.team_no))
+				{
+					if (attacker == targ.real_owner)
+					{
+						Give_Frags_Out(attacker, targ, -2, 0, 1, 1, 0);
+//						attacker.real_frags = attacker.real_frags - 2; //Owner -2
+						bprint (1, attacker.netname);
+						bprint (1, " kills his own fiend!\n");
+					}
+					else
+					{
+						Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//						attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+
+						bprint (1, attacker.netname);
+						bprint (1, " mows down the friendly demon ");
+						bprint (1, targ.netname);
+						bprint (1, " (");
+						bprint (1, targ.real_owner.netname);
+						bprint (1, ")\n");
+					}
+				}
+				else
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//					attacker.real_frags = attacker.real_frags + 1;
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s demon, ");
+					bprint (1, targ.netname);
+					bprint (1, ", was killed by ");
+					bprint (1, attacker.netname);
+					bprint (1, "\n");
+
+					MonsterKill(attacker); // adds knife kills to warlock
+				}
+//				if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//					attacker.frags = attacker.real_frags;
+				return;
+			}
+		}
+		else if (attacker.classname == "monster_army")
+		{
+			//custom_demon_name(attacker);
+			GetRank(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") mows down the friendly demon ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s demon, ");
+				bprint (1, targ.netname);
+				bprint (1, ", didn't have a prayer against ");
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_demon1")
+		{
+			if (attacker == targ)
+			{
+				bprint(1,"The fiend ");
+				bprint(1,targ.netname);
+				bprint(1," eats his own fireballs\n");
+				return;
+			}
+			
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") eviscerates the friendly demon ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s demon, ");
+				bprint (1, targ.netname);
+				bprint (1, ", realises too late that ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") wasn't just trying to be friendly\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_shambler")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") annihilates the friendly demon ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s demon, ");
+				bprint (1, targ.netname);
+				bprint (1, ", is given a firm farewell to the netherworld by ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_wizard")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills the friendly demon ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s demon, ");
+				bprint (1, targ.netname);
+				bprint (1, ", is killed by the scrag ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_fish")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills the friendly demon ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s demon, ");
+				bprint (1, targ.netname);
+				bprint (1, ", is killed by the piranha ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+		else if (attacker.classname == "monster_gremlin")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills the friendly demon ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s demon, ");
+				bprint (1, targ.netname);
+				bprint (1, ", is killed by the gremlin ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+	}
+	else if (targ.classname == "monster_army") //CH
+	{
+		//custom_demon_name(targ); //CH
+		GetRank(targ);
+		if (attacker.classname == "building_tesla")
+		{
+			if ((teamplay) && (attacker.real_owner.team_no > 0) && (targ.real_owner.team_no > 0))
+			{
+				if (!Teammate(targ.real_owner.team_no, attacker.real_owner.team_no))
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 2, 0, 0); //Tesla
+					Give_Frags_Out(attacker.real_owner, targ, 1, 0, 1, 1, 0);
+
+/*					attacker.frags = attacker.frags + 1; //Tesla
+					attacker.real_owner.real_frags = attacker.real_owner.real_frags + 1; //Player
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s mercenary soldier, ");
+					bprint (1, targ.undercover_name);
+					bprint (1, targ.netname);
+					bprint (1, ", was shocked to death by ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s tesla sentry\n");
+					return;
+				}
+				else
+				{
+					Give_Frags_Out(attacker, targ, -1, 0, 2, 0, 0); //Tesla
+					Give_Frags_Out(attacker.real_owner, targ, -1, 0, 1, 1, 0);
+/*
+					attacker.frags = attacker.frags - 1; //Tesla
+					attacker.real_owner.real_frags = attacker.real_owner.real_frags - 1; //Player
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s friendly soldier, ");
+					bprint (1, targ.undercover_name);
+					bprint (1, targ.netname);
+					bprint (1, ", was shocked to death by ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s tesla sentry\n");
+					return;
+				}
+			}
+		}
+
+		if (attacker.classname == "player" || npcAi_IsCoopMonster( attacker ))
+
+
+
+		{
+			if ((teamplay) && (attacker.team_no > 0) && (targ.real_owner.team_no > 0))
+			{
+				if (Teammate(targ.real_owner.team_no,attacker.team_no))
+				{
+					if (attacker == targ.real_owner)
+					{
+						Give_Frags_Out(attacker, targ, -2, 0, 1, 1, 0);
+//						attacker.real_frags = attacker.real_frags - 2; //Owner -2
+						bprint (1, attacker.netname);
+						bprint (1, " kills his own soldier!\n");
+					}
+					else
+					{
+						Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//						attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+
+						bprint (1, attacker.netname);
+						bprint (1, " mows down the friendly soldier ");
+						bprint (1, targ.undercover_name);
+						bprint (1, targ.netname);
+						bprint (1, " (");
+						bprint (1, targ.real_owner.netname);
+						bprint (1, ")\n");
+					}
+				}
+				else
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//					attacker.real_frags = attacker.real_frags + 1;
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s mercenary soldier, ");
+					bprint (1, targ.undercover_name);
+					bprint (1, targ.netname);
+					bprint (1, ", was killed by ");
+					bprint (1, attacker.netname);
+					bprint (1, "\n");
+				}
+//				if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//					attacker.frags = attacker.real_frags;
+				return;
+			}
+		}
+		else if (attacker.classname == "monster_shambler")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") slaps the friendly soldier ");
+				bprint (1, targ.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ") into oblivion\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s soldier, ");
+				bprint (1, targ.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, ", is smacked down by ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_demon1")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") disembowels the friendly soldier ");
+				bprint (1, targ.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s soldier, ");
+				bprint (1, targ.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, ", is now listed as KIA thanks to ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_army")
+		{
+			//custom_demon_name(attacker);
+			GetRank(attacker);
+			
+			if (targ==attacker) //- OfN - It *may* happen
+			{
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, "'s soldier, ");
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, ", explodes with his own rockets\n");
+				return;
+			}	
+			
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") mows down comrade-in-arms ");
+				bprint (1, targ.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s soldier, ");
+				bprint (1, targ.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, ", takes a bullet in the chest from ");
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_wizard")
+		{
+			//custom_demon_name(attacker);
+			//GetRank(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, "The scrag ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills the friendly soldier ");
+				bprint (1, targ.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s soldier, ");
+				bprint (1, targ.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, ", is killed by the scrag ");
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+		else if (attacker.classname == "monster_fish")
+		{
+			//custom_demon_name(attacker);
+			//GetRank(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, "The piranha ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills the friendly soldier ");
+				bprint (1, targ.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s soldier, ");
+				bprint (1, targ.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, ", is killed by the piranha ");
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+		else if (attacker.classname == "monster_gremlin")
+		{
+			//custom_demon_name(attacker);
+			//GetRank(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, "The gremlin ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") mows down the friendly soldier ");
+				bprint (1, targ.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s soldier, ");
+				bprint (1, targ.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, ", is destroyed by the gremlin ");
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+	}
+	else if (targ.classname == "monster_shambler") //CH
+	{
+		//custom_demon_name(targ); //CH
+		if (attacker.classname == "building_tesla")
+		{
+			if ((teamplay) && (attacker.real_owner.team_no > 0) && (targ.real_owner.team_no > 0))
+			{
+				if (!Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 2, 0, 0); //Tesla
+					Give_Frags_Out(attacker.real_owner, targ, 1, 0, 1, 1, 0);
+
+/*					attacker.frags = attacker.frags + 1; //Tesla
+					attacker.real_owner.real_frags = attacker.real_owner.real_frags + 1; //Player
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s shambler, ");
+					bprint (1, targ.netname);
+					bprint (1, ", was given a shocking surprise by ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s tesla sentry\n");
+					return;
+				}
+				else
+				{
+					Give_Frags_Out(attacker, targ, -1, 0, 2, 0, 0); //Tesla
+					Give_Frags_Out(attacker.real_owner, targ, -1, 0, 1, 1, 0);
+/*
+					attacker.frags = attacker.frags - 1; //Tesla
+					attacker.real_owner.real_frags = attacker.real_owner.real_frags - 1; //Player
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s friendly shambler, ");
+					bprint (1, targ.netname);
+					bprint (1, ", shouldn't play so close to ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s tesla sentry\n");
+					return;
+				}
+			}
+		}
+
+		if (attacker.classname == "player" || npcAi_IsCoopMonster( attacker ))
+
+
+
+		{
+			if ((teamplay) && (attacker.team_no > 0) && (targ.real_owner.team_no > 0))
+			{
+				if (Teammate(targ.real_owner.team_no,attacker.team_no))
+				{
+					if (attacker == targ.real_owner)
+					{
+						Give_Frags_Out(attacker, targ, -2, 0, 1, 1, 0);
+						bprint (1, attacker.netname);
+						bprint (1, " kills his own shambler!\n");
+//						attacker.real_frags = attacker.real_frags - 2; //Owner -2
+					}
+					else
+					{
+						Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//						attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+
+						bprint (1, attacker.netname);
+						bprint (1, " mows down the friendly shambler ");
+						bprint (1, targ.netname);
+						bprint (1, " (");
+						bprint (1, targ.real_owner.netname);
+						bprint (1, ")\n");
+					}
+				}
+				else
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//					attacker.real_frags = attacker.real_frags + 1;
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s shambler, ");
+					bprint (1, targ.netname);
+					bprint (1, ", was felled by ");
+					bprint (1, attacker.netname);
+					bprint (1, "\n");
+
+					MonsterKill(attacker); // adds knife kills to warlock
+				}
+//				if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//					attacker.frags = attacker.real_frags;
+				return;
+			}
+		}
+		else if (attacker.classname == "monster_demon1")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") checks its aura after killing ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s shambler, ");
+				bprint (1, targ.netname);
+				bprint (1, ", is torn apart by ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_shambler")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") electrifies the friendly shambler ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s shambler, ");
+				bprint (1, targ.netname);
+				bprint (1, ", finds losing against shambler ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") to be a fatal experience\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_army")
+		{
+			//custom_demon_name(attacker);
+			GetRank(attacker);
+			if ( Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ") is caught in the crossfire from ");
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") proves to ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ") that size doesn't matter\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_wizard")
+		{
+			//custom_demon_name(attacker);
+			//GetRank(attacker);
+
+			// condition reversed forconvenience
+			if (!Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, "The scrag ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills the surprised shambler ");
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, "The scrag ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills the friendly shambler ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+		else if (attacker.classname == "monster_fish")
+		{
+			//custom_demon_name(attacker);
+			//GetRank(attacker);
+
+			// condition reversed forconvenience
+			if (!Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, "The piranha ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills weirdly the shambler ");
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, "The piranha ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills the friendly shambler ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+		else if (attacker.classname == "monster_gremlin")
+		{
+			//custom_demon_name(attacker);
+			//GetRank(attacker);
+
+			// condition reversed forconvenience
+			if (!Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, "The gremlin ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") destroys the shambler ");
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, "The gremlin ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") mows down the friendly shambler ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+
+	}
+	else if (targ.classname == "monster_fish") //CH
+	{
+		//custom_demon_name(targ); //CH
+		if (attacker.classname == "building_tesla")
+		{
+			if ((teamplay) && (attacker.real_owner.team_no > 0) && (targ.real_owner.team_no > 0))
+			{
+				if (!Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 2, 0, 0); //Tesla
+					Give_Frags_Out(attacker.real_owner, targ, 1, 0, 1, 1, 0);
+
+/*					attacker.frags = attacker.frags + 1; //Tesla
+					attacker.real_owner.real_frags = attacker.real_owner.real_frags + 1; //Player
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s piranha, ");
+					bprint (1, targ.netname);
+					bprint (1, ", was electrocuted by ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s tesla sentry\n");
+					return;
+				}
+				else
+				{
+					Give_Frags_Out(attacker, targ, -1, 0, 2, 0, 0); //Tesla
+					Give_Frags_Out(attacker.real_owner, targ, -1, 0, 1, 1, 0);
+/*
+					attacker.frags = attacker.frags - 1; //Tesla
+					attacker.real_owner.real_frags = attacker.real_owner.real_frags - 1; //Player
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+					bprint (1, targ.real_owner.netname);
+					bprint (1, "'s friendly piranha, ");
+					bprint (1, targ.netname);
+					bprint (1, ", shouldn't play so close to ");
+					bprint (1, attacker.real_owner.netname);
+					bprint (1, "'s tesla sentry\n");
+					return;
+				}
+			}
+		}
+
+		if (attacker.classname == "player" || npcAi_IsCoopMonster( attacker ))
+
+
+
+		{
+			if ((teamplay) && (attacker.team_no > 0) && (targ.real_owner.team_no > 0))
+			{
+				if (Teammate(targ.real_owner.team_no,attacker.team_no))
+				{
+					if (attacker == targ.real_owner)
+					{
+						Give_Frags_Out(attacker, targ, -2, 0, 1, 1, 0);
+						bprint (1, attacker.netname);
+						bprint (1, " kills his own piranha!\n");
+//						attacker.real_frags = attacker.real_frags - 2; //Owner -2
+					}
+					else
+					{
+						Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//						attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+
+						bprint (1, attacker.netname);
+						bprint (1, " kills the friendly piranha ");
+						bprint (1, targ.netname);
+						bprint (1, " (");
+						bprint (1, targ.real_owner.netname);
+						bprint (1, ")\n");
+					}
+				}
+				else
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+					
+					if (rnum < 0.5)
+					{
+						bprint (1, attacker.netname);
+						bprint (1, " returns ");
+						bprint (1, targ.netname);
+						bprint (1, " (");
+						bprint (1, targ.real_owner.netname);
+						bprint (1, ") to the aquarium\n");
+					}
+					else
+					{
+						bprint (1, attacker.netname);
+						bprint (1, " kills the piranha ");
+						bprint (1, targ.netname);
+						bprint (1, " (");
+						bprint (1, targ.real_owner.netname);
+						bprint (1, ")\n");
+					}
+
+					MonsterKill(attacker); // adds knife kills to warlock
+				}
+//				if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//					attacker.frags = attacker.real_frags;
+				return;
+			}
+		}
+		else if (attacker.classname == "monster_demon1")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") checks its aura after killing ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s piranha, ");
+				bprint (1, targ.netname);
+				bprint (1, ", is killed evilly by ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_shambler")
+		{
+			//custom_demon_name(attacker);
+			if (Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills the friendly piranha ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, targ.real_owner.netname);
+				bprint (1, "'s piranha, ");
+				bprint (1, targ.netname);
+				bprint (1, ", isn't enough for the shambler ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_army")
+		{
+			//custom_demon_name(attacker);
+			GetRank(attacker);
+			if ( Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ") is caught in the crossfire from ");
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				bprint (1, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills the piranha ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_fish")
+		{
+			//custom_demon_name(attacker);
+			//GetRank(attacker);
+
+			// condition reversed forconvenience
+			if (!Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, "The piranha ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ") kills ");
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") after an underwater fight\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, "The piranha ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills its friendly companion fish ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}	
+		else if (attacker.classname == "monster_wizard")
+		{
+			//custom_demon_name(attacker);
+			//GetRank(attacker);
+
+			// condition reversed forconvenience
+			if (!Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, "The scrag ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ") kills the piranha ");
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, "The scrag ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") kills the friendly piranha ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+		else if (attacker.classname == "monster_gremlin")
+		{
+			//custom_demon_name(attacker);
+			//GetRank(attacker);
+
+			// condition reversed forconvenience
+			if (!Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags - 1; // killed a team demon
+					
+				bprint (1, "The gremlin ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ") kills the piranha ");
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ")\n");
+			}
+			else
+			{
+				Give_Frags_Out(attacker, targ, -1, 0, 1, 1, 0);
+//				attacker.real_frags = attacker.real_frags + 1;
+				//bprint (#PRINT_MEDIUM, attacker.undercover_name);
+				bprint (1, "The gremlin ");
+				bprint (1, attacker.netname);
+				bprint (1, " (");
+				bprint (1, attacker.real_owner.netname);
+				bprint (1, ") mows down the friendly piranha ");
+				bprint (1, targ.netname);
+				bprint (1, " (");
+				bprint (1, targ.real_owner.netname);
+				bprint (1, ")\n");
+			}
+//			if (!(toggleflags & #TFLAG_TEAMFRAGS))
+//				attacker.frags = attacker.real_frags;
+		return;
+		}
+
+	}
+	else if (IsBuilding(targ) && targ.classname != "building_sentrygun_base" && attacker.classname == "building_tesla") //Evil Tesla!
+	{
+		if (!Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+		{
+			if (targ.classname == "building_sentrygun" ||
+				targ.classname == "building_tesla") 
+			{
+				Give_Frags_Out(attacker, targ, 1, 0, 2, 0, 0); //Tesla
+				Give_Frags_Out(attacker.real_owner, targ, 1, 0, 1, 1, 0);
+/*
+				attacker.frags = attacker.frags + 1; //Tesla
+				attacker.real_owner.real_frags = attacker.real_owner.real_frags + 1; //Player
+				if (!(toggleflags & #TFLAG_TEAMFRAGS))
+					attacker.real_owner.frags = attacker.real_owner.real_frags;
+*/
+			}
+		}
+		bprint (1, targ.real_owner.netname);
+		bprint (1, "'s ");
+			if (targ.classname == "building_dispenser")
+				bprint (1, "dispenser was zapped by");
+			else if (targ.classname == "building_sentrygun")
+				bprint (1, "sentrygun was no match for");
+			else if (targ.classname == "building_camera")
+				bprint (1, "security camera was vaporized by");
+			else if (targ.classname == "building_sensor")
+				bprint (1, "motion sensor was obliterated by");
+			else if (targ.classname == "building_teleporter")
+				bprint (1, "teleporter pad was short circuted by");
+			else if (targ.classname == "building_tesla" && attacker == targ)
+			{
+				if (deathmsg == 72)
+				{
+					bprint(1,"tesla is destroyed by the earthquake!\n");
+					return;
+				}
+
+				if (deathmsg == 73)
+				{
+					bprint(1,"tesla is destroyed by the storm lightning!\n");
+					return;
+				}
+
+				bprint (1, "tesla coil destroys itself.\n");
+				return;
+			}
+			else if (targ.classname == "building_tesla")
+				bprint (1, "tesla sentry lost the battle against");
+			else if (targ.classname == "building_sensor")
+				bprint (1, "motion sensor was fucked up by");
+			else if (targ.classname == "building_fieldgen")
+				bprint (1, "field generator was destroyed by");
+			else
+				bprint (1, "??Building??");
+		bprint (1, " ");
+		bprint (1, attacker.real_owner.netname);
+		bprint (1, "'s tesla sentry\n");
+		return;
+	}
+	else if (IsBuilding(targ) && targ.classname != "building_sentrygun_base")
+	{
+		//- OfN - Weird but may happen.. like when a sentry is blown up by its own rocket
+		if (attacker == targ)
+		{
+			if (deathmsg == 72)
+			{
+				tst = GetBuildingName(targ);
+				bprint(1,targ.real_owner.netname,"'s ",tst," is destroyed by the earthquake!\n");
+				return;
+			}
+
+			if (deathmsg == 73)
+			{
+				tst = GetBuildingName(targ);
+				bprint(1,targ.real_owner.netname,"'s ",tst," is destroyed by the storm lightning!\n");
+				return;
+			}
+			
+			bprint (1, targ.real_owner.netname);
+			bprint (1, "'s ");
+			
+				if (targ.classname == "building_dispenser")
+					bprint (1, "dispenser");
+				else if (targ.classname == "building_sentrygun")
+					bprint (1, "sentrygun");
+				else if (targ.classname == "building_camera")
+					bprint (1, "security camera");
+				else if (targ.classname == "building_teleporter")
+					bprint (1, "teleporter pad");
+				else if (targ.classname == "building_tesla")
+					bprint (1, "tesla sentry");
+				else if (targ.classname == "building_sensor")
+					bprint (1, "motion sensor");
+				else if (targ.classname == "building_fieldgen")
+					bprint (1, "field generator");
+				else
+					bprint (1, "??Building??");
+			
+			bprint (1, " destroys itself\n");
+			return;
+		}
+		
+		if (attacker.classname == "teledeath")
+		{
+			bprint (1, targ.real_owner.netname);
+			bprint (1, "'s ");
+			
+			//bprint (#PRINT_MEDIUM,GetBuildingName(targ));
+				if (targ.classname == "building_dispenser")
+					bprint (1, "dispenser");
+				else if (targ.classname == "building_sentrygun")
+					bprint (1, "sentrygun");
+				else if (targ.classname == "building_camera")
+					bprint (1, "security camera");
+				else if (targ.classname == "building_teleporter")
+					bprint (1, "teleporter pad");
+				else if (targ.classname == "building_tesla")
+					bprint (1, "tesla sentry");
+				else if (targ.classname == "building_sensor")
+					bprint (1, "motion sensor");
+				else if (targ.classname == "building_fieldgen")
+					bprint (1, "field generator");
+				else
+					bprint (1, "??Building??");
+			
+			bprint (1, " was telefragged by ");
+			bprint (1, attacker.owner.netname);
+			bprint (1, "\n");
+			return;
+		}
+
+
+		if (attacker.classname == "player" || npcAi_IsCoopMonster( attacker ))
+
+
+
+		{
+			if (attacker == targ.real_owner)
+			{
+				bprint (1, targ.real_owner.netname);
+				bprint (1, " destroys his ");
+				
+				//bprint (#PRINT_MEDIUM,GetBuildingName(targ));
+				if (targ.classname == "building_dispenser")
+					bprint (1, "dispenser");
+				else if (targ.classname == "building_sentrygun")
+					bprint (1, "sentrygun");
+				else if (targ.classname == "building_camera")
+					bprint (1, "security camera");
+				else if (targ.classname == "building_teleporter")
+					bprint (1, "teleporter pad");
+				else if (targ.classname == "building_tesla")
+					bprint (1, "tesla sentry");
+				else if (targ.classname == "building_sensor")
+					bprint (1, "motion sensor");
+				else if (targ.classname == "building_fieldgen")
+					bprint (1, "field generator");
+				else
+					bprint (1, "??Building??");
+				bprint (1, "\n");
+				return;
+			}
+
+			bprint (1, targ.real_owner.netname);
+			bprint (1, "'s ");
+
+			//bprint (#PRINT_MEDIUM,GetBuildingName(targ)); //- OfN - FIXED?
+
+			if (targ.classname == "building_dispenser")
+				bprint (1, "dispenser");
+			else if (targ.classname == "building_sentrygun")
+				bprint (1, "sentrygun");
+			else if (targ.classname == "building_camera")
+				bprint (1, "security camera");
+			else if (targ.classname == "building_teleporter")
+				bprint (1, "teleporter pad");
+			else if (targ.classname == "building_tesla")
+				bprint (1, "tesla sentry");
+			else if (targ.classname == "building_sensor")
+				bprint (1, "motion sensor");
+			else if (targ.classname == "building_fieldgen")
+				bprint (1, "field generator");
+			else
+				bprint (1, "??Building??");
+
+			bprint (1, " was destroyed by ");
+			bprint (1, attacker.netname);
+			bprint (1, "\n");
+
+			if (!Teammate(targ.real_owner.team_no,attacker.team_no))
+			{
+				if (targ.classname == "building_sentrygun" ||
+					targ.classname == "building_tesla")
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+/*
+					attacker.real_frags = attacker.real_frags + 1;
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.frags = attacker.real_frags;
+*/
+				}
+			}
+
+			return;
+		}
+		else if (attacker.classname == "monster_army") // SB grunty kills building
+		{
+			//custom_demon_name(attacker);
+			GetRank(attacker);
+
+			bprint (1, targ.real_owner.netname);
+			bprint (1, "'s ");
+			
+			//bprint(#PRINT_MEDIUM,GetBuildingName(targ));
+			if (targ.classname == "building_dispenser")
+				bprint (1, "dispenser");
+			else if (targ.classname == "building_sentrygun")
+				bprint (1, "sentrygun");
+			else if (targ.classname == "building_camera")
+				bprint (1, "security camera");
+			else if (targ.classname == "building_teleporter")
+				bprint (1, "teleporter pad");
+			else if (targ.classname == "building_tesla")
+				bprint (1, "tesla sentry");
+			else if (targ.classname == "building_sensor")
+				bprint (1, "motion sensor");
+			else if (targ.classname == "building_fieldgen")
+				bprint (1, "field generator");
+			else
+				bprint (1, "??Building??");
+
+			bprint (1, " was destroyed by ");
+			bprint (1, attacker.undercover_name);
+			bprint (1, attacker.netname);
+			bprint (1, " (");
+			bprint (1, attacker.real_owner.netname);
+			bprint (1, ")\n");
+		
+			if (!Teammate(targ.real_owner.team_no,attacker.real_owner.team_no))
+			{
+				if (targ.classname == "building_sentrygun" ||
+					targ.classname == "building_tesla")
+				{
+					Give_Frags_Out(attacker, targ, 1, 0, 1, 1, 0);
+/*
+					attacker.real_frags = attacker.real_frags + 1;
+					if (!(toggleflags & #TFLAG_TEAMFRAGS))
+						attacker.frags = attacker.real_frags;
+*/
+				}
+			}
+			return;
+		}
+	}
+
+	//- Miscellaneous monster/army deaths
+
+	else if (IsOwnedMonster(targ)) {
+
+
+
+
+		if (attacker.classname == "explo_box")
+		{
+			deathstring = " blew up\n";
+		}
+		else if (attacker.solid == 4 && attacker != world)
+		{	
+			deathstring = " was squished\n";
+		}
+		else if (attacker.classname == "trap_shooter" || attacker.classname == "trap_spikeshooter" || attacker.classname == "trap_tf_spikeshooter" || attacker.classname == "trap_tf_shooter")
+		{
+			if (attacker.deathtype != string_null)
+				deathstring = attacker.deathtype;
+			else if (attacker.spawnflags == 2)
+				deathstring = " had surgery from a laser\n";
+			else if (attacker.spawnflags == 4)
+				deathstring = " took a ride on a rocket\n";
+			else if (attacker.spawnflags == 8)
+				deathstring = " tried to eat a wild pineapple\n";
+			else if (attacker.spawnflags == 16)
+				deathstring = " was burned alive\n";
+			else if (attacker.spawnflags == 1)
+				deathstring = " was nailed to the ground\n";
+			else
+				deathstring = " was spiked\n";
+		}
+		else if (attacker.classname == "fireball")
+		{
+			deathstring = " ate a lavaball\n";
+		}
+		else if (attacker.classname == "teledeath")
+		{
+			deathstring = " was telefragged by ";
+		}
+		else 
+		{
+			deathstring = " dies\n";
+		}
+
+		deathstring2=GetMonsterName(targ);
+
+		bprint(2,"The ");
+		bprint(2, deathstring2);
+		bprint(2," ");
+		bprint(2, targ.netname);
+		bprint(2," (");
+		bprint(2, targ.real_owner.netname);
+		bprint(2,")");
+		bprint(2, deathstring);
+		if (attacker.classname == "teledeath")
+		{
+			bprint(2, attacker.owner.netname);
+			bprint(2,"\n");
+		}
+
+		return;
+	}
+};
+

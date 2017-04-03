@@ -1,0 +1,350 @@
+/*======================================================
+	TFORTHLP.QC			CustomTeamFortress v3.1	
+
+	(c) TeamFortress Software Pty Ltd 	29/2/97
+	(c) William Kerney			5/22/00
+	parts (c) Craig Hauser
+========================================================
+Functions handling all the help displaying for TeamFortress. 
+========================================================*/
+// Prototypes
+// Help Functions
+void() TeamFortress_MOTD;
+void() TeamFortress_HelpMap;
+void() AliasTimer;
+
+//ofN
+void() bprintline;
+void(entity player, string thesound) PlayClientSound;
+
+//=========================================================================
+// HELP FUNCTIONS
+//=========================================================================
+void() TeamFortress_MOTD =
+{
+	local string ya;
+	local string st;
+	local entity atimer;
+
+	// check if player already has aliases
+	if (self.motd == 4) {
+		stuffcmd(self,"prozac2\n");
+		self.show_hostile = 0;
+	}
+
+	if (self.motd <= 152 - 2)
+	{
+		if (self.show_hostile < time) {
+			//CenterPrint3(self,#MSG_INTRO,#MSG_INTRO2,#MSG_INTRO3);//,CP_MOTD);
+            PrintProzacMOTD();
+			self.show_hostile = time + 1; //was 1 //.5?             
+		}
+		self.menu_count = 25;
+		self.current_menu = 1;
+
+		self.motd = self.motd + 1;
+		return;
+	}
+
+	if (self.motd == 152 - 1)
+	{
+		
+			//WK CHECK TO SEE IF WE ARE REDIRECTING PLAYERS
+			st = infokey(world, "redir");
+			if (st != string_null && st != "off") {
+				stuffcmd(self,"connect ");
+				stuffcmd(self,st);
+				stuffcmd(self,"\n");
+			}
+		
+
+		// Set Default autozoom
+		if (0 == 0)
+			self.tfstate = self.tfstate | 4096;
+
+		// Set their color to white, so they stand out from teams
+		if ((teamplay != 0) && (self.team_no == 0))
+		{
+			stuffcmd(self, "color ");
+			ya = ftos(1 - 1);
+			stuffcmd(self, ya);
+			stuffcmd(self, "\n");
+		}
+
+/*		if (self.got_aliases == #FALSE)
+			sprint(self, #PRINT_HIGH, "\n\n\n");*/
+
+//CH prints customTF version.  Edit in messages.qc
+        PrintProzacIntro();
+
+        self.current_menu = 5;
+		self.menu_count = 25;
+   
+		self.motd = 152;
+
+		//WK CustomTF Commands
+		TeamFortress_Alias("custom", (100 + 11), 0);
+		TeamFortress_Alias("upgrade", (187), 0);
+		TeamFortress_Alias("skill", (200), 0);
+		TeamFortress_Alias("throwdet", (191), 0);
+        TeamFortress_Alias("holo", (192), 0);
+        TeamFortress_Alias("range", 196, 0);
+        //TeamFortress_Alias("debug", (#IMPULSE_DEBUG), 0); 193
+		
+		// check if player already has aliases
+	   	if (self.got_aliases == 1)
+			return;
+
+		//WK If not, spawn off a timer to slowly send the aliases to
+		//prevent overflow
+		atimer = spawn ();
+		atimer.classname = "timer";
+        atimer.netname = "alias"; // OfN - For not removing on removetimers func
+		atimer.owner = self;
+		atimer.nextthink = time + 0.5;
+		atimer.heat = 0;
+		atimer.think = AliasTimer;
+	}
+};
+
+//=========================================================================
+// Help displayed when someone types the alias "maphelp"
+void() TeamFortress_HelpMap =
+{
+    // Anti-abuse code
+    if (self.option2 > time)
+        return;
+
+    self.option2 = time + 1.25;
+    
+    // OfN - Display settings
+    PrintGameSettings(0);
+
+    sprint(self,2,"Íáð Èåìð:\n");
+
+	local entity te;
+
+	te = find(world, classname, "info_tfdetect");
+	if (te)
+	{
+		if (te.non_team_broadcast != string_null)
+		{
+			sprint (self, 2, te.non_team_broadcast);
+			return;
+		}
+	}
+    
+    // sprint (self, #PRINT_HIGH, "There is no help for you.\n");
+    sprint (self, 2, "There is no map-specific help.\n");
+};
+
+void() AliasTimer = {
+	
+    if (!self.owner.is_connected)
+    {
+        dremove(self);
+        return;
+    }
+    
+    local entity oself;
+	local float myheat;
+	myheat = self.heat = self.heat + 1;
+	if (self.heat > 5) {
+		self.think = SUB_Remove;
+		self.nextthink = time + 0.1;
+	}
+	oself = self;
+	self = self.owner;
+
+	if (myheat == 1) {
+		sprint (self, 2, "binding aliases...\n");
+
+		// Stuff Aliases
+
+		// Grenades
+		TeamFortress_Alias("primeone", 150, 0);
+		TeamFortress_Alias("primetwo", 151, 0);
+		TeamFortress_Alias("throwgren", 152, 0);
+		TeamFortress_Alias("+gren1", 150, 0);
+		TeamFortress_Alias("+gren2", 151, 0);
+		TeamFortress_Alias("-gren1", 152, 0);
+		TeamFortress_Alias("-gren2", 152, 0);
+
+		// Pipebombs
+		TeamFortress_Alias("detpipe", 170, 0);
+		TeamFortress_Alias("uncustom", 121, 0);
+        
+
+        
+
+
+	}
+	else if (myheat == 2) {
+
+        
+
+
+
+		// Reloading
+		TeamFortress_Alias("reload", 173, 0);
+
+		// Actions
+		TeamFortress_Alias("special", 171, 0);
+		TeamFortress_Alias("saveme", 181, 0);
+		TeamFortress_Alias("discard", 184, 0);
+		TeamFortress_Alias("id", 185, 0);
+		TeamFortress_Alias("inv",135, 0);
+
+		// Class Ability Impulses
+		TeamFortress_Alias("disguise", 177, 0);
+		TeamFortress_Alias("feign", 178, 0);
+		TeamFortress_Alias("sfeign", 213, 0);
+		TeamFortress_Alias("build", 179, 0);
+		TeamFortress_Alias("detdispenser", (179), 7);
+
+		// General
+		TeamFortress_Alias("dropammo", 172, 0);
+		TeamFortress_Alias("flaginfo", 23, 0);
+		TeamFortress_Alias("autozoom", 174, 0);
+		//TeamFortress_Alias("showloc", #TF_DISPLAYLOCATION, 0);
+		//TeamFortress_Alias("changeclass",#TF_CHANGECLASS, 0);
+                                    //- OfN - it was(#TF_CHANGEPC + #PC_CUSTOM)
+
+        
+
+
+	}
+	else if (myheat == 3) {
+
+        
+
+        
+
+		//Taunts
+		TeamFortress_Alias("taunt1", 203, 0);
+		TeamFortress_Alias("taunt2", 204, 0);
+		TeamFortress_Alias("taunt3", 205, 0);
+		TeamFortress_Alias("taunt4", 206, 0);
+		TeamFortress_Alias("taunt5", 207, 0);
+
+		// Class Changing
+		TeamFortress_Alias("scout",(100 + 1), 0);
+		TeamFortress_Alias("sniper",(100 + 2), 0);
+		TeamFortress_Alias("soldier",(100 + 3), 0);
+		TeamFortress_Alias("demoman",(100 + 4), 0);
+		TeamFortress_Alias("medic",(100 + 5), 0);
+		TeamFortress_Alias("hwguy",(100 + 6), 0);
+		TeamFortress_Alias("pyro",(100 + 7), 0);
+		TeamFortress_Alias("spy",(100 + 8), 0);
+		TeamFortress_Alias("engineer",(100 + 9), 0);
+		TeamFortress_Alias("randompc",(100 + 10), 0);
+
+		TeamFortress_Alias("showtf",136, 0);
+		TeamFortress_Alias("maphelp", 131, 0);	
+        
+
+
+
+
+        
+
+
+	}
+	else if (myheat == 4) {
+
+        
+
+
+
+		// Sample aliases for the Scanner
+		TeamFortress_Alias("scan10", 162, 0);
+		TeamFortress_Alias("scan30", 163, 0);
+		TeamFortress_Alias("scan100", 164, 0);
+		TeamFortress_Alias("scanf", 161, 0);
+		TeamFortress_Alias("scane", 160, 0);
+
+		// Team handlers
+		TeamFortress_Alias("showscores",145, 0);
+		TeamFortress_Alias("showclasses",144, 0);
+		TeamFortress_Alias("query", 119, 0);
+
+		// Sample aliases for the Detpack
+		TeamFortress_Alias("det5", 165, 0);
+		TeamFortress_Alias("det20", 166, 0);
+		TeamFortress_Alias("det50", 167, 0);
+		TeamFortress_Alias("+det5", 165, 0);
+		TeamFortress_Alias("-det5", 169, 0);
+		TeamFortress_Alias("+det20", 166, 0);
+		TeamFortress_Alias("-det20", 169, 0);
+		TeamFortress_Alias("+det50", 167, 0);
+		TeamFortress_Alias("-det50", 169, 0);
+
+        
+
+
+	}
+	else if (myheat == 5) {
+		
+        
+
+
+
+        //Get rid of silly MegaTF 10 year olds
+		TeamFortress_Alias("lay", 201, 0);
+		//CH allow dropitems
+		TeamFortress_Alias("dropitems", 202, 0);
+        
+        //TeamFortress_Alias("get", #TF_ADMIN_KICK_CYCLE, 0);
+		//TeamFortress_Alias("kick", #TF_ADMIN_KICK_PERSON, 0);
+		//TeamFortress_Alias("ban", #TF_ADMIN_BAN_PERSON, 0);
+		//TeamFortress_Alias("ceasefire", #TF_ADMIN_CEASEFIRE, 0);
+        //TeamFortress_Alias("cmnd", #IMPULSE_STUFFCMD, 0);
+
+        //- OfN
+        TeamFortress_Alias("punish", 215, 0);
+        TeamFortress_Alias("votemap", 216, 0);
+        TeamFortress_Alias("voteyes", 217, 0);
+        TeamFortress_Alias("voteno", 218, 0);
+
+
+
+		TeamFortress_Alias("sbar_on", 182, 0);
+		TeamFortress_Alias("sbar_off", 183, 0);
+		TeamFortress_Alias("sbar_200", 71, 0);
+		TeamFortress_Alias("sbar_240", 71 + 1, 0);
+		TeamFortress_Alias("sbar_300", 71 + 2, 0);
+		TeamFortress_Alias("sbar_350", 71 + 3, 0);
+		TeamFortress_Alias("sbar_384", 71 + 4, 0);
+		TeamFortress_Alias("sbar_400", 71 + 5, 0);
+		TeamFortress_Alias("sbar_480", 71 + 6, 0);
+		TeamFortress_Alias("sbar_600", 71 + 7, 0);
+		TeamFortress_Alias("sbar_768", 71 + 8, 0);
+
+		// Set up the alias check
+		TeamFortress_Alias("prozac2", 13, 0);
+
+		// Do the binds
+		stuffcmd(self, "bind 9 \"impulse 9\"\n");
+		stuffcmd(self, "bind 0 \"impulse 10\"\n");
+
+		//WK INTRO THUNDER
+		// OfN - now we have four :P
+        
+        myheat = rint(random()*3);
+
+        if (myheat == 0)
+            stuffcmd(self, "play ambience/thunder1\n");
+        else if (myheat == 1)
+            stuffcmd(self, "play environ/thunder2\n");
+        else if (myheat == 2)
+            stuffcmd(self, "play environ/thunder3\n");
+        else
+            stuffcmd(self, "play environ/thunder4\n");
+
+        sprint(self,2,"The aliases have been set. Welcome!\n");
+	}
+
+	self = oself;
+	self.nextthink = time + 1;
+};
+

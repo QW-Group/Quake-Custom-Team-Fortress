@@ -1,0 +1,102 @@
+/*======================================================
+	TSOLDIER.QC
+
+	TeamFortress v2.5	 29/2/97
+========================================================
+Functions for the SOLDIER class and associated weaponry                          
+========================================================*/
+// Functions outside this file
+
+// Functions inside this file
+// Nail Grenade Functions
+void() NailGrenadeTouch;
+void() NailGrenadeExplode;
+void() NailGrenadeNailEm;
+void() NailGrenadeLaunchNail;
+
+//=========================================================================
+// Touch Function for Nail Grenade
+void() NailGrenadeTouch =
+{
+	if (other == self.owner)
+		return;		// don't explode on owner
+
+	// If the Nail Grenade hits a player, it just bounces off
+
+	sound (self, 1, "weapons/bounce.wav", 1, 1);
+	if (self.velocity == '0 0 0')
+		self.avelocity = '0 0 0';
+};
+
+//=========================================================================
+// Explode Function for Nail Grenade
+void() NailGrenadeExplode =
+{
+	// Raise into the air
+	self.movetype = 5;
+
+	setorigin(self, self.origin + '0 0 32');
+	self.avelocity = '0 500 0';
+
+	self.nextthink = time + 0.7;
+	self.think = NailGrenadeNailEm;
+};
+
+//=========================================================================
+// Nail function for Nail Grenade
+void() NailGrenadeNailEm =
+{
+	// Rotate and spew Nails
+	self.velocity = '0 0 0';
+
+	self.nextthink = time + 0.1;
+	self.think = NailGrenadeLaunchNail;
+	self.playerclass = 0;
+};
+
+//=========================================================================
+// Nail function for Nail Grenade
+void() NailGrenadeLaunchNail =
+{
+	local float i,j;
+	local float current_yaw;
+
+	i = 0;
+
+
+
+	while (i < 3)
+
+	{
+		j = (random() + 2) * 5;
+		current_yaw = anglemod(self.angles_y + j);
+		self.angles_y = current_yaw;
+		self.angles_x = 0;
+		self.angles_z = 0;
+		makevectors(self.angles);
+	
+        
+
+
+
+
+
+        if (random() < 0.33)
+            MuzzleFlash(self);
+        launch_directspike(self.origin, v_forward);
+        
+
+		i = i + 1;
+	}
+
+	self.playerclass = self.playerclass + 1;
+	self.nextthink = time + 0.1;
+
+	// Explode 
+	if (self.playerclass > 50)
+	{
+		self.weapon = 9;
+		self.think = GrenadeExplode;
+	}
+};
+

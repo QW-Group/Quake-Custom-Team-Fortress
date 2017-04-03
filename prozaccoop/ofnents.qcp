@@ -1,0 +1,301 @@
+/*=======================================================//
+// ofnents.QC - CustomTF 3.2.OfN           - 30/1/2001 - //
+// by Sergio Fumaña Grunwaldt - OfteN [cp]               //
+=========================================================//
+ Additional map entities along with their spawn functions
+=========================================================*/
+
+void() model_solid =
+{
+    if (self.mdl != "")
+        precache_model(self.mdl);
+    
+    self.movetype = 0;
+	self.solid = 2;
+	
+    setmodel (self, self.mdl);
+    setsize(self, self.mins, self.maxs);
+    setorigin(self, self.origin);
+};
+
+void() model_nonsolid =
+{
+    if (self.mdl != "")
+    	precache_model(self.mdl);
+    
+    self.movetype = 0;
+	self.solid = 0;
+	
+    setmodel (self, self.mdl);
+	setorigin(self, self.origin);
+
+    if (self.option != 0) return;
+
+    makestatic (self); //CRASH This used to have no args. Possible?
+};
+
+void(void() touch_function) InitOfNTrigger =
+{
+    InitTrigger();
+
+    self.touch = touch_function;
+    
+    if (self.noise != "")
+    {
+        precache_sound(self.noise);
+
+        if (!self.volume)
+            self.volume = 1;
+    }
+};
+
+void(entity targetplayer) TriggerNotifyAndEffects =
+{
+    if (self.message != "")
+        sprint(targetplayer,2,self.message);
+
+    if (self.noise != "")
+        sound(targetplayer,0,self.noise,self.volume,1);
+};
+
+float(entity ent, float bastards) PlayerCanTrigger =
+{
+    if (ent.classname != "player") 
+        return 0;
+    if (!ent.is_connected)
+        return 0;
+    if (ent.health <= 0) // alive?
+        return 0;
+    if (ent.done_custom & 4) // ppl customizing
+        return 0;
+    if (ent.playerclass == 0) // observers
+        return 0;
+
+    if (!bastards)
+    if (other.penance_time > time)
+        return 0;
+
+    return 1;
+};
+
+void() trigger_gravity_touch =
+{
+    if (!PlayerCanTrigger(other,1)) return;
+
+    if (other.gravity != self.gravity)
+    {
+        TriggerNotifyAndEffects(other);
+        other.gravity = self.gravity;
+    }
+};
+
+void() trigger_gravity =
+{
+    InitOfNTrigger(trigger_gravity_touch);
+};
+
+void() trigger_alter_equip_touch =
+{
+    if (!PlayerCanTrigger(other,0)) return;
+
+    local float itemid, counter, all;
+    local entity oself;
+    
+    all = 0;
+    counter = 0;
+
+    if (self.if_goal_is_active | self.if_goal_is_inactive | self.if_goal_is_removed | self.if_group_is_active | self.if_group_is_inactive)
+    {   
+        if (self.if_goal_is_active && ((self.if_goal_is_active & other.if_goal_is_active)!=self.if_goal_is_active))
+        {
+            itemid = 1;
+
+            while (itemid < 22)
+            {
+                if (self.if_goal_is_active & itob(itemid))
+                if (GiveSpecificItem(other,itemid,1,0))
+                    counter = counter + 1;
+                
+                itemid = itemid + 1;
+            }
+        }        
+
+        if (self.if_goal_is_inactive && ((self.if_goal_is_inactive & other.if_goal_is_inactive)!=self.if_goal_is_inactive))
+        {
+            itemid = 25;
+
+            while (itemid < 22 + 24)
+            {
+                if (self.if_goal_is_inactive & itob(itemid - 24))
+                if (GiveSpecificItem(other,itemid,1,0))
+                    counter = counter + 1;
+                
+                itemid = itemid + 1;
+            }
+        }
+        
+        if (self.if_goal_is_removed && ((self.if_goal_is_removed & other.if_goal_is_removed)!=self.if_goal_is_removed))
+        {
+            itemid = 25+24;
+
+            while (itemid < 22 + 24 + 24)
+            {
+                if (self.if_goal_is_removed & itob(itemid - (24+24)))
+                if (GiveSpecificItem(other,itemid,1,0))
+                    counter = counter + 1;
+                
+                itemid = itemid + 1;
+            }
+        }
+
+        if (self.if_group_is_active && ((self.if_group_is_active & other.if_group_is_active)!=self.if_group_is_active))
+        {
+            itemid = 25+24+24;
+            
+            while (itemid < 22 + 24 + 24 + 24)
+            {
+                if (self.if_group_is_active & itob(itemid - (24+24+24)))
+                if (GiveSpecificItem(other,itemid,1,0))
+                    counter = counter + 1;
+                
+                itemid = itemid + 1;
+            }
+        }
+        
+        if (self.if_group_is_inactive && ((self.if_group_is_inactive & other.if_group_is_inactive)!=self.if_group_is_inactive))
+        {
+            itemid = 25+24+24+24;
+            
+            while (itemid < 22 + 24 + 24 + 24 + 24)
+            {
+                if (self.if_group_is_inactive & itob(itemid - (24+24+24+24)))
+                if (GiveSpecificItem(other,itemid,1,0))
+                    counter = counter + 1;
+                
+                itemid = itemid + 1;
+            }
+        }
+        
+        if (counter)
+        {
+            oself = self;
+            self = other;
+            UpdateWeaponItems();
+            self = oself;
+        }
+    }
+    
+    if (self.display_item_status1 | self.display_item_status2 | self.display_item_status3 | self.display_item_status4 | self.restore_group_no)
+    {
+        all = counter;        
+        counter = 0;
+        
+        if (self.display_item_status1 && ((self.display_item_status1 & other.display_item_status1)!=self.display_item_status1))
+        {
+            itemid = 1;
+
+            while (itemid < 22)
+            {
+                if (self.display_item_status1 & itob(itemid))
+                if (StripSpecificItem(other,itemid,1,0))
+                    counter = counter + 1;
+                
+                itemid = itemid + 1;
+            }
+        }
+        
+        if (self.display_item_status2 && ((self.display_item_status2 & other.display_item_status2)!=self.display_item_status2))
+        {
+            itemid = 25;
+            
+            while (itemid < 22 + 24)
+            {
+                if (self.display_item_status2 & itob(itemid - 24))
+                if (StripSpecificItem(other,itemid,1,0))
+                    counter = counter + 1;
+                
+                itemid = itemid + 1;
+            }
+        }
+
+        if (self.display_item_status3 && ((self.display_item_status3 & other.display_item_status3)!=self.display_item_status3))
+        {
+            itemid = 25+24;
+            
+            while (itemid < 22 + 24 + 24)
+            {
+                if (self.display_item_status3 & itob(itemid - (24+24)))
+                if (StripSpecificItem(other,itemid,1,0))
+                    counter = counter + 1;
+                
+                itemid = itemid + 1;
+            }
+        }
+        
+        if (self.display_item_status4 && ((self.display_item_status4 & other.display_item_status4)!=self.display_item_status4))
+        {
+            itemid = 25+24+24;
+            
+            while (itemid < 22 + 24 + 24 + 24)
+            {
+                if (self.display_item_status4 & itob(itemid - (24+24+24)))
+                if (StripSpecificItem(other,itemid,1,0))
+                    counter = counter + 1;
+                
+                itemid = itemid + 1;
+            }
+        }
+
+        if (self.restore_group_no && ((self.restore_group_no & other.restore_group_no)!=self.restore_group_no))
+        {
+            itemid = 25+24+24+24;
+
+            while (itemid < 22 + 24 + 24 + 24 + 24)
+            {
+                if (self.restore_group_no & itob(itemid - (24+24+24+24)))
+                if (StripSpecificItem(other,itemid,1,0))
+                    counter = counter + 1;
+                
+                itemid = itemid + 1;
+            }
+        }
+
+        if (counter)
+        {
+            oself = self;
+            self = other;
+            self.current_weapon = W_BestWeapon ();
+            W_SetCurrentAmmo ();
+            UpdateWeaponItems();
+            self = oself;
+        }
+    }
+
+    if ((counter + all) > 0)
+        TriggerNotifyAndEffects(other);
+};
+
+void() trigger_alter_equip =
+{    
+    InitOfNTrigger(trigger_alter_equip_touch);
+};
+
+void() trigger_restore_equip_touch =
+{
+    if (!PlayerCanTrigger(other,0)) return;
+
+    if (RestoreOriginalItems(other))
+        TriggerNotifyAndEffects(other);
+};
+
+void() trigger_restore_equip =
+{
+    InitOfNTrigger(trigger_restore_equip_touch);
+};
+
+// Spawnflags: 1 NO_BUILDS 2 NO_MONSTERS
+
+void() trigger_special_zone =
+{
+
+};

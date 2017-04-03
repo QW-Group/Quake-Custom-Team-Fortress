@@ -1,0 +1,876 @@
+/* ALL MONSTERS SHOULD BE 1 0 0 IN COLOR */
+
+// name =[framenum,	nexttime, nextthink] {code}
+// expands to:
+// name ()
+// {
+//		self.frame=framenum;
+//		self.nextthink = time + nexttime;
+//		self.think = nextthink
+//		<code>
+// };
+
+//- OfN -
+entity (vector location, float life, float type, entity sld) CreateWaypoint;
+string(entity themonster) GetMonsterName;
+void(entity warlock, float soulnum) KillSoul;
+
+
+/*
+=============
+visible
+
+returns 1 if the entity is visible to self, even if not infront ()
+=============
+*/
+
+float (entity targ) visible =
+{
+	local vector	spot1, spot2;
+
+	spot1 = self.origin + self.view_ofs;
+	spot2 = targ.origin + targ.view_ofs;
+	traceline (spot1, spot2, 1, self);	// see through other monsters
+	
+	if (trace_inopen && trace_inwater)
+		return 0;			// sight line crossed contents
+
+	if (trace_fraction == 1)
+		return 1;
+	return 0;
+};
+//CH so you can check other then self
+float (entity targ, entity check) visible2 =
+{
+	local vector	spot1, spot2;
+	
+	spot1 = check.origin + check.view_ofs;
+	spot2 = targ.origin + targ.view_ofs;
+	traceline (spot1, spot2, 1, check);	// see through other monsters
+	
+	if (trace_inopen && trace_inwater)
+		return 0;			// sight line crossed contents
+
+	if (trace_fraction == 1)
+		return 1;
+	return 0;
+};
+
+//- OfN - Used for haxxx and sentrygun targetting
+float (entity targ, entity check) visible2x =
+{
+	local vector	spot1, spot2;
+	
+	spot1 = check.origin + check.view_ofs;
+	spot2 = targ.origin + targ.view_ofs;
+	
+    if (check.classname == "building_sentrygun")
+    {
+        if (check.tf_items & 2)
+            spot1 = check.origin + check.view_ofs - '0 0 20';
+        else
+            spot1 = check.origin + check.view_ofs + '0 0 20';
+    }
+
+    traceline (spot1, spot2, 1, check);	// see through other monsters
+	
+	if (trace_inopen && trace_inwater)
+		return 0;			// sight line crossed contents
+
+	if (trace_fraction == 1)
+		return 1;
+	return 0;
+};
+
+
+//#ifndef COOP_MODE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void() FoundTarget;
+
+/* WK We are already including these
+ai.qc
+fight.qc
+demon.qc
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+================
+monster_use
+
+Using a monster makes it angry at the current activator
+================
+*/
+void() monster_use =
+{
+	if (self.enemy)
+		return;
+	if (self.health <= 0)
+		return;
+	if (activator.items & 524288)
+		return;
+	if (activator.flags & 128)
+		return;
+	if (activator.classname != "player")
+		return;
+	
+// delay reaction so if the monster is teleported, its sound is still
+// heard
+	self.enemy = activator;
+	self.nextthink = time + 0.1;
+	self.think = FoundTarget;
+};
+
+/*===========================
+set_monster_health
+
+Increases the monsters health 
+for skill levels above 3
+doesnt work
+===========================*/
+
+void() set_monster_health =
+{
+
+
+
+
+	if (skill > 2)
+	{
+		self.lives = ((skill - 2) * 10) - 1;
+		skill = 3;
+	}
+};
+
+
+/*
+================
+monster_death_use
+
+When a mosnter dies, it fires all of its targets with the current
+enemy as activator.
+================
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//============================================================================
+
+void() walkmonster_start_go =
+{
+//	local entity	etemp;
+//	local float		failure;
+//	local vector	test;
+
+	self.origin_z = self.origin_z + 1;	// raise off floor a bit
+	droptofloor();
+	
+/*	failure = 1;
+	
+	test = self.origin;
+	test_z = test_z - self.mins_z - 1;
+	
+	if (pointcontents(test) == #CONTENT_SOLID)
+		failure = 0;
+	
+	test = self.origin - self.mins;
+	test_z = test_z - 1;
+	
+	if (pointcontents(test) == #CONTENT_SOLID)
+		failure = 0;
+	
+	test_x = test_x - self.mins_x + self.maxs_x;
+	
+	if (pointcontents(test) == #CONTENT_SOLID)
+		failure = 0;
+	
+	test_y = test_y - self.mins_y + self.maxs_y;
+	
+	if (pointcontents(test) == #CONTENT_SOLID)
+		failure = 0;
+		
+	test_x = test_x - self.maxs_x + self.mins_x;
+
+	if (pointcontents(test) == #CONTENT_SOLID)
+		failure = 0;
+*/
+	
+	if (!walkmove(0,0))
+//	if (failure)
+	{
+/*		RPrint ("walkmonster in wall at: ");
+		RPrint (vtos(self.origin));
+		RPrint ("\n"); */
+
+        if (IsOwnedMonster(self))
+			if (self.real_owner.classname == "player")
+			{
+				//self.real_owner.job = self.real_owner.job - (self.real_owner.job & #JOB_DEMON_OUT);
+				local string MName;
+                MName=GetMonsterName(self);
+                sprint(self.real_owner,2,"Your ");
+                sprint(self.real_owner,2,MName);
+                sprint(self.real_owner,2," was beamed into a wall and died.\n");
+
+				/* TODO:
+                if (self.classname == "monster_shambler") //- ofn
+				{
+					self.real_owner.demon_blood = self.real_owner.demon_blood + 4;
+					if (self.real_owner.demon_blood > #MAX_KNIFE_BLOOD)
+						self.real_owner.demon_blood = #MAX_KNIFE_BLOOD;
+				}
+                else if (self.classname == "monster_demon1") //- ofn
+				{
+					self.real_owner.demon_blood = self.real_owner.demon_blood + 2;
+					if (self.real_owner.demon_blood > #MAX_KNIFE_BLOOD)
+						self.real_owner.demon_blood = #MAX_KNIFE_BLOOD;
+				}*/
+                
+                /*else if (self.classname == "monster_wizard") //- ofn
+				{
+					self.real_owner.demon_blood = self.real_owner.demon_blood + ? ;
+					if (self.real_owner.demon_blood > #MAX_KNIFE_BLOOD)
+						self.real_owner.demon_blood = #MAX_KNIFE_BLOOD;
+				}*/
+
+                //kill_his_demons(self.real_owner);
+                KillSoul(self.real_owner,self.increase_team1);
+                return;
+			}
+		dremove(self);
+		return;
+	}
+	
+	self.takedamage = 2;
+
+	self.ideal_yaw = self.angles * '0 1 0';
+	if (!self.yaw_speed)
+		self.yaw_speed = 20;
+
+	self.view_ofs = '0 0 25';
+	self.use = monster_use;
+	
+	self.flags = self.flags | 32;
+	
+	if (self.target)
+	{
+		self.goalentity = self.movetarget = find(world, targetname, self.target);
+		self.ideal_yaw = vectoyaw(self.goalentity.origin - self.origin);
+		if (!self.movetarget)
+		{
+			RPrint ("Monster can't find target at ");
+			RPrint (vtos(self.origin));
+			RPrint ("\n");
+		}
+// this used to be an objerror
+		if (self.movetarget.classname == "path_corner")
+			self.th_walk ();
+		else
+			self.pausetime = 99999999;
+			self.th_stand ();
+	}
+	else
+	{
+		self.pausetime = 99999999;
+		self.th_stand ();
+	}
+	
+	if (self.classname == "monster_army")
+	{
+        self.martyr_enemy = CreateWaypoint(self.origin,240,0, self);
+		self.martyr_enemy.goalentity = world;
+
+        // OFTEN
+        self.demon_two=world;
+        self.demon_one=world;
+        // OFTEN
+
+		self.goalentity = world;
+	}
+
+// spread think times so they don't all happen at same time
+	self.nextthink = self.nextthink + random()*0.5;
+};
+
+
+void() walkmonster_start =
+{
+// delay drop to floor to make sure all doors have been spawned
+// spread think times so they don't all happen at same time
+	self.nextthink = self.nextthink + 1; //WK Give time to run from demons
+	//WK self.nextthink = self.nextthink + random()*0.5;
+	self.think = walkmonster_start_go;
+	// Gizmo - don't count summoned monsters in the total monster count
+	if ( !IsOwnedMonster( self ) )
+		total_monsters = total_monsters + 1;
+	set_monster_health();
+};
+
+
+
+void() flymonster_start_go =
+{
+	self.takedamage = 2;
+
+	self.ideal_yaw = self.angles * '0 1 0';
+	if (!self.yaw_speed)
+		self.yaw_speed = 10;
+	self.view_ofs = '0 0 25';
+	self.use = monster_use;
+
+	self.flags = self.flags | 1;
+	self.flags = self.flags | 32;
+
+	if (!walkmove(0,0))
+	{
+		RPrint ("flymonster in wall at: ");
+		RPrint (vtos(self.origin));
+		RPrint ("\n");
+	}
+
+	if (self.target)
+	{
+		self.goalentity = self.movetarget = find(world, targetname, self.target);
+		if (!self.movetarget)
+		{
+			RPrint ("Monster can't find target at ");
+			RPrint (vtos(self.origin));
+			RPrint ("\n");
+		}
+// this used to be an objerror
+		if (self.movetarget.classname == "path_corner")
+			self.th_walk ();
+		else
+			self.pausetime = 99999999;
+			self.th_stand ();
+	}
+	else
+	{
+		self.pausetime = 99999999;
+		self.th_stand ();
+	}
+};
+
+void() flymonster_start =
+{
+// spread think times so they don't all happen at same time
+	self.nextthink = self.nextthink + random()*0.5;
+        
+	self.think = flymonster_start_go;
+	// Gizmo - don't count summoned monsters in the total monster count
+	if ( !IsOwnedMonster( self ) )
+		total_monsters = total_monsters + 1;
+	set_monster_health();
+};
+
+
+void() swimmonster_start_go =
+{
+	/*if (deathmatch)
+	{
+		dremove(self);
+		return;
+	}*/
+
+	self.takedamage = 2;
+
+	self.ideal_yaw = self.angles * '0 1 0';
+	if (!self.yaw_speed)
+		self.yaw_speed = 25; // Original 10
+	self.view_ofs = '0 0 10';
+	self.use = monster_use;
+	
+	self.flags = self.flags | 2;
+	self.flags = self.flags | 32;
+
+	if (self.target)
+	{
+		self.goalentity = self.movetarget = find(world, targetname, self.target);
+		if (!self.movetarget)
+		{
+			RPrint ("Monster can't find target at ");
+			RPrint (vtos(self.origin));
+			RPrint ("\n");
+		}
+// this used to be an objerror
+		self.ideal_yaw = vectoyaw(self.goalentity.origin - self.origin);
+		self.th_walk ();
+	}
+	else
+	{
+		self.pausetime = 99999999;
+		self.th_stand ();
+	}
+
+// spread think times so they don't all happen at same time
+	self.nextthink = self.nextthink + random()*0.5;
+};
+
+void() swimmonster_start =
+{
+// spread think times so they don't all happen at same time
+	self.nextthink = self.nextthink + random()*0.5;
+	self.think = swimmonster_start_go;
+	// Gizmo - don't count summoned monsters in the total monster count
+	if ( !IsOwnedMonster( self ) )
+		total_monsters = total_monsters + 1;
+	set_monster_health();
+};
+// WK #endif
+
+//===========================================================================
+// Declares a monster dead 
+
+void() MonsterDead =
+{
+    self.th_die = SUB_Null;
+    self.classname = "monster_corpse";
+    SpawnBloodEx(self.origin,0.75,9);
+};
+
+//============================================================================
+// Sets corpse removal time and flags the entity for corpse damage
+
+void() MonsterCorpse =
+{
+
+	local float r;
+
+	if ( self.endtime > 0 && npcAi_IsCoopMonster( self ) ) {
+		r = random();
+		if ( r < 0.5 )
+			r = 0.5 + random()*0.5;
+
+		self.nextthink = time + self.endtime*r;
+	} else
+
+		self.nextthink = time + 40 + (80 - 40)*random();	
+	self.think = SUB_Remove;
+    
+    
+    if (self.increase_team3 == 1)
+        MakeCorpse(self,140);
+    else if (self.increase_team3 == 2)
+        MakeCorpse(self,120);
+    else if (self.increase_team3 == 3)
+        MakeCorpse(self,200);
+    else if (self.increase_team3 == 4)
+        MakeCorpse(self,220);
+    else if (self.increase_team3 == 5)
+        MakeCorpse(self,340);
+    else if (self.increase_team3 == 6)
+        MakeCorpse(self,180);
+    else 
+        MakeCorpse(self,200); // Shouldnt happen, if it does, bug
+    
+};
+
+//=======================================================================
+// Plays aura of power sound effect when needed for the monster
+
+void() MonsterAuraPower =
+{
+    if (self.aura == 1 && self.super_sound < time)
+    {
+        sound (self, 4, "auras/aura2b.wav", 1, 1);
+        self.super_sound = time + 1;
+    }
+};

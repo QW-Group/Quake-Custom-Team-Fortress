@@ -1,0 +1,291 @@
+/*======================================================
+	TELEPORT.QC 		Custom TeamFortress v2.2
+
+	(c) Craig Hauser			23/3/00
+========================================================
+Functions for the teleporters
+======================================================*/
+
+void() Teleporter_touch;
+void() Teleporter_Die;
+void() Teleporter_heat_think;
+float(entity targ) Teleporter_check_person;
+
+//- OfN
+float(entity player) IsOutWorld;
+
+
+
+
+//====================
+void() Teleporter_touch =
+{
+	local entity te;
+
+	if (self.heat == 0)
+	{
+		if (Teleporter_check_person(other))
+		{
+			te = find(world, classname, "building_teleporter");
+			while (!(te.real_owner == self.real_owner && te != self) && te != world)
+			{
+				te = find(te, classname, "building_teleporter");
+			}
+			if (te != world)
+			{
+				local vector vec;
+				vec = '0 0 32';
+
+				if (te.tf_items & 2) //- OfN turretized teleporters
+					vec = '0 0 -40';
+				
+				if (te.heat == 0 && te.ammo_cells >= 8)
+				{
+					self.heat = 2;
+					te.heat = 2;
+					if (self.is_malfunctioning & 8 || te.is_malfunctioning & 8)
+					{
+						CenterPrint(other, "The other teleporter is out of power.\n");
+						return;
+					}
+					
+					self.ammo_cells = self.ammo_cells - 8;
+					te.ammo_cells = te.ammo_cells - 8;
+
+					local entity ote;
+					ote = te;
+					if (self.is_malfunctioning & 4 || te.is_malfunctioning & 4) //sb
+					{
+						te = self.real_owner;
+						spawn_tdeath(te.origin + vec, te);
+					}
+					spawn_tfog (other.origin);
+					spawn_tdeath(te.origin + vec, other);
+					makeImmune(other,time + 2);
+					setorigin(other, te.origin + vec);
+
+					//- OfN
+					if (IsOutWorld(other))
+					{
+
+						// Gizmo - if other was forced into a wall; we should die before PlayerPostThink() resets it
+						if ( self.pickedupby )
+						if ( Teammate( self.pickedupby.team_no, other.team_no ) )
+							other.trigger_field = self.pickedupby;
+
+						deathmsg = 68;
+						TF_T_Damage(other, other, other,1000,0,0);
+						return;
+					}
+
+
+					// Gizmo - if other was forced to teleport into lava, make sure we count it as a teamkill
+					if ( pointcontents( other.origin ) == -5 || !checkbottom( other ) )
+					if ( self.pickedupby )
+					if ( Teammate( self.pickedupby.team_no, other.team_no ) ) {
+						other.flags = other.flags - ( other.flags & ( 512 | 1024 ) );
+						other.trigger_field = self.pickedupby;
+					}
+
+
+					if (self.is_malfunctioning & 1 || te.is_malfunctioning & 1) // SB
+					{
+						other.ammo_cells = 0;
+						other.ammo_shells = 0;
+						other.ammo_nails = 0;
+						other.ammo_rockets = 0;
+						other.armorvalue = 0;
+						other.ammo_detpack = 0;
+						other.ammo_c4det = 0;
+						other.ammo_medikit = 0;
+					}
+					if (self.is_malfunctioning & 2 || te.is_malfunctioning & 2) // SB
+					{
+						if (self.is_malfunctioning & 2)
+							te.martyr_enemy = self.martyr_enemy;
+						else if (te.is_malfunctioning & 2)
+							self.martyr_enemy = te.martyr_enemy;
+						TF_T_Damage(other, self, self, 500, 0, 0);
+					}
+					spawn_tfog (te.origin + vec);
+					if (self.is_malfunctioning & 4 || ote.is_malfunctioning & 4)
+						te = ote;
+					if ((te.ammo_cells >= 8 && te.ammo_cells <= 8 * 2) || (self.ammo_cells >= 8 && self.ammo_cells <= 8 * 2))
+						sprint (self.real_owner, 2, "A teleporter is getting low on power.\n");
+				}
+				else if (te.ammo_cells < 8)
+					CenterPrint(other, "The other teleporter is out of power.\n");
+			}
+		}
+	}
+
+	if (other == world && self.tf_items & 2 && !(self.flags & 512)) 
+	{ //The tele has landed! //- needed?
+		sprint(self.real_owner, 2, "Teleporter turretized succesfully!\n");
+		self.solid = 2; //#SOLID_BBOX;//SOLID_SLIDEBOX// SOLID_TRIGGER
+		self.flags = self.flags | 512;
+	   // setsize(self, self.mins, self.maxs);
+		//self.movetype = #MOVETYPE_STEP;
+		self.origin_z = self.origin_z + 46;//32; // was 40, old custom bug? fixed
+		setorigin(self,self.origin);
+
+		self.velocity = '0 0 0';
+		//setsize (self.building, '-16 -16 -48', '16 16 -52');
+		//setsize (self.building, '-16 -16 0', '16 16 1');
+		//return;
+	}
+
+	/*if (other.solid == #SOLID_BSP && self.tf_items & #NIT_TURRET && !(self.flags & #FL_ONGROUND))
+	{
+		sprint(self.real_owner, #PRINT_HIGH, "Teleporter turretized succesfully!\n");
+		self.solid = #SOLID_TRIGGER; //#SOLID_BBOX;//SOLID_SLIDEBOX// SOLID_TRIGGER
+		self.flags = self.flags | #FL_ONGROUND; //MOVETYPE_NONE
+		self.movetype = #MOVETYPE_NONE;
+		self.origin_z = self.origin_z + 8;//32; // was 40, old custom bug? fixed
+		//setsize (self.building, '-16 -16 -48', '16 16 -52');
+		//setsize (self.building, '-16 -16 -0', '16 16 -4');
+		//return;
+	}*/
+
+
+};
+//===============
+float(entity targ) Teleporter_check_person =
+{
+	if (self.ammo_cells < 8) {
+		if (Teammate(targ.team_no, self.team_no)) //only to team member
+			CenterPrint(other, "This teleporter is out of power.\n");
+		return 0;
+	}
+	if (self.real_owner.has_teleporter == 1) {
+		if (Teammate(targ.team_no, self.team_no)) //only to team member
+			CenterPrint(other, "There is no other teleporter!\n");
+		return 0;
+	}
+ // culled by KK. was QUAKE_WORLD
+	/*if (infokey(world,"ceasefire")=="on") //To not cause loops
+		return #FALSE;*/
+	if (ceasefire)
+		return 0;
+
+	if (targ == world)//that would be bad.
+		return 0;
+	if (targ.done_custom & 4)
+		return 0;
+	if (targ.classname != "player")
+		return 0;
+	if (targ.velocity != '0 0 0')
+		return 0;
+	if (targ.health <= 0)
+		return 0;
+	if (!targ.is_connected)
+		return 0;
+	if (targ.playerclass == 0)
+		return 0;
+	if (targ.is_feigning)
+		return 0;
+	if (targ.is_building)
+		return 0;
+	if (targ.is_detpacking)
+		return 0;
+	if (targ.playerclass == 12) {
+		CenterPrint(targ, "Civilian + Teleporter = No, NFC!\n");
+		return 0;
+	}
+	// Gizmo - changed this to allow teleport while glowing, but not while holding a tfgoal
+	if ( targ.remove_spawnpoint ) {
+		CenterPrint( targ, "Can't use teleporter while carrying\nitems or flags!\n" );
+		return 0;
+	}
+/*
+	if (targ.effects & (#EF_BRIGHTLIGHT | #EF_DIMLIGHT | #EF_BRIGHTFIELD)) {//no flag for you!
+		CenterPrint(targ, "Can't use teleporter while glowing!\n");
+		return #FALSE;
+	}
+*/
+
+//ALL NEW CHECKS _MUST_ BE ABOVE THIS LINE
+	if (teamplay)
+	{
+		if (Teammate(targ.team_no, self.team_no))
+			return 1;
+		if (Teammate(targ.undercover_team, self.team_no))
+			return 1;
+	}
+	else
+		return 1;
+	return 0;
+};
+//===============
+void() Teleporter_heat_think =
+{
+	//- OfN turretizing and stoped?
+	if (self.tf_items & 2 && !(self.flags & 512))
+		self.velocity_z = 200;
+
+//CH used to reduce the heat and check pos
+	local float pos, num;
+	local vector loc;
+
+	if (self.heat <= 0)
+		self.heat = 0;
+	else
+		self.heat = self.heat - 1;
+
+	self.think = Teleporter_heat_think; //keep in loop
+	self.nextthink = time + 1;
+
+//CH if spawnflags is >0 do extensive height checks b/c the pad just spawned.
+	if (self.spawnflags > 0) {
+		self.spawnflags = self.spawnflags - 1;
+		num = 0; //16 checks
+	}
+	else
+		num = 15; //1 check
+	while (num < 16)
+	{
+		//sprint (self.real_owner, #PRINT_HIGH, "Checking space!\n");
+		loc = self.origin;
+		loc_z = loc_z + (rint(random() * 8 + 1) * 8); //1-8 * 8  x+8 -> x+64
+		loc_x = loc_x + ((rint(random() * 3 + 1) * 16) - 32);
+		loc_y = loc_y + ((rint(random() * 3 + 1) * 16) - 32);
+
+		pos = pointcontents(loc);					   //-
+		if ( ( (pos == -2 || pos == -6) && !(self.tf_items & 2)) || (self.tf_items & 2 && pos == -6) )
+		{
+			TF_T_Damage(self, world, world, self.health+1, 0, 0);
+			
+			if (self.tf_items & 2) //- ofn
+				sprint (self.real_owner, 2, "Your teleporter flies away.\n");
+			else
+				sprint (self.real_owner, 2, "Not enough space for teleportation.\n");
+			
+			num = 100; //Get out of loop
+		}
+		num = num + 1;
+	}
+	
+};
+//================
+void() Teleporter_Die =
+{
+	sprint(self.real_owner, 2, "Your Teleporter Pad was destroyed.\n");
+	self.real_owner.has_teleporter = (self.real_owner.has_teleporter - 1);
+
+//	ThrowGib("progs/tgib1.mdl", -70);
+//	ThrowGib("progs/tgib2.mdl", -70);
+//	ThrowGib("progs/tgib3.mdl", -70);
+
+	WriteByte (4, 23);
+	WriteByte (4, 3);
+	WriteCoord (4, self.origin_x);
+	WriteCoord (4, self.origin_y);
+	WriteCoord (4, self.origin_z);
+
+	multicast (self.origin, 1);
+	dremove(self);
+
+
+
+};
+
