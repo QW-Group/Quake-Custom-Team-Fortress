@@ -378,13 +378,12 @@ void() Menu_VoteMap =
 	keyst = GetMapString(self.goal_state*6+1);
 	if (mapname == keyst)
 	{
-		color = keyst;
 		//color = colstr(keyst,2);
 		if (self.endtime & 1)
 			keyst = strcat(color," [ðìáùéîç]");
 		else
 			keyst = strcat(color," ÛplayingÝ");
-		color = keyst;
+		
 	}
 	else
 		color = keyst;
@@ -406,7 +405,6 @@ void() Menu_VoteMap =
 	keyst = GetMapString(self.goal_state*6+2);
 	if (mapname == keyst)
 	{
-		color = keyst;
 		//color = colstr(keyst,2);
 		if (self.endtime & 1)
 			keyst = strcat(color," [ðìáùéîç]");
@@ -424,7 +422,6 @@ void() Menu_VoteMap =
 	if (mapname == keyst)
 	{
 		//color = colstr(keyst,2);
-		color = keyst;
 		if (self.endtime & 1)
 			keyst = strcat(color," [ðìáùéîç]");
 		else
