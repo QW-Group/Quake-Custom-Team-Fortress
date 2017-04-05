@@ -3312,7 +3312,7 @@ void(entity Item, entity AP, float method) tfgoalitem_RemoveFromPlayer =
 				DelayReturn.nextthink = time + 15;
 				bprint(2, "Flag will respawn in ");
 				local string tmp; tmp = ftos(15);
-				tmp = colstr(tmp, 4);
+				//tmp = colstr(tmp, 4);
 				bprint(2, tmp); bprint(2, " seconds\n");
 			}
 			else

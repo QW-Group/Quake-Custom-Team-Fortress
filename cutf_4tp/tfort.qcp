@@ -207,7 +207,7 @@ void() TeamFortress_ChangeClass =
 
 		sprint(self, 2, "After dying, you will return as a ");
 		st = TeamFortress_GetClassName(self.nextpc);
-		st = colstr(st,2);
+		//st = colstr(st,2);
 		sprint(self, 2, st, "\n");
 		return;
 	}

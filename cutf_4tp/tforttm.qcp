@@ -895,7 +895,7 @@ float() TeamFortress_TeamGetSecond =
 // Display all the Team Scores
 void(float all, float teamscored, float scorepoints) TeamFortress_TeamShowScores =
 {
-	local string st;
+	local string st, k;
 	local float i,j;
 
 	i = 1;
@@ -909,8 +909,11 @@ void(float all, float teamscored, float scorepoints) TeamFortress_TeamShowScores
             if (TeamFortress_TeamGetColor(i) > 0)
             {
                 st = ftos(i);
-                bprint (2, "Team ", st, " (");
+		j = TeamFortress_TeamGetScore(i);
+		k = GetTrueTeamName(i);
+		bprint (2, "Team ", st, " (", k, ") ", j, " points\n");
 
+/*
                 st = GetTrueTeamName(i);
                 st = strcat(st,") ");
                 st = padstr(st,8);
@@ -919,7 +922,7 @@ void(float all, float teamscored, float scorepoints) TeamFortress_TeamShowScores
                 
                 j = TeamFortress_TeamGetScore(i);
                 st = ftos(j);
-                st = colstr(st,4);
+                //st = colstr(st,4);
 
                 if (j < 10)
                     bprint(2,"  ");
@@ -927,6 +930,7 @@ void(float all, float teamscored, float scorepoints) TeamFortress_TeamShowScores
                     bprint(2," ");                
 
                 bprint (2, st, " points\n");
+*/
             }
             i = i + 1;
         }
@@ -959,7 +963,7 @@ void(float all, float teamscored, float scorepoints) TeamFortress_TeamShowScores
             st = GetTrueTeamName(teamscored);
             bprint(2," [",st," scores ");
             st = ftos(scorepoints);
-            st = colstr(st,4);
+            //st = colstr(st,4);
             bprint(2,st,"]\n");		
         }
 

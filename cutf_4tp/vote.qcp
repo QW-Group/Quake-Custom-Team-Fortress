@@ -381,7 +381,8 @@ void() Menu_VoteMap =
 	keyst = GetMapString(self.goal_state*6+1);
 	if (mapname == keyst)
 	{
-		color = colstr(keyst,2);
+	color = keyst;
+		//color = colstr(keyst,2);
 		if (self.endtime & 1)
 			keyst = strcat(color," [Ï·˘ÈÓÁ]");
 		else
@@ -390,7 +391,8 @@ void() Menu_VoteMap =
 	}
 	else
 		color = keyst;
-	paddedstr = padstr(color,18);
+	//paddedstr = padstr(color,18);
+	paddedstr = color;
 	if (self.goal_state == 0)
 		st1 = strcat("¡ˆ·ÏÈ·‚ÏÂ Ì·Û: ®page 1Ø6©\n\n.. ",paddedstr);
 	else if (self.goal_state == 1)
@@ -407,7 +409,7 @@ void() Menu_VoteMap =
 	keyst = GetMapString(self.goal_state*6+2);
 	if (mapname == keyst)
 	{
-		color = colstr(keyst,2);
+		//color = colstr(keyst,2);
 		if (self.endtime & 1)
 			keyst = strcat(color," [Ï·˘ÈÓÁ]");
 		else
@@ -415,14 +417,15 @@ void() Menu_VoteMap =
 		color = keyst;
 	}
 	else
-		color = keyst;
-	paddedstr = padstr(color,18);
+		color = keyst;	
+	//paddedstr = padstr(color,18);
+	paddedstr = color;
 	st2 = strcat("\n.. ",paddedstr);
 		
 	keyst = GetMapString(self.goal_state*6+3);
 	if (mapname == keyst)
 	{
-		color = colstr(keyst,2);
+		//color = colstr(keyst,2);
 		if (self.endtime & 1)
 			keyst = strcat(color," [Ï·˘ÈÓÁ]");
 		else
@@ -431,13 +434,14 @@ void() Menu_VoteMap =
 	}
 	else
 		color = keyst;
-	paddedstr = padstr(color,18);
+	//paddedstr = padstr(color,18);
+	paddedstr = color;
 	st3 = strcat("\n.. ",paddedstr);
 	
 	keyst = GetMapString(self.goal_state*6+4);
 	if (mapname == keyst)
 	{
-		color = colstr(keyst,2);
+		//color = colstr(keyst,2);
 		if (self.endtime & 1)
 			keyst = strcat(color," [Ï·˘ÈÓÁ]");
 		else
@@ -446,13 +450,14 @@ void() Menu_VoteMap =
 	}
 	else
 		color = keyst;
-	paddedstr = padstr(color,18);
+	//paddedstr = padstr(color,18);
+	paddedstr = color;
 	st4 = strcat("\n.. ",paddedstr);
 
 	keyst = GetMapString(self.goal_state*6+5);
 	if (mapname == keyst)
 	{
-		color = colstr(keyst,2);
+		//color = colstr(keyst,2);
 		if (self.endtime & 1)
 			keyst = strcat(color," [Ï·˘ÈÓÁ]");
 		else
@@ -461,13 +466,14 @@ void() Menu_VoteMap =
 	}
 	else
 		color = keyst;
-	paddedstr = padstr(color,18);
+	//paddedstr = padstr(color,18);
+	paddedstr = color;
 	st5 = strcat("\n.. ",paddedstr);
 
 	keyst = GetMapString(self.goal_state*6+6);
 	if (mapname == keyst)
 	{
-		color = colstr(keyst,2);
+		//color = colstr(keyst,2);
 		if (self.endtime & 1)
 			keyst = strcat(color," [Ï·˘ÈÓÁ]");
 		else
@@ -476,7 +482,8 @@ void() Menu_VoteMap =
 	}
 	else
 		color = keyst;
-	paddedstr = padstr(color,18);
+	//paddedstr = padstr(color,18);
+	paddedstr = color;
 	st6 = strcat("\n.. ",paddedstr);
 
 	// Gizmo
@@ -1047,7 +1054,7 @@ void(float nummap, string themap) StartVoteMap =
 		{
 			sprint(self, 2, "Votingç Max number of players allowed for an ¡«“ vote is ");
 			temp = ftos(agr_vote_max);
-			temp = colstr(temp, 4);
+			//temp = colstr(temp, 4);
 			sprint(self, 2, temp);
 			sprint(self, 2, " players.\n");
 			return;
@@ -1141,7 +1148,8 @@ void(float nummap, string themap) StartVoteMap =
 
 	BroadcastSound("misc/medkey");
 
-	themap = colstr(current_voteent.netname,2);
+	//themap = colstr(current_voteent.netname,2);
+	themap = current_voteent.netname;
 
 	bprint(2,"Votingç ",self.netname);
 	last_vote_starter = self.netname; // for AGR -PZ
@@ -1240,7 +1248,8 @@ void(string question) StartPoll =
 
 	BroadcastSound("misc/medkey");
 
-	str = colstr(question, 2);
+//	str = colstr(question, 2);
+	str = question;
 
 	bprint(2,"Votingç Admin, ", self.netname);
 	bprint(2,", begins poll: ");
@@ -1686,7 +1695,8 @@ float(float final) CheckVoting =
 //		if (num_for > num_total * #VOTESNEEDED_NEXTMAP) // success?
 		if ( VotePassed( num_for, num_against, 0.5 ) )
 		{
-			st = colstr(current_voteent.netname,2);
+			//st = colstr(current_voteent.netname,2);
+			st = current_voteent.netname;
 
 			bprint(2,"Votingç Success° Setting ",st," as next map");
 			// Gizmo - print the map vote type
@@ -1756,7 +1766,8 @@ float(float final) CheckVoting =
 //		if (num_for > num_total * #VOTESNEEDED_MAP) // success?
 		if ( VotePassed( num_for, num_against, 0.5 ) )
 		{
-			st = colstr(current_voteent.netname,2);
+			//st = colstr(current_voteent.netname,2);
+			st = current_voteent.netname;
 
 			bprint(2,"Votingç Success° Switching map to ",st);
 			// Gizmo - print the map vote type
@@ -1847,8 +1858,8 @@ float(float final) CheckVoting =
 	// PZ: generic player polling
 	else if (current_voteent.has_sentry == 5)
 	{
-		st = colstr(current_voteent.netname, 2);
-
+		//st = colstr(current_voteent.netname, 2);
+		st = current_voteent.netname;
 		if (num_for > num_against)
 		{
 			bprint(2, "Votingç Poll: ", st, "\nVotingç Players agreed\n");
@@ -1966,7 +1977,8 @@ void( float num_for, float num_against ) bprintVotesNeeded = {
 				againstTemp = againstTemp - fraction;
 			} while ( forTemp <= againstTemp );
 
-			st = colstr( ftos( forTemp - num_for ), 4 );
+			//st = colstr( ftos( forTemp - num_for ), 4 );
+			st = ftos( forTemp - num_for );
 			bprint( 2, " (", st, " needed to not fail)" );
 		}
 	}
@@ -1994,10 +2006,12 @@ void() bprintVotesLeft =
 		te = nextent(te);
 	}
 
-	st = colstr(ftos(num_for), 4);
+	//st = colstr(ftos(num_for), 4);
+	st = ftos(num_for);
 	bprint(2, " €", st, " for Ø ");
 
-	st = colstr(ftos(num_against), 4);
+	//st = colstr(ftos(num_against), 4);
+	st = ftos(num_against);
 	bprint(2, st, " against");
 
 	// Gizmo - print the number of votes needed for the vote to pass

@@ -719,7 +719,7 @@ void(float inp) Menu_Team_Input =
 				if (agr_vote_max != 0 && x > agr_vote_max)
 				{
 					bprint(2, "Votingç Max number of players allowed for an ¡«“ vote is ");
-					temp = ftos(agr_vote_max); temp = colstr(temp, 4);
+					temp = ftos(agr_vote_max); //temp = colstr(temp, 4);
 					bprint(2, temp); bprint(2, " players.\n");
 					bprint(2, last_vote_starter); bprint(2, " thanks ");
 					bprint(2, self.netname); 

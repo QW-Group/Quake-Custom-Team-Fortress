@@ -186,7 +186,7 @@ void(entity pl) RefreshStatusBar =
         else if (ceil(team4score < 100))
             s7 = strcat(" ",s7);
 
-        s7 = padstr(s7,12);
+        //s7 = padstr(s7,12);	
         
         s7 = strcat("  Teal: ",s7);
     }
@@ -696,7 +696,7 @@ void(entity pl) RefreshStatusBar3 =
             {
                 // Ok then, show number of soul also
                 tmp = ftos(targnum+1);
-                tmp = colstr(tmp,4);
+                //tmp = colstr(tmp,4);
 
                 if (self.job & 4)
                 {
@@ -715,7 +715,7 @@ void(entity pl) RefreshStatusBar3 =
             else
             {
                 tmp = ftos(targnum+1);
-                tmp = colstr(tmp,4);
+               //tmp = colstr(tmp,4);
 
                 s2 = strcat(s2," ");
                 s2 = strcat(s2,tmp);
@@ -928,8 +928,8 @@ string(entity pl) ClipSizeToString100 =
     
     if (pl.tfstate & 2)
         tmps2 = "";
-    else
-        tmps2 = colstr(tmps,4);
+    //else
+        //tmps2 = colstr(tmps,4);
 
     
 
