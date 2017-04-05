@@ -346,8 +346,8 @@ void() Menu_PrimaryWeapon =
 	local string temp;
 	temp = ftos(self.money);
 	
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 	
 	MenuResetCount();
 	
@@ -492,8 +492,8 @@ void() Menu_SecondaryWeapon =
 	local string temp;
 	temp = ftos(self.money);
 	
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 		
 	local string l1,l2,l3,l4, str;
 
@@ -605,8 +605,8 @@ void() Menu_MiscWeapon =
 	local string temp;
 	temp = ftos(self.money);
 	
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 	
 	local string l1,l2,l3,l4, str;
 
@@ -711,8 +711,8 @@ void() Menu_ToolWeapon =
 	local string temp;
 	temp = ftos(self.money);
 	
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 	
 	local string l1,l2,l3,l4, str;
 
@@ -775,8 +775,8 @@ void() Menu_Legs =
 	local string temp;
 	temp = ftos(self.money);
 	
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 	
 	local string l1,l2,l3,l4,str;
 
@@ -1195,8 +1195,8 @@ void() Menu_Health =
 	local string temp;
 	temp = ftos(self.money);
 	
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 		
 	local string l1,l2,l3,l4,str;
 
@@ -1402,8 +1402,8 @@ void() Menu_Armor  =
 {
 	local string temp;
 	temp = ftos(self.money);
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 	local string l1,l2,l3,l4,str;
 
 	MenuResetCount();
@@ -1491,8 +1491,8 @@ void() Menu_Special =
 {
 	local string temp;
 	temp = ftos(self.money);
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 	local string l1,l2,l3,l4,str;
 
 	MenuResetCount();
@@ -1643,8 +1643,8 @@ void() Menu_Special2 =
 {
 	local string temp;
 	temp = ftos(self.money);
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 	local string l1,l2,l3,l4,str;
 
 	MenuResetCount();
@@ -1749,8 +1749,8 @@ void() Menu_Gren1 =
 {
 	local string temp;
 	temp = ftos(self.money);
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 	local string l1,l2,l3,l4,str;
 
 	MenuResetCount();
@@ -1865,8 +1865,8 @@ void() Menu_Gren2 =
 {
 	local string temp;
 	temp = ftos(self.money);
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 	local string l1,l2,l3,l4,str;
 
 	MenuResetCount();
@@ -1973,8 +1973,9 @@ void() Menu_Engineering =
 {
 	local string temp;
 	temp = ftos(self.money);
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
+
 	local string l1,l2,l3,l4,str;
 
 	MenuResetCount();
@@ -2120,8 +2121,9 @@ void() Menu_Profession =
 {
 	local string temp;
 	temp = ftos(self.money);
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
+
 	local string l1,l2,l3,l4,str;
 
 	MenuResetCount();
@@ -2216,8 +2218,8 @@ void() Menu_Profession2 =
 {
 	local string temp;
 	temp = ftos(self.money);
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 	local string l1,l2,l3,l4, str;
 
 	MenuResetCount();
@@ -2288,8 +2290,8 @@ void() Menu_Proficiency =
 {
 	local string temp;
 	temp = ftos(self.money);
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 	local string l1,l2,l3,l4,str;
 
 	MenuResetCount();
@@ -2390,8 +2392,8 @@ void() Menu_Option =
 {
 	local string temp;
 	temp = ftos(self.money);
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 	local string l1,l2,l3,l4,str;
 
 	MenuResetCount();
@@ -2477,8 +2479,8 @@ void() Menu_MoreOption =
 	local string temp;
 	temp = ftos(self.money);
 	
-	if (self.tfstate & 2097152)
-		temp = colstr(temp,2);
+	//if (self.tfstate & 2097152)
+		//temp = colstr(temp,2);
 	
 	local string l1,l2,l3,l4;
 
@@ -2554,7 +2556,7 @@ string(float itemnum, string itemdesc,float cost,float field, float bit) Constru
 	local string result;
 	
 	result = ftos(itemnum);
-	result = colstr(result,4);
+	//result = colstr(result,4);
 	
 	if (field & bit)
 		result = strcat("Ь ",result);
@@ -2564,7 +2566,7 @@ string(float itemnum, string itemdesc,float cost,float field, float bit) Constru
 	if (!CanBuyItem(itemnum))
 	{
 		result = strcat(result,"оо ");
-		itemdesc = colstr(itemdesc,2);
+		//itemdesc = colstr(itemdesc,2);
 	}
 	else if (ItemIsFree(itemnum))
 	{
@@ -2573,8 +2575,8 @@ string(float itemnum, string itemdesc,float cost,float field, float bit) Constru
 	else
 	{
 		result = strcat(result,".. ");
-		if (cost > self.money && !(field & bit))
-			itemdesc = colstr(itemdesc,2);
+		if (cost > self.money && !(field & bit)){}
+			//itemdesc = colstr(itemdesc,2);
 	}
 
 	result = strcat(result,itemdesc);
@@ -2590,8 +2592,8 @@ string(float itemnum, string itemdesc,float cost,float field, float bit) Constru
 	
 	itemdesc = ftos(cost);
 
-	if (field & bit)
-		itemdesc = colstr(itemdesc,4);
+	if (field & bit){}
+		//itemdesc = colstr(itemdesc,4);
 	/*else
 	{
 		if (cost > self.money)
@@ -2611,7 +2613,7 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuSentryStr =
 	local float numbought;
 
 	result = ftos(itemnum);
-	result = colstr(result,4);
+	//result = colstr(result,4);
 	
 	if (!(self.cutf_items & 16))
 	{
@@ -2635,7 +2637,7 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuSentryStr =
 	if (!CanBuyItem(itemnum))
 	{
 		result = strcat(result,"оо ");
-		itemdesc = colstr(itemdesc,2);
+		//itemdesc = colstr(itemdesc,2);
 	}
 	else if (ItemIsFree(itemnum))
 	{
@@ -2644,8 +2646,8 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuSentryStr =
 	else
 	{
 		result = strcat(result,".. ");
-		if (cost > self.money && !numbought)
-			itemdesc = colstr(itemdesc,2);
+		//if (cost > self.money && !numbought){}
+			//itemdesc = colstr(itemdesc,2);
 	}
 
 	result = strcat(result,itemdesc);
@@ -2666,7 +2668,7 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuSentryStr =
 		if (numbought == 2)
 			itemdesc = ftos(cost*2);
 
-		itemdesc = colstr(itemdesc,4);
+		//itemdesc = colstr(itemdesc,4);
 	}
 	/*else
 	{
@@ -2687,7 +2689,7 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuTeslaStr =
 	local float numbought;
 
 	result = ftos(itemnum);
-	result = colstr(result,4);
+	//result = colstr(result,4);
 	
 	if (!(self.tf_items & 32768))
 	{
@@ -2711,7 +2713,7 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuTeslaStr =
 	if (!CanBuyItem(itemnum))
 	{
 		result = strcat(result,"оо ");
-		itemdesc = colstr(itemdesc,2);
+		//itemdesc = colstr(itemdesc,2);
 	}
 	else if (ItemIsFree(itemnum))
 	{
@@ -2720,8 +2722,8 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuTeslaStr =
 	else
 	{
 		result = strcat(result,".. ");
-		if (cost > self.money && !numbought)
-			itemdesc = colstr(itemdesc,2);
+		if (cost > self.money && !numbought){}
+			//itemdesc = colstr(itemdesc,2);
 	}
 
 	result = strcat(result,itemdesc);
@@ -2742,7 +2744,7 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuTeslaStr =
 		if (numbought == 2)
 			itemdesc = ftos(cost*2);
 
-		itemdesc = colstr(itemdesc,4);
+		//itemdesc = colstr(itemdesc,4);
 	}
 	/*else
 	{
@@ -2763,7 +2765,7 @@ string(float itemnum, string itemdesc,float jobid,float cost, float extra1cost, 
 	local float numbought;
 
 	result = ftos(itemnum);
-	result = colstr(result,4);
+	//result = colstr(result,4);
 	
 	if (!(self.job & jobid))
 	{
@@ -2808,7 +2810,7 @@ string(float itemnum, string itemdesc,float jobid,float cost, float extra1cost, 
 	if (!CanBuyItem(itemnum))
 	{
 		result = strcat(result,"оо ");
-		itemdesc = colstr(itemdesc,2);
+		//itemdesc = colstr(itemdesc,2);
 	}
 	else if (ItemIsFree(itemnum))
 	{
@@ -2819,8 +2821,8 @@ string(float itemnum, string itemdesc,float jobid,float cost, float extra1cost, 
 		result = strcat(result,".. ");
 
 		if (!numbought)
-		if (cost > self.money + SpentOnJob())
-			itemdesc = colstr(itemdesc,2);		
+		if (cost > self.money + SpentOnJob()){}
+			//itemdesc = colstr(itemdesc,2);		
 	}
 
 	result = strcat(result,itemdesc);
@@ -2850,7 +2852,7 @@ string(float itemnum, string itemdesc,float jobid,float cost, float extra1cost, 
 		else if (extra1cost && !extras_mode)
 			itemdesc = ftos(extra1cost);
 
-		itemdesc = colstr(itemdesc,4);
+		//itemdesc = colstr(itemdesc,4);
 	}
 	/*else
 	{
@@ -2918,7 +2920,7 @@ string(float itemnum, string itemdesc,float cost,float grentype) ConstructMenuGr
 	local float numbought;
 
 	result = ftos(itemnum);
-	result = colstr(result,4);
+	//result = colstr(result,4);
 	
 	if ((self.tp_grenades_1 != grentype) && (self.tp_grenades_2 != grentype))
 	{
@@ -2942,7 +2944,7 @@ string(float itemnum, string itemdesc,float cost,float grentype) ConstructMenuGr
 	if (!CanBuyItem(itemnum))
 	{
 		result = strcat(result,"оо ");
-		itemdesc = colstr(itemdesc,2);
+		//itemdesc = colstr(itemdesc,2);
 	}
 	else if (ItemIsFree(itemnum))
 	{
@@ -2953,8 +2955,8 @@ string(float itemnum, string itemdesc,float cost,float grentype) ConstructMenuGr
 		result = strcat(result,".. ");
 
 		if (!numbought)
-		if (cost > self.money + SpentOnGrens())
-			itemdesc = colstr(itemdesc,2);		
+		if (cost > self.money + SpentOnGrens()){}
+			//itemdesc = colstr(itemdesc,2);		
 	}
 
 	result = strcat(result,itemdesc);
@@ -2973,8 +2975,8 @@ string(float itemnum, string itemdesc,float cost,float grentype) ConstructMenuGr
 	 
 	itemdesc = ftos(cost);
 
-	if (numbought)
-		itemdesc = colstr(itemdesc,4);
+	if (numbought){}
+		//itemdesc = colstr(itemdesc,4);
 	/*else
 	{
 		if (cost > self.money)
@@ -3076,7 +3078,7 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuSpeedStr =
 	local float bought;
 	
 	result = ftos(itemnum);
-	result = colstr(result,4);
+	//result = colstr(result,4);
 	
 	bought = 0;
 
@@ -3091,7 +3093,7 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuSpeedStr =
 	if (!CanBuyItem(itemnum))
 	{
 		result = strcat(result,"оо ");
-		itemdesc = colstr(itemdesc,2);
+		//itemdesc = colstr(itemdesc,2);
 	}
 	else if (ItemIsFree(itemnum))
 	{
@@ -3102,8 +3104,8 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuSpeedStr =
 		result = strcat(result,".. ");
 
 		if (!bought)
-		if (cost > self.money + SpentOnLegs())
-			itemdesc = colstr(itemdesc,2);
+		if (cost > self.money + SpentOnLegs()){}
+			//itemdesc = colstr(itemdesc,2);
 	}
 
 	result = strcat(result,itemdesc);
@@ -3121,8 +3123,8 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuSpeedStr =
 	
 	itemdesc = ftos(cost);
 
-	if (bought && cost)
-		itemdesc = colstr(itemdesc,4);
+	if (bought && cost){}
+		//itemdesc = colstr(itemdesc,4);
 	/*else
 	{
 		if (cost > self.money)
@@ -3184,7 +3186,7 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuHPStr =
 	local float bought;
 	
 	result = ftos(itemnum);
-	result = colstr(result,4);
+	//result = colstr(result,4);
 	
 	bought = 0;
 
@@ -3199,7 +3201,7 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuHPStr =
 	if (!CanBuyItem(itemnum))
 	{
 		result = strcat(result,"оо ");
-		itemdesc = colstr(itemdesc,2);
+		//itemdesc = colstr(itemdesc,2);
 	}
 	else if (ItemIsFree(itemnum))
 	{
@@ -3210,8 +3212,8 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuHPStr =
 		result = strcat(result,".. ");
 
 		if (!bought)
-		if (cost > self.money + SpentOnHP())
-			itemdesc = colstr(itemdesc,2);
+		if (cost > self.money + SpentOnHP()){}
+			//itemdesc = colstr(itemdesc,2);
 	}
 
 	result = strcat(result,itemdesc);
@@ -3229,8 +3231,8 @@ string(float itemnum, string itemdesc,float cost) ConstructMenuHPStr =
 	
 	itemdesc = ftos(cost);
 
-	if (bought && cost)
-		itemdesc = colstr(itemdesc,4);
+	if (bought && cost){}
+		//itemdesc = colstr(itemdesc,4);
 	/*else
 	{
 		if (cost > self.money)

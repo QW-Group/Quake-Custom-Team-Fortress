@@ -252,7 +252,7 @@ void(string cmdstr, string helpstr, string cmdlist, string finalstr) CmdHelpPars
 	{
 		sprint( self, 2, "[" );
 
-		cmdlist = colstr( cmdlist, 2 );		// may not color the string if too long
+		//cmdlist = colstr( cmdlist, 2 );		// may not color the string if too long
 		sprint( self, 2, cmdlist );
 
 		sprint( self, 2, "]\n" );
@@ -708,11 +708,11 @@ float(float num_args, string arg1, string arg2, string arg3, string arg4, string
 					sprint(self, 2, " selected ¨");
 
 					st = ftos(getuid(self.admin_kick));
-					st = colstr(st,4);
+					//st = colstr(st,4);
 
 					sprint(self, 2, "ÕóåòÉÄº",st," ÉĞº"); 
 					st = infokey(self.admin_kick,"ip");
-					st = colstr(st,4);
+					//st = colstr(st,4);
 					sprint(self,2,st,"©\n");
 
 					return 1;
@@ -2068,6 +2068,7 @@ float(float num_args, string arg1, string arg2, string arg3, string arg4, string
 				return 1;
 			}
 
+			
 			if (validatelit())
 			{
 				sprint(self,2,"Attempting to download coloured lighting file for the map...\n");
@@ -2079,6 +2080,7 @@ float(float num_args, string arg1, string arg2, string arg3, string arg4, string
 			{
 				CmdMsg("The server doesn't have a coloured lighting file for this map!\n");
 			}
+			
 
 			return 1;
 		}

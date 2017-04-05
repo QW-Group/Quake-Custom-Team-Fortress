@@ -220,7 +220,7 @@ void(entity soul, float currentsoul) Menu_Army1 =
 	{		 
 		// First, get army rating string
 		st5 = ftos(rint(self.dont_do_triggerwork*100));
-		st5 = colstr(st5,4);
+		//st5 = colstr(st5,4);
 		st5 = strcat("Ÿ Áòíù Òáôéîç: ",st5);
 		st5 = strcat(st5,"¥ Ÿ\n");
 		
@@ -1331,7 +1331,7 @@ void(entity player) PrintArmyTime =
 	fl3=floor(fl/60);
 	
 	st=ftos(fl3);
-	st = colstr(st,4);
+	//st = colstr(st,4);
    
 	sprint(player,2,st);
 	sprint(player,2,"º");
@@ -1349,7 +1349,7 @@ string (float num) Digitize =
 	local string tmps;
 	
 	tmps = ftos(num);
-	tmps = colstr(tmps,4);
+	//tmps = colstr(tmps,4);
 	
 	if (num < 10)
 		tmps = strcat("",tmps);
