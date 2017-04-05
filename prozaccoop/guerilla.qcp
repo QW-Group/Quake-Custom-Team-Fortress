@@ -335,7 +335,7 @@ void() Menu_Guerilla =
 			tmp = GetGrenadeText(self.tp_grenades_1);
 			st4 = strcat(st4,tmp);
 			st4 = strcat(st4," Grenade");
-			st4 = padstr(st4,33);
+			//st4 = padstr(st4,33);
 			st4 = strcat(st4,"\n");
 		}
 
@@ -347,7 +347,7 @@ void() Menu_Guerilla =
 			tmp = GetGrenadeText(self.tp_grenades_2);
 			st5 = strcat(st5,tmp);
 			st5 = strcat(st5," Grenade");
-			st5 = padstr(st5,33);
+			//st5 = padstr(st5,33);
 			st5 = strcat(st5,"\n");
 		}
 	}
@@ -436,7 +436,7 @@ void(float inp) Menu_Guerilla_Input =
 void() GuerillaExplode =
 {
 	// Only call minedown() if we r still guerilla, this avoids garbage on clean up
-	if (self.owner.job & 32)
+	if (self.owner.job & 64)
 		MineDown(self.owner,self);
 
 	local string st,st2;

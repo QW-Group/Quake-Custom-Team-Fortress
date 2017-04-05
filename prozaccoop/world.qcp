@@ -211,7 +211,7 @@ void() InsaneCoop_CheckDeadPlayers = {
 	}
 
 	// at this point there's either no one in the game or they're all dead
-	str = colstr( "Your team has been eliminated.\n", 2 );
+	str = "Your team has been eliminated.\n";
 	bprint( 2, str );
 	BroadcastSound( "misc/runekey" );
 

@@ -34,14 +34,14 @@ void() PrintProzacMOTD =
     local string st;   
 
     st = "Ÿ Celebrating  years !! Ÿ\n\n";
-    
+/*    
     if ((self.endtime & 3) == 3)
         st = colstr(st,1);
     else if (self.endtime & 2)
         st = colstr(st,2);
     else if (self.endtime & 1)
         st = colstr(st,3);
-    
+*/    
     CenterPrint4(self,"Welcome to ĞÒÏÚÁÃ CustomÔÆ\na Quake ÔÆ MOD by ShakaUVM\nwww®telefragged®com¯shaka\nModified for COOP By Ôèå Çéúíï\n\nŸ\n\n","Based on the aussie ver by SB-1\nModified version by Clan Prozac\n\n",st,"Post bug reports and comments on:\nhttp:¯¯www®customtf®org¯forums");
 
     self.endtime = self.endtime + 1;
@@ -67,7 +67,7 @@ void() PrintProzacIntro =
 	if ( coop == 3 && !deathmatch ) {
 		local string	str;
 
-		str = colstr( "œThis server is in Insane Coop modeœ\n", 2 );
+		str = "œThis server is in Insane Coop modeœ\n";
 		sprint( self, 2, str );
 	}
 

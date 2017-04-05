@@ -280,7 +280,7 @@ void() Menu_Demon =
         if (strlen(st5)==1)
             st5 = strcat(" ",st5);
         st5 = strcat("èåáòôó: ",st5);
-        st5 = padstr(st5,21);
+//        st5 = padstr(st5,21);
 
         
         st5 = strcat(st5,"\n");
@@ -292,7 +292,7 @@ void() Menu_Demon =
 
         st7 = strcat("íåáô:  ",st6);
         st7 = strcat(st7," ëçó");
-        st7 = padstr(st7,21);
+//        st7 = padstr(st7,21);
 
 
         st5 = strcat(st5,st7);
@@ -306,7 +306,7 @@ void() Menu_Demon =
         else if (strlen(st6)==2)
             st6 = strcat(" ",st6);
         st7 = strcat("èåáäó: ",st6);
-        st7 = padstr(st7,21);
+//        st7 = padstr(st7,21);
 
         
         st5 = strcat(st5,st7);
@@ -398,7 +398,7 @@ void() Menu_Demon =
         if (strlen(st5)==1)
             st5= strcat(" ",st5);
         st5 = strcat("èåáòôó: ",st5);
-        st5 = padstr(st5,31);
+//        st5 = padstr(st5,31);
 
         
         st5 = strcat(st5,"\n");
@@ -410,7 +410,7 @@ void() Menu_Demon =
             st6 = strcat(" ",st6);
         st7 = strcat("íåáô:  ",st6);
         st7 = strcat(st7," ëçó");
-        st7 = padstr(st7,15);
+//        st7 = padstr(st7,15);
 
         if (meatusage == 0)
             st7 = strcat(st7,"  .. õóáçå   0¥\n");
@@ -432,7 +432,7 @@ void() Menu_Demon =
         else if (strlen(st6)==2)
             st6 = strcat(" ",st6);
         st7 = strcat("èåáäó: ",st6);
-        st7 = padstr(st7,15);
+//        st7 = padstr(st7,15);
 
         if (headsusage == 0)
             st7 = strcat(st7,"  .. õóáçå   0¥");
@@ -2905,7 +2905,7 @@ void( entity printDest, entity se ) Summon_PrintDetails = {
 	local string	st;
 
 	st = GetMonsterName( se );
-	st = colstr( st, 2 );
+	//st = colstr( st, 2 );
 	if ( printDest == se.real_owner )
 		sprint( printDest, 2, "Your ", st, " ", se.netname, " has " );
 	else

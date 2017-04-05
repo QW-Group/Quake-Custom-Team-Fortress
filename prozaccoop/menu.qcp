@@ -722,7 +722,7 @@ void(float inp) Menu_Team_Input =
 				if (agr_vote_max != 0 && x > agr_vote_max)
 				{
 					bprint(2, "Votingç Max number of players allowed for an ¡«“ vote is ");
-					temp = ftos(agr_vote_max); temp = colstr(temp, 4);
+					temp = ftos(agr_vote_max); //temp = colstr(temp, 4);
 					bprint(2, temp); bprint(2, " players.\n");
 					bprint(2, last_vote_starter); bprint(2, " thanks ");
 					bprint(2, self.netname); 
@@ -3152,9 +3152,9 @@ void() Menu_EngineerFix_Tesla3 =
 	batteryUps = ftos( Tesla_GetOverchargeUps( self.building.restore_goal_no + 1 ) );
 	chainUps = ftos( Tesla_GetChainLightningUps( self.building.remove_item_group + 1 ) );
 	batteryLevel = ftos( self.building.restore_goal_no + 1 );
-	batteryLevel = padstr( batteryLevel, 2 );
+	//batteryLevel = padstr( batteryLevel, 2 );
 	chainLevel = ftos( self.building.remove_item_group + 1 );
-	chainLevel = padstr( chainLevel, 2 );
+	//chainLevel = padstr( chainLevel, 2 );
 
 	l1 = Return_Colored_Num(self.building.has_sentry);
 //	l2 = " .. Battery Overcharge        ≠ 10u\n .. Chain Lighting            ≠ 10u\n .. Proximity Defense System  ≠ 20u\n .. Solar Panel               ≠ 20u\n .. Nano Bots                 ≠ 35u\n .. Healing Field             ≠ 40u\n.. Repair and Recharge           \n.. Dismantle                     \n.. ŒÔÙËÈÓÁ                       \n\n.. Normal Upgrades\n";
