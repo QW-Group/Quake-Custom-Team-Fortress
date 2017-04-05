@@ -27,7 +27,7 @@ cd prozaccoop
 ./gmqcc -O3
 
 
-**To compile cpqw** (not recomended)
+**To compile cpqw (not recomended)**
 
 sudo apt-get install libmysqlclient-dev #(this is a little confusing but appears to be for server statistics)
 
