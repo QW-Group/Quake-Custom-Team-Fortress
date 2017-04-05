@@ -1886,7 +1886,7 @@ void(float broadcastmsg) PrintGameSettings =
 	if (custom_mode == 0)
 	{
 		temp = ftos(custom_money);
-		temp = colstr(temp,4);
+		//temp = colstr(temp,4);
 
 		st = strcat(st,": Enabled œ Íïîåù: ");
 		st = strcat(st,temp);		 
@@ -1916,7 +1916,7 @@ void(float broadcastmsg) PrintGameSettings =
 		{
 			st = strcat(st,"Lightning Storm ¼");
 			temp = ftos(floor(storm*100));
-			temp = colstr(temp,4);
+			//temp = colstr(temp,4);
 			st = strcat(st,temp);
 			st = strcat(st,"¥©");
 			
@@ -1931,7 +1931,7 @@ void(float broadcastmsg) PrintGameSettings =
 				st = strcat(st,"\n             EarthQuakes ¼");
 
 			temp = ftos(floor(earthquake*100));
-			temp = colstr(temp,4);
+			//temp = colstr(temp,4);
 			st = strcat(st,temp);
 			st = strcat(st,"¥©");
 
@@ -1954,7 +1954,7 @@ void(float broadcastmsg) PrintGameSettings =
 				st = strcat(st,"\n             Day Light ¼");
 
 			temp = ftos(floor(daytime));
-			temp = colstr(temp,4);
+			//temp = colstr(temp,4);
 			st = strcat(st,temp);
 			st = strcat(st," äáùó©");
 			
@@ -1969,7 +1969,7 @@ void(float broadcastmsg) PrintGameSettings =
 				st = strcat(st,"\n             Ancient Runes ¼");
 
 			temp = ftos(floor(runes));
-			temp = colstr(temp,4);
+			//temp = colstr(temp,4);
 			st = strcat(st,temp);
 			st = strcat(st,"ðð©");
 		}
@@ -3775,7 +3775,7 @@ string(float ver) ver_ftos =
 	tmpf = floor((ver - tmpf) * 100);
 	tmpst = ftos(tmpf);
 	result = strcat(result,tmpst);
-	result = colstr(result,4);
+	//result = colstr(result,4);
 
 	return result;
 };

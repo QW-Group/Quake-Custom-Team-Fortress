@@ -867,9 +867,18 @@ void(vector where, float set) multicast 	= #82;	// sends the temp message to a s
 
 // OfN - Stuff added to cpqwsv for prozac
 float(entity client) getuid = #83;
-string(string st1, string st2) strcat = #84;
-string(string st, float len) padstr = #85;
-string(string srcstr, float action) colstr = #86;
+//string(string st1, string st2) strcat = #84; //cpquake
+
+//string(string st, float len) padstr = #85;
+//string(string srcstr, float action) colstr = #86;
+
+// Server Fix Function
+string(string s1, string s2, ...) qsg_strcat = #82;
+string(string s1, string s2, ...) cpqwsv_strcat = #84;
+string(string s1, string s2, ...) mvdsv_strcat = #89;
+string(string s1, string s2, ...) frik_strcat = #115;
+float(string s) checkextension = #99;
+
 
 // colstr() possible action values
 
@@ -880,11 +889,23 @@ string(string srcstr, float action) colstr = #86;
 
 
 float(string st1, string st2) strcasecmp = #87;
-float(string st) strlen = #88;
+
+//float(string st) strlen = #88; //cpquake
+float(string s) strlen = #114; //mvdsv
+string(string s1, string s2) strcat = #115; //mvdsv
+
 entity(string st) getclient = #89;
 
 float(entity client) mutedtime = #90;
 float(string st) validatefile = #91;
+//added for environ.qcp
+float(string strr1) validatelit;
+float(string strr2) validatesky;
+float(string strr3) validatehrt;
+
+//string(string s) strzone = #118;
+//void(string s) strunzone = #119;
+
 void(entity client) putsaytime = #92;
 
 string(string st) makestr = #93;
@@ -2667,3 +2688,4 @@ void(entity client, float ammount) BackFlash;
 .float runes_owned;
 .float clversion;
 .float cltype;
+

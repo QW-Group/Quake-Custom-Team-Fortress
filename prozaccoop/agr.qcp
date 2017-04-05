@@ -64,10 +64,10 @@ void() AGR_think =
 					}
 					bprint(2, "\n Blue Successfully Defends \n");
 					bprint(2, "Blue is awarded ");
-					temp = ftos(agr_frags); temp = colstr(temp, 4);
+					temp = ftos(agr_frags); //temp = colstr(temp, 4);
 					bprint(2, temp);
 					bprint(2, " frags for\nsuccessfully defending for ");
-					temp = ftos(agr_minutes); temp = colstr(temp, 4);
+					temp = ftos(agr_minutes); //temp = colstr(temp, 4);
 					bprint(2, temp); bprint(2, " minutes!\n");
 					bprint(2, "\n");
 					TeamFortress_TeamShowScores(2, 1, agr_frags);
@@ -125,7 +125,7 @@ void() AGR_startTimer =
 	timeToRewardBlue = time + agr_minutes*60; // set the defender's reward timer
 	agrTimerRunning = 1;
 	temp = ftos(agr_minutes);
-	temp = colstr(temp, 4);
+	//temp = colstr(temp, 4);
 	bprint(2, "\n агр Timer Started \n");
 	bprint(2, "Blue must successfully defend their\nflag for ");
 	bprint(2, temp); bprint(2, " minutes, in order to score.\n");
@@ -190,7 +190,7 @@ void() AGR_resetTimer =
 	timeToRewardBlue = time + agr_minutes*60;
 	bprint(2, "\n агр Timer Reset \n");
 	bprint(2, "The flag capture timer has been reset.\nRed has ");
-	temp = ftos(agr_minutes); temp = colstr(temp, 4); 
+	temp = ftos(agr_minutes); //temp = colstr(temp, 4); 
 	bprint(2, temp); bprint(2, " minutes to capture Blue's flag.\n");
 	bprint(2, "\n");
 	BroadcastSound("doors/runeuse.wav");
@@ -284,13 +284,13 @@ void() AGR_invPrint =
 		x = timeToRewardBlue - time; // in seconds
 		// convert to min:sec
 		y = floor(x / 60);
-		temp = ftos(y); temp = colstr(temp, 4);
+		temp = ftos(y); //temp = colstr(temp, 4);
 		sprint2(self, 2, temp, ":"); // minutes
 		y = x - (60 * floor(x / 60)); // y = x mod 60
 		y = floor(y);
 		if (y < 10)
 			sprint(self, 2, "▓"); // padding zero
-		temp = ftos(y); temp = colstr(temp, 4);
+		temp = ftos(y); //temp = colstr(temp, 4);
 		sprint(self, 2, temp); // seconds
 		sprint(self, 2, " remaining");
 	}

@@ -143,11 +143,11 @@ void() Admin_Kick_Cycle =
         sprint(self, 2, " selected ¨");
 
         st = ftos(getuid(self.admin_kick));
-        st = colstr(st,4);
+        //st = colstr(st,4);
         
         sprint(self, 2, "ÕóåòÉÄº",st," ÉĞº"); 
         st = infokey(self.admin_kick,"ip");
-        st = colstr(st,4);
+        //st = colstr(st,4);
         sprint(self,2,st,"©\n");
 	}
 };
@@ -702,7 +702,7 @@ void(float none, float isadmin) PrintAdmins =
             counter = counter + 1;
 
             tmps = ftos(counter);
-            tmps = colstr(tmps,4);
+            //tmps = colstr(tmps,4);
             
             sprint(self,2,tmps);
             sprint(self,2,"º ");
@@ -711,11 +711,11 @@ void(float none, float isadmin) PrintAdmins =
             if (isadmin || self.admin_flag)
             {
                 tmps = ftos(getuid(te));
-                tmps = colstr(tmps,4);
+                //tmps = colstr(tmps,4);
 
                 sprint(self, 2, " ¨ÕóåòÉÄº",tmps," ÉĞº"); 
                 tmps = infokey(te,"ip");
-                tmps = colstr(tmps,4);
+                //tmps = colstr(tmps,4);
                 sprint(self,2,tmps,"©\n");
             }
             else
@@ -743,7 +743,7 @@ void(float none, float isadmin) PrintAdmins =
             counter = counter + 1;
 
             tmps = ftos(counter);
-            tmps = colstr(tmps,4);
+            //tmps = colstr(tmps,4);
             
             sprint(self,2,tmps);
             sprint(self,2,"º ");
@@ -753,11 +753,11 @@ void(float none, float isadmin) PrintAdmins =
             if (isadmin || self.admin_flag)
             {
                 tmps = ftos(getuid(te));
-                tmps = colstr(tmps,4);
+                //tmps = colstr(tmps,4);
 
                 sprint(self, 2, " ¨ÕóåòÉÄº",tmps," ÉĞº"); 
                 tmps = infokey(te,"ip");
-                tmps = colstr(tmps,4);
+                //tmps = colstr(tmps,4);
                 sprint(self,2,tmps,"©\n");
             }
             else
@@ -890,7 +890,7 @@ float(entity user, string str) Admin_Tell =
         return 99;
     }
 
-    st = colstr(str,2);
+    //st = colstr(str,2);
 
     numadmins = 0;
 
@@ -947,7 +947,7 @@ float(entity user, string str) Admin_Tell =
         else
         {
             st = ftos(numadmins);
-            st = colstr(st,4);
+            //st = colstr(st,4);
 
             sprint(user,2,"Û",st," admins reading thisİ\n");            
         }
@@ -1140,10 +1140,10 @@ void() Admin_Check =
         sprint(self,2,"Ÿ Ãìéåîô Éîæïòíáôéïî Ãèåãëó: Ÿ\n");
         tmpf = getuid(self.admin_kick);
         st = ftos(tmpf);
-        st = colstr(st,4);
+        //st = colstr(st,4);
         sprint(self, 2,"Îáíå: ",self.admin_kick.netname,"\nÕóåòÉÄ: ",st," œ ÉĞ: ");
         st = infokey(self.admin_kick,"ip");
-        st = colstr(st,4);
+        //st = colstr(st,4);
         sprint(self, 2,st,"\nÃìáéíåä: ");
         st = GetClientDescription(self.admin_kick);
         sprint(self, 2,st,"\nŸ\n");

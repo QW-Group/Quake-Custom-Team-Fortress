@@ -62,6 +62,12 @@ float(entity tester) IsBuilding;
 void() GetRunesGlobal;
 void(float oldrunes) UpdateRuneStuff;
 
+//validate files
+float(string strr1) validatelit;
+float(string strr2) validatesky;
+float(string strr3) validatehrt;
+
+
 /*===============================================================================================
 
 EXPLANATION OF HOW THE ENTITY FIELDS ARE USED (thnx? np.. :P)
@@ -182,34 +188,34 @@ void() InitEnvironment =
 //=================================================================
 // These return TRUE if server has the file for current map
 
-float() validatelit =
+float(string strr1) validatelit =
 {
-    local string st;
+//    local string st;
 
-    st = strcat("maps/",mapname);
-    st = strcat(st,".lit");
+    strr1 = strcat("maps/",strr1);
+    strr1 = strcat(strr1,".lit");
 
-    return validatefile(st);
+    return validatefile(strr1);
 };
 
-float() validatesky =
+float(string strr2) validatesky =
 {
-    local string st;
+//    local string st;
 
-    st = strcat("maps/",mapname);
-    st = strcat(st,".sky");
+    strr2 = strcat("maps/",strr2);
+    strr2 = strcat(strr2,".sky");
 
-    return validatefile(st);
+    return validatefile(strr2);
 };
 
-float() validatehrt =
+float(string strr3) validatehrt =
 {
-    local string st;
+//    local string st;
 
-    st = strcat("maps/",mapname);
-    st = strcat(st,".hrt");
+    strr3 = strcat("maps/",strr3);
+    strr3 = strcat(strr3,".hrt");
 
-    return validatefile(st);
+    return validatefile(strr3);
 };
 
 //=======================================================================
@@ -245,18 +251,16 @@ void() ApplyMapFlags =
     // Inform clients about any existing special extra files for this map...
     dprint("Looking for any map extra files...\n");
     // Does the server have a coloured lighting file for this map?
-/*
-    if (validatelit())
+
+    if (validatelit(mapname))
         bprint(2,"Map Infoç Coloured lighting for this map is avaliable. Type ¢cmd special getlit¢ to download it.\n");
     // Does the server have a paked skybox file for this map?
-    if (validatesky())
+    if (validatesky(mapname))
         bprint(2,"Map Infoç Packed skybox for this map is avaliable. Type ¢cmd special getsky¢ to download it.\n");
     // Does the server have a hi-res textures file for this map? 
-    if (validatehrt())
+    if (validatehrt(mapname))
         bprint(2,"Map Infoç Hi-Res texture file for this map is avaliable. Type ¢cmd special gethrt¢ to download it.\n");
 
-*/
-    
     // Get standard environment flags "hard-coded" into the map file (worldspawn field)
     if (world.has_holo & 16)
         storm = 1;
