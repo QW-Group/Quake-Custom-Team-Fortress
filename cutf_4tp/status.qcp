@@ -928,7 +928,8 @@ string(entity pl) ClipSizeToString100 =
     
     if (pl.tfstate & 2)
         tmps2 = "";
-    //else
+    else
+	tmps2 = tmps; //comperr
         //tmps2 = colstr(tmps,4);
 
     
