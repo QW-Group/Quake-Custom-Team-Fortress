@@ -1,5 +1,5 @@
 #
-# cppreqcc Makefile for Linux and SunOS
+# qccx Makefile for Linux and SunOS
 #
 # GNU Make required
 #
@@ -10,8 +10,8 @@
 
 SV_DIR = .
 
-# to compile cppreqcc as 32bit on 64bit target platform use next:
-# for gcc its like: make cppreqcc FORCE32BITFLAGS=-m32
+# to compile qccx as 32bit on 64bit target platform use next:
+# for gcc its like: make qccx FORCE32BITFLAGS=-m32
 # configure script add FORCE32BITFLAGS=-m32
 
 BASE_CFLAGS=-Wall -pipe -pthread -funsigned-char $(FORCE32BITFLAGS)
@@ -26,7 +26,7 @@ ASM=$(USE_ASM)
 endif
 endif
 endif
-CFLAGS=$(ASM) $(BASE_CFLAGS) -m32 -O3 -ffast-math -funroll-loops
+CFLAGS=$(ASM) $(BASE_CFLAGS) -O3 -ffast-math -funroll-loops
 else
 CFLAGS=$(BASE_CFLAGS) -Wsign-compare -ggdb
 endif
@@ -35,7 +35,7 @@ LDFLAGS=-lm -lstdc++
 ifeq ($(UNAME),Linux)
 LDFLAGS+=-ldl
 STRIP=-strip
-STRIP_FLAGS=--strip-unneeded --remove-section=.comment cppreqcc
+STRIP_FLAGS=--strip-unneeded --remove-section=.comment qccx
 else
 ifeq ($(UNAME),SunOS)
 LDFLAGS+= -lsocket -lnsl
@@ -74,11 +74,11 @@ endif
 .s.o :
 	$(CC) $(CFLAGS) -DELF -x assembler-with-cpp -c $< -o $@
 
-all : cppreqcc
+all : qccx
 	$(STRIP) $(STRIP_FLAGS)
 
-cppreqcc : $(SV_OBJS) $(SV_ASM_OBJS)
-	$(CC) $(CFLAGS) -o cppreqcc $^ $(LDFLAGS)
+qccx : $(SV_OBJS) $(SV_ASM_OBJS)
+	$(CC) $(CFLAGS) -o qccx $^ $(LDFLAGS)
 
 clean : 
 	-rm -f $(SV_DIR)/core $(SV_DIR)/*.o cppreqcc
