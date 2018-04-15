@@ -9,4 +9,4 @@ make
 
 
 Copy the qccx to the cutf_4tp_the_original directory after using ./cppreqcc
-There will be an error without debuging, suggest using gmqcc to debug or using the updated code in this project
+There will be an error without debuging with gmqcc. To skip debugging use the udpated code included with the this project.
