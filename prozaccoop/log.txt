@@ -1,0 +1,198 @@
+Mode: progs.src
+There are 98 items to compile:
+  item: defs.qcp (qc)
+defs.qcp:637:14: warning: field `oldorigin` already declared here: defs.qcp:122 [-Wfield-redeclared]
+  item: tfdefs.qcp (qc)
+  item: agr_h.qcp (qc)
+  item: qw.qcp (qc)
+  item: debug.qcp (qc)
+  item: coop_defs.qcp (qc)
+  item: npcai/npcdefs.qcp (qc)
+  item: optimize.qcp (qc)
+  item: prozac.qcp (qc)
+  item: sprites.qcp (qc)
+  item: environ.qcp (qc)
+  item: menu.qcp (qc)
+  item: cutfmenu.qcp (qc)
+  item: tinker.qcp (qc)
+  item: custom.qcp (qc)
+  item: sbitems.qcp (qc)
+  item: jobs.qcp (qc)
+jobs.qcp:41:19: warning: global `modelindex_eyes` already declared here: custom.qcp:50 [-Wdouble-declaration]
+jobs.qcp:41:37: warning: global `modelindex_player` already declared here: custom.qcp:50 [-Wdouble-declaration]
+jobs.qcp:41:53: warning: global `modelindex_null` already declared here: custom.qcp:50 [-Wdouble-declaration]
+  item: guerilla.qcp (qc)
+  item: subs.qcp (qc)
+  item: combat.qcp (qc)
+  item: items.qcp (qc)
+  item: coop_items.qcp (qc)
+  item: admin.qcp (qc)
+  item: gweapons.qcp (qc)
+  item: weapons.qcp (qc)
+weapons.qcp:571:50: warning: suggesting parenthesis around logical operations [-Wparenthesis]
+  item: world.qcp (qc)
+  item: status.qcp (qc)
+  item: client.qcp (qc)
+client.qcp:19:19: warning: global `modelindex_eyes` already declared here: custom.qcp:50 [-Wdouble-declaration]
+client.qcp:19:37: warning: global `modelindex_player` already declared here: custom.qcp:50 [-Wdouble-declaration]
+client.qcp:19:53: warning: global `modelindex_null` already declared here: custom.qcp:50 [-Wdouble-declaration]
+  item: obits.qcp (qc)
+  item: player.qcp (qc)
+  item: doors.qcp (qc)
+  item: buttons.qcp (qc)
+  item: triggers.qcp (qc)
+  item: tforttm.qcp (qc)
+  item: plats.qcp (qc)
+  item: misc.qcp (qc)
+  item: warlock.qcp (qc)
+  item: army.qcp (qc)
+  item: monsters.qcp (qc)
+  item: ai.qcp (qc)
+  item: fight.qcp (qc)
+  item: demon.qcp (qc)
+  item: shambler.qcp (qc)
+  item: grunty.qcp (qc)
+  item: wizard.qcp (qc)
+  item: fish.qcp (qc)
+  item: gremlin.qcp (qc)
+  item: haxxx.qcp (qc)
+  item: sentry.qcp (qc)
+  item: tesla.qcp (qc)
+  item: field.qcp (qc)
+  item: security.qcp (qc)
+  item: teleport.qcp (qc)
+  item: airfist.qcp (qc)
+airfist.qcp:178:22: warning: initializing expression turns variable `numBubbles` into a constant in this standard [-Wlocal-constants]
+airfist.qcp:184:21: warning: initializing expression turns variable `attackTime` into a constant in this standard [-Wlocal-constants]
+airfist.qcp:187:22: warning: initializing expression turns variable `maxFireRate` into a constant in this standard [-Wlocal-constants]
+airfist.qcp:201:23: warning: initializing expression turns variable `shotTimeout` into a constant in this standard [-Wlocal-constants]
+  item: pyro.qcp (qc)
+  item: spy.qcp (qc)
+  item: demoman.qcp (qc)
+  item: scout.qcp (qc)
+  item: engineer.qcp (qc)
+engineer.qcp:10:20: warning: global `modelindex_tesla` already declared here: tesla.qcp:71 [-Wdouble-declaration]
+  item: tsoldier.qcp (qc)
+  item: sniper.qcp (qc)
+  item: speed.qcp (qc)
+  item: tfort.qcp (qc)
+  item: tforthlp.qcp (qc)
+  item: tfortmap.qcp (qc)
+  item: hook.qcp (qc)
+  item: ctf.qcp (qc)
+  item: coop.qcp (qc)
+  item: actions.qcp (qc)
+  item: medic.qcp (qc)
+  item: crusader.qcp (qc)
+  item: cpstuff.qcp (qc)
+cpstuff.qcp:1165:12: warning: statement has no effect [-Weffectless-statement]
+  item: mtfents.qcp (qc)
+  item: rotate.qcp (qc)
+  item: spectate.qcp (qc)
+  item: ofnents.qcp (qc)
+  item: vote.qcp (qc)
+  item: cmnd.qcp (qc)
+cmnd.qcp:2047:16: warning: too few parameters for call to validatelit: expected 1, got 0
+ -> `validatelit` has been declared here: environ.qcp:192 [-Winvalid-parameter-count]
+  item: runes.qcp (qc)
+  item: megatf.qcp (qc)
+  item: agr.qcp (qc)
+agr.qcp:176:22: warning: statement has no effect [-Weffectless-statement]
+  item: npcai/coop_monsters.qcp (qc)
+  item: npcai/common.qcp (qc)
+  item: idmonsters/soldier.qcp (qc)
+  item: idmonsters/dog.qcp (qc)
+  item: idmonsters/zombie.qcp (qc)
+  item: idmonsters/demon.qcp (qc)
+  item: idmonsters/boss.qcp (qc)
+  item: idmonsters/ogre.qcp (qc)
+  item: idmonsters/knight.qcp (qc)
+idmonsters/knight.qcp:49:21: warning: duplicate frame macro defined: `attackb1` [-Wframe-macros]
+  item: idmonsters/wizard.qcp (qc)
+  item: idmonsters/shambler.qcp (qc)
+  item: idmonsters/enforcer.qcp (qc)
+  item: idmonsters/fish.qcp (qc)
+  item: idmonsters/tarbaby.qcp (qc)
+  item: idmonsters/shalrath.qcp (qc)
+  item: idmonsters/hknight.qcp (qc)
+  item: idmonsters/oldone.qcp (qc)
+idmonsters/oldone.qcp:41:40: warning: duplicate frame macro defined: `shake12` [-Wframe-macros]
+defs.qcp:16:9: warning: unused global: `frametime` [-Wunused-variable]
+defs.qcp:52:21: warning: unused global: `parm16` [-Wunused-variable]
+defs.qcp:60:28: warning: unused global: `trace_allsolid` [-Wunused-variable]
+defs.qcp:61:20: warning: unused global: `trace_startsolid` [-Wunused-variable]
+defs.qcp:65:23: warning: unused global: `trace_plane_dist` [-Wunused-variable]
+defs.qcp:474:16: warning: unused global: `empty_float` [-Wunused-variable]
+triggers.qcp:5:31: warning: unused global: `stemp` [-Wunused-variable]
+triggers.qcp:5:31: warning: unused global: `otemp` [-Wunused-variable]
+triggers.qcp:5:31: warning: unused global: `old` [-Wunused-variable]
+ai.qcp:66:16: warning: unused global: `current_yaw` [-Wunused-variable]
+ai.qcp:75:31: warning: unused global: `sight_entity` [-Wunused-variable]
+ai.qcp:76:18: warning: unused global: `sight_entity_time` [-Wunused-variable]
+cutfmenu.qcp:2892:17: warning: control reaches end of non-void function (`SpentOnJob`) via  [-Wmissing-return-values]
+guerilla.qcp:1491:1: warning: unreachable statement [-Wunreachable-code]
+subs.qcp:15:5: warning: control reaches end of non-void function (`SetMovedir`) via  [-Wmissing-return-values]
+client.qcp:784:5: warning: control reaches end of non-void function (`FindIntermission`) via  [-Wmissing-return-values]
+client.qcp:979:1: warning: unreachable statement [-Wunreachable-code]
+warlock.qcp:2828:4: warning: control reaches end of non-void function (`AI_Regenerate`) via  [-Wmissing-return-values]
+wizard.qcp:173:4: warning: control reaches end of non-void function (`WizardAttackFinished`) via  [-Wmissing-return-values]
+haxxx.qcp:1066:40: warning: control reaches end of non-void function (`ReturnHackDelay`) via  [-Wmissing-return-values]
+engineer.qcp:115:10: warning: unreachable statement [-Wunreachable-code]
+engineer.qcp:116:10: warning: unreachable statement [-Wunreachable-code]
+engineer.qcp:117:11: warning: unreachable statement [-Wunreachable-code]
+engineer.qcp:118:11: warning: unreachable statement [-Wunreachable-code]
+engineer.qcp:119:11: warning: unreachable statement [-Wunreachable-code]
+engineer.qcp:121:10: warning: unreachable statement [-Wunreachable-code]
+engineer.qcp:125:7: warning: unreachable statement [-Wunreachable-code]
+tfort.qcp:2760:40: warning: control reaches end of non-void function (`TeamFortress_GetClassName`) via  [-Wmissing-return-values]
+tfortmap.qcp:703:24: warning: control reaches end of non-void function (`Finditem`) via  [-Wmissing-return-values]
+tfortmap.qcp:727:24: warning: control reaches end of non-void function (`Findgoal`) via  [-Wmissing-return-values]
+tfortmap.qcp:753:29: warning: control reaches end of non-void function (`Findteamspawn`) via  [-Wmissing-return-values]
+medic.qcp:198:57: warning: control reaches end of non-void function (`CureAdverseEffects`) via  [-Wmissing-return-values]
+cpstuff.qcp:1576:1: warning: unreachable statement [-Wunreachable-code]
+sprites.qcp:64:8: warning: variable `sprite` may be used uninitialized in this function [-Wused-uninitialized]
+sbitems.qcp:392:5: warning: variable `client` may be used uninitialized in this function [-Wused-uninitialized]
+admin.qcp:885:8: warning: variable `st` may be used uninitialized in this function [-Wused-uninitialized]
+gweapons.qcp:37:5: warning: variable `oldownerorg_x` may be used uninitialized in this function [-Wused-uninitialized]
+gweapons.qcp:37:5: warning: variable `oldownerorg_y` may be used uninitialized in this function [-Wused-uninitialized]
+gweapons.qcp:37:5: warning: variable `oldownerorg_z` may be used uninitialized in this function [-Wused-uninitialized]
+weapons.qcp:288:5: warning: variable `dir_x` may be used uninitialized in this function [-Wused-uninitialized]
+weapons.qcp:288:5: warning: variable `dir_y` may be used uninitialized in this function [-Wused-uninitialized]
+weapons.qcp:288:5: warning: variable `dir_z` may be used uninitialized in this function [-Wused-uninitialized]
+status.qcp:925:8: warning: variable `tmps2` may be used uninitialized in this function [-Wused-uninitialized]
+gremlin.qcp:468:10: warning: variable `end_x` may be used uninitialized in this function [-Wused-uninitialized]
+gremlin.qcp:468:10: warning: variable `end_y` may be used uninitialized in this function [-Wused-uninitialized]
+gremlin.qcp:468:10: warning: variable `end_z` may be used uninitialized in this function [-Wused-uninitialized]
+gremlin.qcp:1778:7: warning: variable `pos_x` may be used uninitialized in this function [-Wused-uninitialized]
+gremlin.qcp:1778:7: warning: variable `pos_y` may be used uninitialized in this function [-Wused-uninitialized]
+gremlin.qcp:1778:7: warning: variable `pos_z` may be used uninitialized in this function [-Wused-uninitialized]
+haxxx.qcp:81:5: warning: variable `st3` may be used uninitialized in this function [-Wused-uninitialized]
+haxxx.qcp:81:5: warning: variable `st` may be used uninitialized in this function [-Wused-uninitialized]
+haxxx.qcp:337:5: warning: variable `st4` may be used uninitialized in this function [-Wused-uninitialized]
+haxxx.qcp:337:5: warning: variable `st3` may be used uninitialized in this function [-Wused-uninitialized]
+haxxx.qcp:337:5: warning: variable `st2` may be used uninitialized in this function [-Wused-uninitialized]
+haxxx.qcp:337:5: warning: variable `st` may be used uninitialized in this function [-Wused-uninitialized]
+sentry.qcp:309:5: warning: variable `client` may be used uninitialized in this function [-Wused-uninitialized]
+security.qcp:34:5: warning: variable `client` may be used uninitialized in this function [-Wused-uninitialized]
+security.qcp:105:5: warning: variable `client` may be used uninitialized in this function [-Wused-uninitialized]
+coop.qcp:105:5: warning: variable `plyr2` may be used uninitialized in this function [-Wused-uninitialized]
+coop.qcp:104:5: warning: variable `plyr1` may be used uninitialized in this function [-Wused-uninitialized]
+vote.qcp:375:5: warning: variable `color` may be used uninitialized in this function
+ -> vote.qcp:383 [-Wused-uninitialized]
+npcai/common.qcp:869:5: warning: variable `thiefSpotted` may be used uninitialized in this function [-Wused-uninitialized]
+writing '../prozac.dat'
+
+Optimizations:
+    peephole: 4279
+    overlap locals: 4257
+    call stores: 8492
+    void return: 3340
+    vector components: 6
+    const fold dce: 11
+    const fold: 1182
+
+File statistics:
+    dat:
+        name: ../prozac.dat
+        size: 1580726 (bytes)
+        crc:  0xD5CA
