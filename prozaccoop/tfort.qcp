@@ -2784,6 +2784,7 @@ string(float pc) TeamFortress_GetClassName =
 		return "Random Playerclass";
 	else if ( pc == 11)
 		return "Custom Playerclass";
+return; //comperr
 };
 
 //=========================================================================

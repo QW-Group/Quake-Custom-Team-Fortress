@@ -2870,6 +2870,8 @@ float(entity ai_entity) AI_Regenerate =
     
     if (ai_entity.health > ai_entity.max_health)
         ai_entity.health = ai_entity.max_health;
+
+return; //comperr
 };
 
 //============================================================================
