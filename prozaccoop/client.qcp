@@ -16,7 +16,7 @@ void(entity attacker, float damage) player_pain;
 void() player_stand1;
 void (vector org) spawn_tfog;
 void (vector org, entity death_owner) spawn_tdeath;
-float modelindex_eyes, modelindex_player, modelindex_null;
+//comperr float modelindex_eyes, modelindex_player, modelindex_null;
 float(float v) anglemod;
 
 //void () SetUpChrisRound;//-
@@ -826,7 +826,8 @@ entity() FindIntermission =
 	}
 	
 	
-	objerror ("FindIntermission: no spot");
+	 objerror ("FindIntermission: no spot");
+	 return; //comperr
 };
 
 /*===========================
@@ -976,7 +977,7 @@ float() DoExtraCycle =
 		return 0;
 	}
 
-	return 0;
+//comperr	return 0;
 };
 
 void() GotoNextMap;

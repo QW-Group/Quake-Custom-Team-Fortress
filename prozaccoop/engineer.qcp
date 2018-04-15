@@ -7,7 +7,7 @@
 ========================================================
 Weapons and functions for the ENGINEER class and associated weaponry
 =======================================================*/
-float modelindex_tesla; //CH
+//comperr float modelindex_tesla; //CH
 // Weapon Functions
 void() LaserBolt_Touch;
 void() LaserBolt_Think;
@@ -112,17 +112,17 @@ void() LaserBolt_Touch =
 		self.nextthink = time + 0.1;
 		self.think = LaserBolt_Think;
 		return;
-		WriteByte (4, 23);
-		WriteByte (4, 0);
-		WriteCoord (4, self.origin_x);
-		WriteCoord (4, self.origin_y);
-		WriteCoord (4, self.origin_z);
+//comperr		WriteByte (4, 23);
+//comperr		WriteByte (4, 0);
+//comperr		WriteCoord (4, self.origin_x);
+//comperr		WriteCoord (4, self.origin_y);
+//comperr		WriteCoord (4, self.origin_z);
 	
-		multicast (self.origin, 1);
+//comperr		multicast (self.origin, 1);
 	
 	}
 	
-	dremove(self);	
+//comperr	dremove(self);	
 };
 
 //=========================================================================

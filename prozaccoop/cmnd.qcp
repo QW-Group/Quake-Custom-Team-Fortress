@@ -2044,7 +2044,7 @@ float(float num_args, string arg1, string arg2, string arg3, string arg4, string
 				return 1;
 			}
 
-			if (validatelit())
+			if (validatelit(mapname)) //comperr
 			{
 				sprint(self,2,"Attempting to download coloured lighting file for the map...\n");
 				stuffcmd(self,"download maps/");

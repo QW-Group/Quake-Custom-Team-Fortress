@@ -2933,6 +2933,7 @@ float() SpentOnJob =
 		return 1000;
 	if (self.job & 1024)
 		return 1600;
+return; //comperr
 };
 
 string(float itemnum, string itemdesc,float cost,float grentype) ConstructMenuGrenStr =

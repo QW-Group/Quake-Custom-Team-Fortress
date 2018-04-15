@@ -634,7 +634,7 @@ float		deathmatch;
 .string 	mdl;
 .vector 	mangle; 		// angle at start
 
-.vector 	oldorigin;		// only used by secret door
+//comperr  .vector 	oldorigin;		// only used by secret door
 
 .float		t_length, t_width;
 
