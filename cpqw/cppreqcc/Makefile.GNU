@@ -57,7 +57,7 @@ endif
 #############################################################################
 
 SV_OBJS = \
-		$(SV_DIR)/cppreqcc.o \
+		$(SV_DIR)/Cppreqcc.o \
 
 ifeq ($(USE_ASM),$(ASM))
 SV_ASM_OBJS = \
