@@ -891,7 +891,7 @@ float(entity user, string str) Admin_Tell =
     }
 
     //st = colstr(str,2);
-
+	st = str; //comperr
     numadmins = 0;
 
     admin = find(world,classname,"player");

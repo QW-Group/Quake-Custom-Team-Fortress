@@ -1,5 +1,4 @@
-/*
-	gweapons.qc - Gizmo's new Coop weapons
+/*	gweapons.qc - Gizmo's new Coop weapons
 
 	FIXME: rename file?
 */
@@ -107,7 +106,7 @@ float (entity ent) InSolid =
 
 	// set origin back to normal if needed
 	if ( ent.owner != world )
-		setorigin( ent.owner, oldownerorg );
+	setorigin( ent.owner, oldownerorg );
 
 	// make sure the test entity can't interact with anything now
 	solidTestEntity.solid = 0;

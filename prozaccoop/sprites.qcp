@@ -135,16 +135,18 @@ entity(float num, float type, vector org, vector direction, float animtype, floa
 
             self = sprite;
             ab_exp1();
-        } else {
-			error ("unknown sprite type");
-			sprite = world;		// shutup warnings
-		}
+
+        } 
+	else    
+	{
+	error ("unknown sprite type");
+	sprite = world;		// shutup warnings
+	}
 
         counter = counter + 1;
     }
 
     self = oself;
-
     return sprite;
 };
 

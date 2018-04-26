@@ -396,6 +396,7 @@ float() MotionSensorFindTarget =
 	r = 0;
 	loopc = 0;
 	gotone = 0;
+	client = checkclient(); //comperr
 	
 	if (self.is_malfunctioning & 4)
 		return 0;
@@ -409,7 +410,7 @@ float() MotionSensorFindTarget =
 	//CH Theortetically this will check every client on the server now
 	while (loopc < 32 && gotone == 0)
 	{
-		client = checkclient();
+		//comperr client = checkclient();
 		gotone = 1;
 
 		if (!client)

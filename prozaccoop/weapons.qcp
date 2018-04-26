@@ -288,24 +288,21 @@ void() W_FireAxe =
 	local	vector	dir;
 	local entity oself; // OfN
 
-	if (self.classname == "player")
-		makevectors(self.v_angle);
-	else
-		dir = normalize (self.enemy.origin - self.origin);
-	source = self.origin + '0 0 16';
-	
-	if (self.classname == "player")
+	if (self.classname == "player") //comperr
 	{
+		makevectors(self.v_angle);
+		source = self.origin + '0 0 16';
 		if (!(self.cutf_items & 65536))
-			//traceline (source, source + v_forward*64, #TL_ANY_SOLID, self);
-			BulletTraceline(source, source + v_forward*64);
-		else
-			//traceline (source, source + v_forward*96, #TL_ANY_SOLID, self);
-			BulletTraceline(source, source + v_forward*96);
+                        BulletTraceline(source, source + v_forward*64);
+                else
+                        BulletTraceline(source, source + v_forward*96);
 	}
 	else
-		//traceline (source, source + dir*64, #TL_ANY_SOLID, self);
+	{
+		dir = normalize (self.enemy.origin - self.origin);
+		source = self.origin + '0 0 16';
 		BulletTraceline(source, source + dir*64);
+	}
 
 	if (trace_fraction == 1.0)
 		return;
@@ -568,7 +565,7 @@ void() W_FireSpanner =
 		{
 			if (trace_ent.classname == "player")
 			{
-				if (Teammate(trace_ent.team_no, self.team_no) && (teamplay) || (coop))
+				if (Teammate(trace_ent.team_no, self.team_no) && ((teamplay) || (coop)) ) //comperr
 				{
 					healam = 50;
 					if (self.ammo_cells < healam)

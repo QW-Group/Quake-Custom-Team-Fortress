@@ -182,6 +182,7 @@ float()	WizardAttackFinished =
 		self.attack_state = 2;
 		self.think = wiz_side1;
 	}
+return; //comperr
 };
 
 /*

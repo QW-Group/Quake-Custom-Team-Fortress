@@ -272,31 +272,7 @@ float(entity targ) rangesentry =
 
 
 float() Sentry_FindTarget =
-{
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	  
-	
+{	
 	self.enemy = world; //CH for sbar
 
  // culled by KK. was QUAKE_WORLD
@@ -319,9 +295,11 @@ float() Sentry_FindTarget =
 	r = 0;
 	loopc = 0;
 	gotone = 0;
+	client = checkclient();
 	//WK Theortetically this will check every client on the server now
 	while (loopc < 32 && gotone == 0) //WK 3
 	{
+		if (loopc >= 1) //comperr
 		client = checkclient();
 
 		gotone = 1;

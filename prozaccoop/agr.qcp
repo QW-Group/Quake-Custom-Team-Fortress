@@ -173,7 +173,7 @@ void() AGR_stopTimer =
 				tfgoalitem_RemoveFromPlayer(self, self.owner, 1);
 			else
 				tfgoalitem_remove();
-			break;
+			//comperr break;
 		}
 		blueFlag = find(blueFlag, classname, "item_tfgoal");
 	}

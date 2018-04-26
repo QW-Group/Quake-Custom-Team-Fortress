@@ -175,17 +175,18 @@ void() launch_horn =
   // Range of the AirFist blast.
   local float inRange;
   // Number of bubbles generated when the AirFist is fired under water.
-  local float numBubbles = 3; // number of bubbles generated in the water
+  local float numBubbles; // number of bubbles generated in the water
+	numBubbles = 3; //comperr
 
   // Recoil strength of the AirFist on the player that shot the weapon.
   local float recoil; // recoil strength of the gun
 
 	// Reshot time for the airgun attack in seconds.
-	local float attackTime = 0.5;
-
+	local float attackTime;
+	attackTime = 0.5; //comperr
 	// Max number of times that the weapon can fired in a period of time.
-	local float maxFireRate = 5;
-
+	local float maxFireRate;
+	maxFireRate = 5; //comperr
   // The maximum number of seconds that maxFireRate can fire in.  If the
   // player has reached the maxFireRate in under the shotTimeout then all
   // shots up to the shotTimeout are "failed" shots that don't do anything.
@@ -198,8 +199,8 @@ void() launch_horn =
   // Any fire rate greater than 2.5 seconds will incure a smaller or no
   // wait time.  Any shots fired in that wait time are "failed" shots that
   // will do nothing.
-  local float shotTimeout = 5.5; // number of seconds for the maxFireRate
-
+  local float shotTimeout; // number of seconds for the maxFireRate
+	shotTimeout = 5.5; //comperr
   // The AirFist fire codde:
 
   //Set initial range

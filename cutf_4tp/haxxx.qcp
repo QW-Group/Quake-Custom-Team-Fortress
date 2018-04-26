@@ -1134,6 +1134,7 @@ float(entity hacked, float r) ReturnHackDelay =
 		else
 			return 2;
 	}
+return; //comperr
 };
 
 float(entity hacked, float r) ReturnFHackDelay =

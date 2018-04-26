@@ -38,7 +38,7 @@ void(entity p) TeamFortress_SetSkin;
 void () BecomeExplosion;
 void(entity bomb, entity attacker, float rad, entity ignore) T_RadiusDamage;
 void() SUB_regen;
-float modelindex_eyes, modelindex_player, modelindex_null;
+//comperror float modelindex_eyes, modelindex_player, modelindex_null;
 void(float inAuto) W_FireMedikit;
 void(float inAuto) TeamFortress_ID;
 void(float range,float inAuto) TeamFortress_Scan;

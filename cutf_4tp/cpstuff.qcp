@@ -1109,7 +1109,8 @@ float(float checkIP, float noIdlers) GetNoPlayers =
 				else if (!strcasecmp(element.netname, ip))
 				{
 					listed = 1;
-					break;
+					//comperr break;
+					counter=2000;
 				}
 				// else continue looking through list
 				element = element.owner;
@@ -1520,7 +1521,7 @@ float(entity theplayer, float grenslot) GetMaxGrens =
 		return 4;
 	}
 
-	return 0; // shouldnt happen ever.
+//comperr	return 0; // shouldnt happen ever.
 };
 
 //=====================================================//

@@ -49,7 +49,7 @@ float() Security_Camera_FindTarget =
 	r = 0;
 	loopc = 0;
 	gotone = 0;
-
+	client = checkclient(); //comperr
     local float trange; //- OfN - Hack
     trange=1000;
 
@@ -59,6 +59,7 @@ float() Security_Camera_FindTarget =
 	//CH Theortetically this will check every client on the server now
 	while (loopc < 32 && gotone == 0)
 	{
+		if(loopc >= 1)
 		client = checkclient();
 		gotone = 1;
 
@@ -112,9 +113,11 @@ float() Security_Camera_FindFakeTarget =
 	r = 0;
 	loopc = 0;
 	gotone = 0;
+	client = checkclient(); //comperr
 	// Pick a random client
 	while (loopc < 32 && gotone == 0)
 	{
+		if(loopc >= 1) //comperr
 		client = checkclient();
 		gotone = 1;
 

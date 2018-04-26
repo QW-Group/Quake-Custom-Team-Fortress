@@ -1489,7 +1489,7 @@ float(entity player, float minetype, float converted) AttemptToSetMine =
 		}		 
 	}
 
-	return 0; // wont happen anyway..
+//comperr	return 0; // wont happen anyway..
 };
 
 //===========================================================

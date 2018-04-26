@@ -871,9 +871,10 @@ float( entity npc, entity en, float attackSpeed ) npcAi_UpdateEnemyPos = {
 	oldOffset = npc.dest;
 	sightblocked = ( !npcAi_FindShootOffset( npc, en ) );
 
+	thiefSpotted = 0;
 	if ( !sightblocked ) {
 		// check if he's a theif
-		thiefSpotted = 0;
+		//comperr thiefSpotted = 0;
 		if ( en.flags & 8 )
 		if ( en.job & 1 && en.job & 2048 ) {
 			if ( !( en.job & 4096 ) ) {

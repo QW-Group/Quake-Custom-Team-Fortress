@@ -169,6 +169,7 @@ float()	_WizardAttackFinished =
 		self.attack_state = 2;
 		self.think = _wiz_side1;
 	}
+return; //comperr
 };
 
 /*
