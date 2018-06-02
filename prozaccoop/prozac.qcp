@@ -1,6 +1,6 @@
 /*=======================================================//
 // prozac.QC - CustomTF 3.2.OfN           - 15/11/2004 - //
-// by Sergio Fumaña Grunwaldt - OfteN [cp]               //
+// by Sergio FumaÃ±a Grunwaldt - OfteN [cp]               //
 =========================================================//
  ProZac Message Of The Day (MOTD) and un/related stuff :)
 =========================================================*/
@@ -9,8 +9,8 @@
 
 
 
-//#define MSG_CUTFVERSION "CustomÔÆ version ö3®2®OfN"
-//WK #define MSG_CUTFVERSION   "ÐÒÏÚÁÃ CustomÔÆ ö•®”®OfN˜" //<-- 3.2.OfN6
+//#define MSG_CUTFVERSION "CustomÃ”Ã† version Ã¶3Â®2Â®OfN"
+//WK #define MSG_CUTFVERSION   "ÃÃ’ÃÃšÃÃƒ CustomÃ”Ã† Ã¶â€¢Â®â€Â®OfNËœ" //<-- 3.2.OfN6
 
 
 
@@ -20,10 +20,10 @@
 
 
 
-//#define MSG_INTRO3 "¨Lot of the stuff under test!!©\n\nClan¯Admin issuesº ask Pirivan!\nGeneral bitchingº ask your mom! :P"
-//#define MSG_INTRO3 "Send bug reports and comments to:\ngrunwÀcopc®es (àQuakeà as subject¡)"
+//#define MSG_INTRO3 "Â¨Lot of the stuff under test!!Â©\n\nClanÂ¯Admin issuesÂº ask Pirivan!\nGeneral bitchingÂº ask your mom! :P"
+//#define MSG_INTRO3 "Send bug reports and comments to:\ngrunwÃ€copcÂ®es (Ã QuakeÃ  as subjectÂ¡)"
 
-//http:¯¯kickme®to¯customtf"
+//http:Â¯Â¯kickmeÂ®toÂ¯customtf"
 
 
 //WK 152 Default, must be > 6.
@@ -33,7 +33,7 @@ void() PrintProzacMOTD =
 {
     local string st;   
 
-    st = "žŸ Celebrating  years !! žŸ\n\n";
+    st = "ÂÅ¾Å¸ Celebrating  years !! ÂÅ¾Å¸\n\n";
 /*    
     if ((self.endtime & 3) == 3)
         st = colstr(st,1);
@@ -42,7 +42,7 @@ void() PrintProzacMOTD =
     else if (self.endtime & 1)
         st = colstr(st,3);
 */    
-    CenterPrint4(self,"Welcome to ÐÒÏÚÁÃ CustomÔÆ\na Quake ÔÆ MOD by ShakaUVM\nwww®telefragged®com¯shaka\nModified for COOP By Ôèå Çéúíï\n\nžžžžžžžžžžžžžžžžžžžžžžžžžžžžŸ\n\n","Based on the aussie ver by SB-1\nModified version by Clan Prozac\n\n",st,"Post bug reports and comments on:\nhttp:¯¯www®customtf®org¯forums");
+    CenterPrint4(self,"Welcome to ÃÃ’ÃÃšÃÃƒ CustomÃ”Ã†\na Quake Ã”Ã† MOD by ShakaUVM\nwwwÂ®telefraggedÂ®comÂ¯shaka\nModified for COOP By Ã”Ã¨Ã¥ Ã‡Ã©ÃºÃ­Ã¯\n\nÂÅ¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¸\n\n","Based on the aussie ver by SB-1\nModified version by Clan Prozac\n\n",st,"Post bug reports and comments on:\nhttps://github.com/deurk/Quake-Custom-Team-Fortress);
 
     self.endtime = self.endtime + 1;
 };
@@ -50,24 +50,24 @@ void() PrintProzacMOTD =
 void() PrintProzacIntro =
 {
     if (!no_votemap && !no_punish)
-        sprint(self,2,"\nVoting You can issue a vote by using the ¢VoteMap¢ and ¢Punish¢ aliases.\n");
+        sprint(self,2,"\nVotingÂ You can issue a vote by using the Â¢VoteMapÂ¢ and Â¢PunishÂ¢ aliases.\n");
     else
     {
         if (!no_punish)
-            sprint(self,2,"\nVoting You can issue a vote by using ¢VoteMap¢ alias.\n");
+            sprint(self,2,"\nVotingÂ You can issue a vote by using Â¢VoteMapÂ¢ alias.\n");
         else if (!no_votemap)
-            sprint(self,2,"\nVoting You can issue a vote by using ¢Punish¢ alias.\n");
+            sprint(self,2,"\nVotingÂ You can issue a vote by using Â¢PunishÂ¢ alias.\n");
     }
 
-    //sprint (self, #PRINT_HIGH, #MSG_INFO, "\n",#MSG_OFTEN_CUTFVERSION, "\nžžŸ ", #MSG_CUTFVERSION, " žžžŸ\n       Éîæïòíáôéïî èïíåðáçå:\n     www®telefragged®com¯shaka\nžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžŸ\n\n");
-    sprint (self, 2, "\nType ¢cmd help¢ to see additional client commands.\n", "\n","Running progs version 1.2 Û4¯1¯2010Ý\n", "\nžžŸ ", "ÐÒÏÚÁÃ CustomÔÆ COOP VERSION 1.2 (4-1-2010)", " žžžŸ\n       Éîæïòíáôéïî èïíåðáçå:\n  http:¯¯customtf®sf®net¯prozaccoop\nžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžžŸ\n\n");
+    //sprint (self, #PRINT_HIGH, #MSG_INFO, "\n",#MSG_OFTEN_CUTFVERSION, "\nÂÅ¾Å¾Å¸ ", #MSG_CUTFVERSION, " ÂÅ¾Å¾Å¾Å¸\n       Ã‰Ã®Ã¦Ã¯Ã²Ã­Ã¡Ã´Ã©Ã¯Ã® Ã¨Ã¯Ã­Ã¥Ã°Ã¡Ã§Ã¥:\n     wwwÂ®telefraggedÂ®comÂ¯shaka\nÂÅ¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¸\n\n");
+    sprint (self, 2, "\nType Â¢cmd helpÂ¢ to see additional client commands.\n", "\n","Running progs version 1.2 Ã›4Â¯1Â¯2010Ã\n", "\nÂÅ¾Å¾Å¸ ", "ÃÃ’ÃÃšÃÃƒ CustomÃ”Ã† COOP VERSION 1.2 (4-1-2010)", " ÂÅ¾Å¾Å¾Å¸\n       Ã‰Ã®Ã¦Ã¯Ã²Ã­Ã¡Ã´Ã©Ã¯Ã® Ã¨Ã¯Ã­Ã¥Ã°Ã¡Ã§Ã¥:\n  http:Â¯Â¯customtfÂ®sfÂ®netÂ¯prozaccoop\nÂÅ¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¾Å¸\n\n");
 
 	// Gizmo
 
 	if ( coop == 3 && !deathmatch ) {
 		local string	str;
 
-		str = "œThis server is in Insane Coop modeœ\n";
+		str = "Å“This server is in Insane Coop modeÅ“\n";
 		sprint( self, 2, str );
 	}
 
